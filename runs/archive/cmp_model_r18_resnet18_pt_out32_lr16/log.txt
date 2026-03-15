@@ -1,0 +1,20 @@
+Device: cpu
+Model: resnet18, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=5000, Val subset=2000
+Epochs=5, batch_size=32, lr=0.001
+Saved run config: runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\run_config.txt
+Epoch 1/5 | Train: loss=2.0795, acc=0.2446 | Val: loss=1.9116, acc=0.2975
+New best: val_acc=0.2975 (epoch 1) -> runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\best.pt
+Epoch 2/5 | Train: loss=1.7422, acc=0.3690 | Val: loss=1.6946, acc=0.3885
+New best: val_acc=0.3885 (epoch 2) -> runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\best.pt
+Epoch 3/5 | Train: loss=1.5656, acc=0.4378 | Val: loss=1.6023, acc=0.4320
+New best: val_acc=0.4320 (epoch 3) -> runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\best.pt
+Epoch 4/5 | Train: loss=1.4373, acc=0.4904 | Val: loss=1.4889, acc=0.4850
+New best: val_acc=0.4850 (epoch 4) -> runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\best.pt
+Epoch 5/5 | Train: loss=1.3180, acc=0.5282 | Val: loss=1.6302, acc=0.4440
+Total time: 353.7s
+Saved log: runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\log.txt
+Saved metrics: runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\metrics.csv
+Saved best checkpoint: runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\best.pt (best_val_acc=0.4850)
+Saved checkpoint: runs\cmp_model_r18_resnet18_pt_out32_lr16_20260310-134115\model_last.pt

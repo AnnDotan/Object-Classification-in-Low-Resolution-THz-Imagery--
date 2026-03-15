@@ -1,0 +1,54 @@
+Device: cuda
+Model: transnext_micro, pretrained=True
+Data: CIFAR10 degraded | out_size=224, low_res=16
+Train subset=5000, Val subset=2000
+Epochs=40, batch_size=8, lr=0.0005
+Group: pilot
+Saved run config: runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\run_config.txt
+Epoch 1/40 | Train: loss=2.3246, acc=0.1006 | Val: loss=2.3191, acc=0.0990
+New best: val_acc=0.0990 (epoch 1) -> runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\best.pt
+Epoch 2/40 | Train: loss=2.3114, acc=0.1016 | Val: loss=2.3043, acc=0.1085
+New best: val_acc=0.1085 (epoch 2) -> runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\best.pt
+Epoch 3/40 | Train: loss=2.3088, acc=0.0988 | Val: loss=2.3082, acc=0.0975
+Epoch 4/40 | Train: loss=2.3070, acc=0.1054 | Val: loss=2.3024, acc=0.1085
+Epoch 5/40 | Train: loss=2.3058, acc=0.0974 | Val: loss=2.3033, acc=0.1015
+Epoch 6/40 | Train: loss=2.3047, acc=0.1094 | Val: loss=2.3049, acc=0.0990
+Epoch 7/40 | Train: loss=2.3060, acc=0.1028 | Val: loss=2.3030, acc=0.1080
+Epoch 8/40 | Train: loss=2.3044, acc=0.1060 | Val: loss=2.3028, acc=0.1085
+Epoch 9/40 | Train: loss=2.3050, acc=0.1014 | Val: loss=2.3029, acc=0.1080
+Epoch 10/40 | Train: loss=2.3045, acc=0.0984 | Val: loss=2.3029, acc=0.1085
+Epoch 11/40 | Train: loss=2.3041, acc=0.1118 | Val: loss=2.3038, acc=0.0975
+Epoch 12/40 | Train: loss=2.3051, acc=0.0980 | Val: loss=2.3054, acc=0.0990
+Epoch 13/40 | Train: loss=2.3051, acc=0.0994 | Val: loss=2.3040, acc=0.0980
+Epoch 14/40 | Train: loss=2.3044, acc=0.0976 | Val: loss=2.3045, acc=0.1015
+Epoch 15/40 | Train: loss=2.3054, acc=0.0924 | Val: loss=2.3033, acc=0.1015
+Epoch 16/40 | Train: loss=2.3040, acc=0.0984 | Val: loss=2.3025, acc=0.0975
+Epoch 17/40 | Train: loss=2.3043, acc=0.0962 | Val: loss=2.3035, acc=0.0980
+Epoch 18/40 | Train: loss=2.3039, acc=0.1036 | Val: loss=2.3023, acc=0.1080
+Epoch 19/40 | Train: loss=2.3039, acc=0.1002 | Val: loss=2.3076, acc=0.0980
+Epoch 20/40 | Train: loss=2.3052, acc=0.1076 | Val: loss=2.3029, acc=0.0975
+Epoch 21/40 | Train: loss=2.3047, acc=0.0974 | Val: loss=2.3037, acc=0.0980
+Epoch 22/40 | Train: loss=2.3040, acc=0.0898 | Val: loss=2.3027, acc=0.0965
+Epoch 23/40 | Train: loss=2.3032, acc=0.1076 | Val: loss=2.3033, acc=0.1080
+Epoch 24/40 | Train: loss=2.3039, acc=0.1038 | Val: loss=2.3037, acc=0.1085
+Epoch 25/40 | Train: loss=2.3040, acc=0.0970 | Val: loss=2.3022, acc=0.1085
+Epoch 26/40 | Train: loss=2.3038, acc=0.1044 | Val: loss=2.3038, acc=0.0980
+Epoch 27/40 | Train: loss=2.3042, acc=0.1026 | Val: loss=2.3038, acc=0.1015
+Epoch 28/40 | Train: loss=2.3039, acc=0.1052 | Val: loss=2.3036, acc=0.1080
+Epoch 29/40 | Train: loss=2.3040, acc=0.0978 | Val: loss=2.3030, acc=0.1085
+Epoch 30/40 | Train: loss=2.3037, acc=0.1046 | Val: loss=2.3025, acc=0.1085
+Epoch 31/40 | Train: loss=2.3042, acc=0.0972 | Val: loss=2.3023, acc=0.1080
+Epoch 32/40 | Train: loss=2.3036, acc=0.1052 | Val: loss=2.3027, acc=0.0990
+Epoch 33/40 | Train: loss=2.3037, acc=0.0982 | Val: loss=2.3029, acc=0.1080
+Epoch 34/40 | Train: loss=2.3032, acc=0.1010 | Val: loss=2.3040, acc=0.1080
+Epoch 35/40 | Train: loss=2.3036, acc=0.1078 | Val: loss=2.3019, acc=0.1080
+Epoch 36/40 | Train: loss=2.3035, acc=0.1036 | Val: loss=2.3017, acc=0.1080
+Epoch 37/40 | Train: loss=2.3036, acc=0.0964 | Val: loss=2.3043, acc=0.0990
+Epoch 38/40 | Train: loss=2.3040, acc=0.0972 | Val: loss=2.3021, acc=0.1080
+Epoch 39/40 | Train: loss=2.3039, acc=0.0980 | Val: loss=2.3047, acc=0.1085
+Epoch 40/40 | Train: loss=2.3031, acc=0.1062 | Val: loss=2.3037, acc=0.0990
+Total time: 7350.7s
+Saved log: runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\log.txt
+Saved metrics: runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\metrics.csv
+Saved best checkpoint: runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\best.pt (best_val_acc=0.1085)
+Saved checkpoint: runs\pilot\transnext_long_train_transnext_micro_pt_out224_lowres16_lr5e-04\model_last.pt

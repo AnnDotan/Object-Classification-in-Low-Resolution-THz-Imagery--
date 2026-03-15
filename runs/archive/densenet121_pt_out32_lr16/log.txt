@@ -1,0 +1,13 @@
+Device: cpu
+Model: densenet121, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=2000, Val subset=1000
+Epochs=1, batch_size=32, lr=0.001
+Saved run config: runs\densenet121_pt_out32_lr16_20260308-172809\run_config.txt
+Epoch 1/1 | Train: loss=2.3968, acc=0.1925 | Val: loss=9.1633, acc=0.2480
+New best: val_acc=0.2480 (epoch 1) -> runs\densenet121_pt_out32_lr16_20260308-172809\best.pt
+Total time: 120.0s
+Saved log: runs\densenet121_pt_out32_lr16_20260308-172809\log.txt
+Saved metrics: runs\densenet121_pt_out32_lr16_20260308-172809\metrics.csv
+Saved best checkpoint: runs\densenet121_pt_out32_lr16_20260308-172809\best.pt (best_val_acc=0.2480)
+Saved checkpoint: runs\densenet121_pt_out32_lr16_20260308-172809\model_last.pt

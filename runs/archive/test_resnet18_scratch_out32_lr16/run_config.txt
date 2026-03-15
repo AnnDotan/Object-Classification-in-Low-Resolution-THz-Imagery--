@@ -1,0 +1,11 @@
+device=cpu
+model_name=resnet18
+pretrained=False
+out_size=32
+low_res=16
+epochs=1
+batch_size=32
+train_subset=200
+val_subset=200
+lr=0.001
+tag=test

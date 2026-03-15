@@ -1,0 +1,13 @@
+Device: cpu
+Model: resnet18, pretrained=False
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=200, Val subset=200
+Epochs=1, batch_size=32, lr=0.001
+Saved run config: runs\test_resnet18_scratch_out32_lr16_20260308-175101\run_config.txt
+Epoch 1/1 | Train: loss=2.3394, acc=0.1100 | Val: loss=2.3244, acc=0.0750
+New best: val_acc=0.0750 (epoch 1) -> runs\test_resnet18_scratch_out32_lr16_20260308-175101\best.pt
+Total time: 3.8s
+Saved log: runs\test_resnet18_scratch_out32_lr16_20260308-175101\log.txt
+Saved metrics: runs\test_resnet18_scratch_out32_lr16_20260308-175101\metrics.csv
+Saved best checkpoint: runs\test_resnet18_scratch_out32_lr16_20260308-175101\best.pt (best_val_acc=0.0750)
+Saved checkpoint: runs\test_resnet18_scratch_out32_lr16_20260308-175101\model_last.pt

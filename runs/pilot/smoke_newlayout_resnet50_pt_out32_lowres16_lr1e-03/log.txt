@@ -1,0 +1,14 @@
+Device: cpu
+Model: resnet50, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=200, Val subset=100
+Epochs=1, batch_size=32, lr=0.001
+Group: pilot
+Saved run config: runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\run_config.txt
+Epoch 1/1 | Train: loss=2.2989, acc=0.1300 | Val: loss=2.3146, acc=0.1400
+New best: val_acc=0.1400 (epoch 1) -> runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\best.pt
+Total time: 3.4s
+Saved log: runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\log.txt
+Saved metrics: runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\metrics.csv
+Saved best checkpoint: runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\best.pt (best_val_acc=0.1400)
+Saved checkpoint: runs\pilot\smoke_newlayout_resnet50_pt_out32_lowres16_lr1e-03_20260310-165838\model_last.pt

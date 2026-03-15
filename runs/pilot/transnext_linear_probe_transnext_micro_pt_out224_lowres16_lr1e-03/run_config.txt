@@ -1,0 +1,14 @@
+device=cuda
+model_name=transnext_micro
+pretrained=True
+out_size=224
+low_res=16
+epochs=20
+batch_size=8
+train_subset=5000
+val_subset=2000
+lr=0.001
+tag=transnext_linear_probe
+group=pilot
+run_name=transnext_linear_probe_transnext_micro_pt_out224_lowres16_lr1e-03
+freeze_backbone=True

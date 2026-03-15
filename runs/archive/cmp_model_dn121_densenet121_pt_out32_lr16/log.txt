@@ -1,0 +1,20 @@
+Device: cpu
+Model: densenet121, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=5000, Val subset=2000
+Epochs=5, batch_size=32, lr=0.001
+Saved run config: runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\run_config.txt
+Epoch 1/5 | Train: loss=2.1234, acc=0.2568 | Val: loss=1.9439, acc=0.3140
+New best: val_acc=0.3140 (epoch 1) -> runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\best.pt
+Epoch 2/5 | Train: loss=1.7739, acc=0.3740 | Val: loss=1.9105, acc=0.3755
+New best: val_acc=0.3755 (epoch 2) -> runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\best.pt
+Epoch 3/5 | Train: loss=1.6204, acc=0.4260 | Val: loss=1.6645, acc=0.4290
+New best: val_acc=0.4290 (epoch 3) -> runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\best.pt
+Epoch 4/5 | Train: loss=1.4778, acc=0.4770 | Val: loss=1.5800, acc=0.4550
+New best: val_acc=0.4550 (epoch 4) -> runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\best.pt
+Epoch 5/5 | Train: loss=1.4275, acc=0.5018 | Val: loss=1.8039, acc=0.4510
+Total time: 1238.4s
+Saved log: runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\log.txt
+Saved metrics: runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\metrics.csv
+Saved best checkpoint: runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\best.pt (best_val_acc=0.4550)
+Saved checkpoint: runs\cmp_model_dn121_densenet121_pt_out32_lr16_20260310-140610\model_last.pt

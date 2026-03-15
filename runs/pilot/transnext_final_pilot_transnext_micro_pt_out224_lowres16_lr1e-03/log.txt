@@ -1,0 +1,24 @@
+Device: cpu
+Model: transnext_micro, pretrained=True
+Data: CIFAR10 degraded | out_size=224, low_res=16
+Train subset=2000, Val subset=500
+Epochs=10, batch_size=2, lr=0.001
+Group: pilot
+Saved run config: runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\run_config.txt
+Epoch 1/10 | Train: loss=2.3404, acc=0.1025 | Val: loss=2.3010, acc=0.1080
+New best: val_acc=0.1080 (epoch 1) -> runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\best.pt
+Epoch 2/10 | Train: loss=2.3187, acc=0.0925 | Val: loss=2.3031, acc=0.1080
+Epoch 3/10 | Train: loss=2.3154, acc=0.1105 | Val: loss=2.3155, acc=0.0800
+Epoch 4/10 | Train: loss=2.3156, acc=0.1000 | Val: loss=2.3110, acc=0.0800
+Epoch 5/10 | Train: loss=2.3155, acc=0.0880 | Val: loss=2.3066, acc=0.1080
+Epoch 6/10 | Train: loss=2.3128, acc=0.1080 | Val: loss=2.3010, acc=0.1080
+Epoch 7/10 | Train: loss=2.3141, acc=0.0910 | Val: loss=2.3028, acc=0.0800
+Epoch 8/10 | Train: loss=2.3115, acc=0.0945 | Val: loss=2.3211, acc=0.0820
+Epoch 9/10 | Train: loss=2.3122, acc=0.0950 | Val: loss=2.3058, acc=0.0800
+Epoch 10/10 | Train: loss=2.3111, acc=0.1000 | Val: loss=2.3049, acc=0.1140
+New best: val_acc=0.1140 (epoch 10) -> runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\best.pt
+Total time: 8742.6s
+Saved log: runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\log.txt
+Saved metrics: runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\metrics.csv
+Saved best checkpoint: runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\best.pt (best_val_acc=0.1140)
+Saved checkpoint: runs\pilot\transnext_final_pilot_transnext_micro_pt_out224_lowres16_lr1e-03\model_last.pt

@@ -1,0 +1,43 @@
+Device: cpu
+Model: resnet50, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=8
+Train subset=5000, Val subset=2000
+Epochs=20, batch_size=32, lr=0.001
+Group: official
+Saved run config: runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\run_config.txt
+Epoch 1/20 | Train: loss=2.2055, acc=0.1730 | Val: loss=2.1826, acc=0.2440
+New best: val_acc=0.2440 (epoch 1) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 2/20 | Train: loss=1.9362, acc=0.2792 | Val: loss=1.9369, acc=0.3060
+New best: val_acc=0.3060 (epoch 2) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 3/20 | Train: loss=1.7896, acc=0.3442 | Val: loss=1.7778, acc=0.3505
+New best: val_acc=0.3505 (epoch 3) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 4/20 | Train: loss=1.6940, acc=0.3778 | Val: loss=1.6828, acc=0.3805
+New best: val_acc=0.3805 (epoch 4) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 5/20 | Train: loss=1.6243, acc=0.4178 | Val: loss=1.6670, acc=0.4050
+New best: val_acc=0.4050 (epoch 5) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 6/20 | Train: loss=1.5175, acc=0.4532 | Val: loss=1.6134, acc=0.4175
+New best: val_acc=0.4175 (epoch 6) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 7/20 | Train: loss=1.4449, acc=0.4806 | Val: loss=1.6056, acc=0.4175
+Epoch 8/20 | Train: loss=1.3488, acc=0.5186 | Val: loss=1.6171, acc=0.4465
+New best: val_acc=0.4465 (epoch 8) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 9/20 | Train: loss=1.3145, acc=0.5270 | Val: loss=1.6040, acc=0.4560
+New best: val_acc=0.4560 (epoch 9) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 10/20 | Train: loss=1.2442, acc=0.5728 | Val: loss=1.6052, acc=0.4495
+Epoch 11/20 | Train: loss=1.1323, acc=0.6010 | Val: loss=1.6352, acc=0.4465
+Epoch 12/20 | Train: loss=1.0767, acc=0.6238 | Val: loss=1.6340, acc=0.4660
+New best: val_acc=0.4660 (epoch 12) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 13/20 | Train: loss=0.9730, acc=0.6614 | Val: loss=1.6321, acc=0.4730
+New best: val_acc=0.4730 (epoch 13) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 14/20 | Train: loss=0.9051, acc=0.6808 | Val: loss=1.7166, acc=0.4595
+Epoch 15/20 | Train: loss=0.8511, acc=0.7052 | Val: loss=1.8114, acc=0.4475
+Epoch 16/20 | Train: loss=0.7675, acc=0.7354 | Val: loss=1.8722, acc=0.4535
+Epoch 17/20 | Train: loss=0.7372, acc=0.7442 | Val: loss=1.7706, acc=0.4660
+Epoch 18/20 | Train: loss=0.6732, acc=0.7670 | Val: loss=1.8969, acc=0.4795
+New best: val_acc=0.4795 (epoch 18) -> runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt
+Epoch 19/20 | Train: loss=0.6105, acc=0.7942 | Val: loss=1.8830, acc=0.4600
+Epoch 20/20 | Train: loss=0.5685, acc=0.8058 | Val: loss=1.9229, acc=0.4730
+Total time: 1890.9s
+Saved log: runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\log.txt
+Saved metrics: runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\metrics.csv
+Saved best checkpoint: runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\best.pt (best_val_acc=0.4795)
+Saved checkpoint: runs\official\baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712\model_last.pt

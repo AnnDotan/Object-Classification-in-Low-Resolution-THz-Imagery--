@@ -1,0 +1,14 @@
+Device: cpu
+Model: transnext_micro, pretrained=True
+Data: CIFAR10 degraded | out_size=224, low_res=16
+Train subset=32, Val subset=16
+Epochs=1, batch_size=2, lr=0.001
+Group: pilot
+Saved run config: runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\run_config.txt
+Epoch 1/1 | Train: loss=2.5172, acc=0.0312 | Val: loss=2.3509, acc=0.1250
+New best: val_acc=0.1250 (epoch 1) -> runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\best.pt
+Total time: 15.0s
+Saved log: runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\log.txt
+Saved metrics: runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\metrics.csv
+Saved best checkpoint: runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\best.pt (best_val_acc=0.1250)
+Saved checkpoint: runs\pilot\transnext_smoke_pretrained_transnext_micro_pt_out224_lowres16_lr1e-03\model_last.pt

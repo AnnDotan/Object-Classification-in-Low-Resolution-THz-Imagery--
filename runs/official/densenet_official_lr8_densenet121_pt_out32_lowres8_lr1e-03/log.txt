@@ -1,0 +1,40 @@
+Device: cpu
+Model: densenet121, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=8
+Train subset=5000, Val subset=2000
+Epochs=20, batch_size=32, lr=0.001
+Group: official
+Saved run config: runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\run_config.txt
+Epoch 1/20 | Train: loss=2.1474, acc=0.2456 | Val: loss=2.3549, acc=0.3170
+New best: val_acc=0.3170 (epoch 1) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 2/20 | Train: loss=1.8783, acc=0.3390 | Val: loss=1.9215, acc=0.3425
+New best: val_acc=0.3425 (epoch 2) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 3/20 | Train: loss=1.7273, acc=0.3864 | Val: loss=1.8332, acc=0.3830
+New best: val_acc=0.3830 (epoch 3) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 4/20 | Train: loss=1.5885, acc=0.4384 | Val: loss=1.7081, acc=0.4180
+New best: val_acc=0.4180 (epoch 4) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 5/20 | Train: loss=1.4818, acc=0.4758 | Val: loss=1.6186, acc=0.4385
+New best: val_acc=0.4385 (epoch 5) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 6/20 | Train: loss=1.3931, acc=0.5040 | Val: loss=1.6483, acc=0.4340
+Epoch 7/20 | Train: loss=1.3301, acc=0.5386 | Val: loss=1.6286, acc=0.4425
+New best: val_acc=0.4425 (epoch 7) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 8/20 | Train: loss=1.2421, acc=0.5634 | Val: loss=1.7643, acc=0.4290
+Epoch 9/20 | Train: loss=1.1755, acc=0.5868 | Val: loss=1.6715, acc=0.4460
+New best: val_acc=0.4460 (epoch 9) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 10/20 | Train: loss=1.1028, acc=0.6138 | Val: loss=1.8247, acc=0.4460
+Epoch 11/20 | Train: loss=1.0476, acc=0.6374 | Val: loss=1.8583, acc=0.4340
+Epoch 12/20 | Train: loss=0.9824, acc=0.6590 | Val: loss=1.9518, acc=0.4315
+Epoch 13/20 | Train: loss=0.9197, acc=0.6848 | Val: loss=1.9024, acc=0.4395
+Epoch 14/20 | Train: loss=0.9000, acc=0.6826 | Val: loss=1.9169, acc=0.4415
+Epoch 15/20 | Train: loss=0.8400, acc=0.7182 | Val: loss=2.0161, acc=0.4450
+Epoch 16/20 | Train: loss=0.7520, acc=0.7406 | Val: loss=2.0598, acc=0.4415
+Epoch 17/20 | Train: loss=0.7044, acc=0.7614 | Val: loss=2.0730, acc=0.4350
+Epoch 18/20 | Train: loss=0.6191, acc=0.7902 | Val: loss=2.2735, acc=0.4405
+Epoch 19/20 | Train: loss=0.6139, acc=0.7946 | Val: loss=2.1981, acc=0.4505
+New best: val_acc=0.4505 (epoch 19) -> runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt
+Epoch 20/20 | Train: loss=0.5325, acc=0.8188 | Val: loss=2.2039, acc=0.4420
+Total time: 5105.6s
+Saved log: runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\log.txt
+Saved metrics: runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\metrics.csv
+Saved best checkpoint: runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\best.pt (best_val_acc=0.4505)
+Saved checkpoint: runs\official\densenet_official_lr8_densenet121_pt_out32_lowres8_lr1e-03_20260310-201351\model_last.pt

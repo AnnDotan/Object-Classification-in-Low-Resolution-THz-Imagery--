@@ -1,0 +1,11 @@
+device=cpu
+model_name=resnet50
+pretrained=True
+out_size=32
+low_res=32
+epochs=5
+batch_size=32
+train_subset=5000
+val_subset=2000
+lr=0.001
+tag=cmp_lr32

@@ -1,0 +1,13 @@
+device=cpu
+model_name=resnet50
+pretrained=True
+out_size=32
+low_res=8
+epochs=20
+batch_size=32
+train_subset=5000
+val_subset=2000
+lr=0.001
+tag=baseline_official_lr8
+group=official
+run_name=baseline_official_lr8_resnet50_pt_out32_lowres8_lr1e-03_20260310-191712

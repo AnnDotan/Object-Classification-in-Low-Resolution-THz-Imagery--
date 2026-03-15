@@ -1,0 +1,9 @@
+Device: cpu
+Model: resnet50, pretrained=True
+Data: CIFAR10 degraded | out_size=32, low_res=16
+Train subset=2000, Val subset=1000
+Epochs=1, batch_size=32
+Epoch 1/1 | Train: loss=2.2680, acc=0.1415 | Val: loss=3.1102, acc=0.1880
+Total time: 35.2s
+Saved log: runs\resnet50_pt_out32_lr16_20260308-170438\log.txt
+Saved checkpoint: runs\resnet50_pt_out32_lr16_20260308-170438\model_last.pt

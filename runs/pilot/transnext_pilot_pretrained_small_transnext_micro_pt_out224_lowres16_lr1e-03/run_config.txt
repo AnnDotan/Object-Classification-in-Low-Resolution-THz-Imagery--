@@ -1,0 +1,13 @@
+device=cpu
+model_name=transnext_micro
+pretrained=True
+out_size=224
+low_res=16
+epochs=3
+batch_size=2
+train_subset=256
+val_subset=128
+lr=0.001
+tag=transnext_pilot_pretrained_small
+group=pilot
+run_name=transnext_pilot_pretrained_small_transnext_micro_pt_out224_lowres16_lr1e-03
