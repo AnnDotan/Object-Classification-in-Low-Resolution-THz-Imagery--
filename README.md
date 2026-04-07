@@ -14,6 +14,18 @@ The repository includes:
 - robustness analysis under degraded image conditions
 - experiment outputs, logs, and saved artifacts
 
+## Key Finding (STAGE 1 Complete)
+
+**TransNeXt with Linear Probe significantly outperforms CNN baselines:**
+
+| Model | Low-Res=16 | Improvement |
+|-------|-----------|-------------|
+| **TransNeXt (Linear Probe)** | **68.75%** | **+14.25%** |
+| ResNet50 | 54.50% | baseline |
+| DenseNet121 | 51.15% | -3.35% |
+
+**Conclusion**: Pretrained TransNeXt features are highly effective for degraded images. Frozen backbone with head-only training outperforms full fine-tuning (10-11%).
+
 ## Motivation
 
 In practical sensing systems, especially under constrained or noisy imaging conditions, model performance may degrade significantly. This project studies that behavior systematically by simulating difficult visual conditions and measuring how different architectures respond in terms of:
@@ -122,9 +134,8 @@ A typical workflow in this project is:
 
 ## Contributors
 
-- Ann Dotan
 - Itamar Bahat
 
 ## License
 
-This project is intended for academic and research use unless stated otherwise.
+This project is intended for academic and research use.
