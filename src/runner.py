@@ -91,6 +91,7 @@ def run_experiment(
     tag: str = "",
     group: str = "pilot",
     freeze_backbone: bool = False,
+    backbone_lr: float | None = None,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -133,6 +134,7 @@ def run_experiment(
         f.write(f"train_subset={train_subset}\n")
         f.write(f"val_subset={val_subset}\n")
         f.write(f"lr={lr}\n")
+        f.write(f"backbone_lr={backbone_lr}\n")
         f.write(f"tag={tag}\n")
         f.write(f"group={group}\n")
         f.write(f"run_name={run_name}\n")
@@ -142,7 +144,7 @@ def run_experiment(
     log(f"Model: {model_name}, pretrained={pretrained}")
     log(f"Data: CIFAR10 degraded | out_size={out_size}, low_res={low_res}")
     log(f"Train subset={train_subset}, Val subset={val_subset}")
-    log(f"Epochs={epochs}, batch_size={batch_size}, lr={lr}")
+    log(f"Epochs={epochs}, batch_size={batch_size}, lr={lr}, backbone_lr={backbone_lr}")
     log(f"Group: {group}")
     log(f"Freeze backbone: {freeze_backbone}")
     log(f"Saved run config: {run_config_path}")
@@ -209,8 +211,16 @@ def run_experiment(
 
     criterion = nn.CrossEntropyLoss()
 
-    trainable_params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.AdamW(trainable_params, lr=lr)
+    if backbone_lr is not None:
+        backbone_params = [p for n, p in model.named_parameters() if 'head' not in n and p.requires_grad]
+        head_params = [p for n, p in model.named_parameters() if 'head' in n and p.requires_grad]
+        optimizer = torch.optim.AdamW([
+            {'params': backbone_params, 'lr': backbone_lr},
+            {'params': head_params, 'lr': lr}
+        ])
+    else:
+        trainable_params = [p for p in model.parameters() if p.requires_grad]
+        optimizer = torch.optim.AdamW(trainable_params, lr=lr)
 
     # metrics + best tracking
     metrics_path = run_dir / "metrics.csv"
@@ -290,6 +300,7 @@ def parse_args():
     p.add_argument("--train_subset", type=int, default=2000)
     p.add_argument("--val_subset", type=int, default=1000)
     p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--backbone_lr", type=float, default=None)
     p.add_argument("--tag", type=str, default="")
     p.add_argument("--group", type=str, default="pilot", choices=["pilot", "official"])
     p.add_argument("--freeze_backbone", action="store_true")
@@ -311,4 +322,5 @@ def main():
         tag=args.tag,
         group=args.group,
         freeze_backbone=args.freeze_backbone,
+        backbone_lr=args.backbone_lr,
     )
