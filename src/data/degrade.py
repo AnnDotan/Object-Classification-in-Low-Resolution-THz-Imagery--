@@ -19,6 +19,10 @@ class DegradeConfig:
     blur_kernel: int = 5  # odd number, e.g. 3/5/7
     blur_sigma: float = 1.0
 
+    # Degradation type isolation (for robustness analysis)
+    # degradation_type: 'all' (default), 'downsampling', 'blur', 'noise'
+    degradation_type: str = 'all'  # 'all', 'downsampling', 'blur', 'noise'
+
 
 def _gaussian_blur_torch(img: torch.Tensor, kernel_size: int, sigma: float) -> torch.Tensor:
     """
@@ -52,30 +56,44 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     """
     img: [C,H,W] float tensor in [0,1]
     returns: [C,out_size,out_size] float in [0,1]
+
+    Supports degradation type isolation:
+    - 'all': Apply all degradations (default)
+    - 'downsampling': Only low-resolution degradation
+    - 'blur': Only Gaussian blur
+    - 'noise': Only Gaussian noise
     """
     if seed is not None:
         random.seed(seed)
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    # 1) optional grayscale
-    if img.shape[0] == 3 and random.random() < cfg.p_grayscale:
-        gray = (0.2989 * img[0] + 0.5870 * img[1] + 0.1140 * img[2]).clamp(0, 1)
-        img = torch.stack([gray, gray, gray], dim=0)
+    # Only apply grayscale for 'all' degradation type
+    if cfg.degradation_type == 'all':
+        # 1) optional grayscale
+        if img.shape[0] == 3 and random.random() < cfg.p_grayscale:
+            gray = (0.2989 * img[0] + 0.5870 * img[1] + 0.1140 * img[2]).clamp(0, 1)
+            img = torch.stack([gray, gray, gray], dim=0)
 
     # 2) downsample to low_res then upsample to out_size
-    img = img.unsqueeze(0)  # [1,C,H,W]
-    img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
-    img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bilinear", align_corners=False)
-    img = img.squeeze(0)
+    # Apply for: 'all' or 'downsampling'
+    if cfg.degradation_type in ['all', 'downsampling']:
+        img = img.unsqueeze(0)  # [1,C,H,W]
+        img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
+        img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bilinear", align_corners=False)
+        img = img.squeeze(0)
 
     # 3) blur
-    if cfg.blur_kernel and cfg.blur_kernel > 1:
-        img = _gaussian_blur_torch(img, kernel_size=cfg.blur_kernel, sigma=cfg.blur_sigma)
+    # Apply for: 'all' or 'blur'
+    if cfg.degradation_type in ['all', 'blur']:
+        if cfg.blur_kernel and cfg.blur_kernel > 1:
+            img = _gaussian_blur_torch(img, kernel_size=cfg.blur_kernel, sigma=cfg.blur_sigma)
 
     # 4) additive gaussian noise
-    if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
-        noise = torch.randn_like(img) * cfg.gaussian_noise_std
-        img = (img + noise).clamp(0, 1)
+    # Apply for: 'all' or 'noise'
+    if cfg.degradation_type in ['all', 'noise']:
+        if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
+            noise = torch.randn_like(img) * cfg.gaussian_noise_std
+            img = (img + noise).clamp(0, 1)
 
     return img

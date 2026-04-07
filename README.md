@@ -26,6 +26,16 @@ The repository includes:
 
 **Conclusion**: Pretrained TransNeXt features are highly effective for degraded images. Frozen backbone with head-only training outperforms full fine-tuning (10-11%).
 
+## Degradation Type Isolation (STAGE 2)
+
+**New Feature**: Separate analysis of robustness to specific degradation types:
+
+- **Downsampling**: Low-resolution information loss
+- **Blur**: Edge and detail loss
+- **Noise**: Random signal corruption
+
+This enables understanding which degradation types each model handles best, informing design decisions for robust systems.
+
 ## Motivation
 
 In practical sensing systems, especially under constrained or noisy imaging conditions, model performance may degrade significantly. This project studies that behavior systematically by simulating difficult visual conditions and measuring how different architectures respond in terms of:
@@ -99,11 +109,37 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Basic Training
+
 Run the main project entry point:
 
 ```bash
 python main.py
 ```
+
+### Advanced Usage
+
+**Specify model and degradation:**
+
+```bash
+# Train ResNet50 with all degradation types (default)
+python main.py --model resnet50 --pretrained --epochs 20
+
+# Train TransNeXt with only blur degradation
+python main.py --model transnext_micro --pretrained --degradation_type blur --epochs 20
+
+# Train DenseNet with only noise degradation
+python main.py --model densenet121 --pretrained --degradation_type noise --epochs 20
+
+# Train with only downsampling (low resolution)
+python main.py --model resnet50 --degradation_type downsampling --epochs 20
+```
+
+**Degradation types:**
+- `all` (default): Downsampling + Blur + Noise + optional Grayscale
+- `downsampling`: Low-resolution information loss only
+- `blur`: Gaussian blur only
+- `noise`: Gaussian noise only
 
 If your workflow uses additional scripts inside `src/`, run them from the repository root after activating the virtual environment.
 
@@ -124,13 +160,21 @@ A typical workflow in this project is:
 - `.venv/` should remain local and should not be committed
 - Large model files such as `.pt` and `.pth` may require Git LFS
 
+## Improvements Implemented
+
+- ✅ Add pretrained model loading options (already exists)
+- ✅ Add automated robustness report generation (visualize_run.py)
+- ✅ Add visual summaries for degradation-performance curves (top_runs_comparison.py)
+- ✅ Add clear CLI arguments (--degradation_type, --backbone_lr, etc.)
+- ✅ Add degradation type isolation for robustness analysis
+
 ## Future Improvements
 
-- Add configuration files for experiments
-- Add pretrained model loading options
-- Add automated robustness report generation
-- Add visual summaries for degradation-performance curves
-- Add clear CLI arguments and reproducible experiment presets
+- Add configuration files (YAML/JSON) for experiments
+- Add experiment presets for common scenarios
+- Add interactive HTML dashboard for results
+- Add additional degradation types (motion blur, color noise)
+- Add automated report generation (PDF)
 
 ## Contributors
 

@@ -21,6 +21,7 @@ class DataConfig:
     low_res: int = 16
     train: bool = True
     download: bool = True
+    degradation_type: str = "all"  # "all", "downsampling", "blur", "noise"
 
 
 class THzLikeCIFAR10(Dataset):
@@ -40,6 +41,7 @@ class THzLikeCIFAR10(Dataset):
         self.deg_cfg = DegradeConfig(
             low_res=cfg.low_res,
             out_size=cfg.out_size,
+            degradation_type=cfg.degradation_type,
         )
 
         self.norm = transforms.Normalize(

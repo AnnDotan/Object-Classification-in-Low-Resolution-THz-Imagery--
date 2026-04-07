@@ -93,6 +93,7 @@ def run_experiment(
     group: str = "pilot",
     freeze_backbone: bool = False,
     backbone_lr: float | None = None,
+    degradation_type: str = "all",
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -136,6 +137,7 @@ def run_experiment(
         f.write(f"val_subset={val_subset}\n")
         f.write(f"lr={lr}\n")
         f.write(f"backbone_lr={backbone_lr}\n")
+        f.write(f"degradation_type={degradation_type}\n")
         f.write(f"tag={tag}\n")
         f.write(f"group={group}\n")
         f.write(f"run_name={run_name}\n")
@@ -146,6 +148,7 @@ def run_experiment(
     log(f"Data: CIFAR10 degraded | out_size={out_size}, low_res={low_res}")
     log(f"Train subset={train_subset}, Val subset={val_subset}")
     log(f"Epochs={epochs}, batch_size={batch_size}, lr={lr}, backbone_lr={backbone_lr}")
+    log(f"Degradation type: {degradation_type}")
     log(f"Group: {group}")
     log(f"Freeze backbone: {freeze_backbone}")
     log(f"Saved run config: {run_config_path}")
@@ -155,8 +158,8 @@ def run_experiment(
         out_size = 224
 
     # data
-    cfg_train = DataConfig(train=True, out_size=out_size, low_res=low_res, root="./data")
-    cfg_val = DataConfig(train=False, out_size=out_size, low_res=low_res, root="./data")
+    cfg_train = DataConfig(train=True, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type)
+    cfg_val = DataConfig(train=False, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type)
 
     train_ds = THzLikeCIFAR10(cfg_train)
     val_ds = THzLikeCIFAR10(cfg_val)
@@ -311,6 +314,9 @@ def parse_args():
     p.add_argument("--val_subset", type=int, default=1000)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--backbone_lr", type=float, default=None)
+    p.add_argument("--degradation_type", type=str, default="all",
+                  choices=["all", "downsampling", "blur", "noise"],
+                  help="Type of degradation: all, downsampling, blur, or noise")
     p.add_argument("--tag", type=str, default="")
     p.add_argument("--group", type=str, default="pilot", choices=["pilot", "official"])
     p.add_argument("--freeze_backbone", action="store_true")
@@ -333,4 +339,5 @@ def main():
         group=args.group,
         freeze_backbone=args.freeze_backbone,
         backbone_lr=args.backbone_lr,
+        degradation_type=args.degradation_type,
     )
