@@ -1,0 +1,62 @@
+# --- Python Specific ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Virtual Environments ---
+venv/
+.venv/
+ENV/
+
+# --- VS Code Specific ---
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# --- Data & Models (IMPORTANT for Token Saving) ---
+# נרצה למנוע מה-AI לקרוא קבצי מידע כבדים או משקלים של מודלים
+data/
+datasets/
+raw_data/
+*.zip
+*.tar.gz
+*.rar
+
+# משקלים של מודלים (PyTorch, TensorFlow, etc.)
+*.pth
+*.pt
+*.h5
+*.weights
+*.pkl
+*.npy
+
+# --- Outputs & Logs ---
+logs/
+results/
+outputs/
+*.log
+.DS_Store (Mac specific)
