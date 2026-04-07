@@ -315,8 +315,8 @@ def parse_args():
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--backbone_lr", type=float, default=None)
     p.add_argument("--degradation_type", type=str, default="all",
-                  choices=["all", "downsampling", "blur", "noise"],
-                  help="Type of degradation: all, downsampling, blur, or noise")
+                  choices=["all", "downsampling", "blur", "noise", "salt_pepper"],
+                  help="Type of degradation: all, downsampling, blur, noise, or salt_pepper")
     p.add_argument("--tag", type=str, default="")
     p.add_argument("--group", type=str, default="pilot", choices=["pilot", "official"])
     p.add_argument("--freeze_backbone", action="store_true")

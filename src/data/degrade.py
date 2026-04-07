@@ -19,9 +19,12 @@ class DegradeConfig:
     blur_kernel: int = 5  # odd number, e.g. 3/5/7
     blur_sigma: float = 1.0
 
+    # Salt-and-pepper noise parameters
+    salt_pepper_amount: float = 0.05  # fraction of pixels affected
+
     # Degradation type isolation (for robustness analysis)
-    # degradation_type: 'all' (default), 'downsampling', 'blur', 'noise'
-    degradation_type: str = 'all'  # 'all', 'downsampling', 'blur', 'noise'
+    # degradation_type: 'all' (default), 'downsampling', 'blur', 'noise', 'salt_pepper'
+    degradation_type: str = 'all'  # 'all', 'downsampling', 'blur', 'noise', 'salt_pepper'
 
 
 def _gaussian_blur_torch(img: torch.Tensor, kernel_size: int, sigma: float) -> torch.Tensor:
@@ -95,5 +98,16 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
         if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
             noise = torch.randn_like(img) * cfg.gaussian_noise_std
             img = (img + noise).clamp(0, 1)
+
+    # 5) salt-and-pepper noise
+    # Apply for: 'all' or 'salt_pepper'
+    if cfg.degradation_type in ['all', 'salt_pepper']:
+        if cfg.salt_pepper_amount and cfg.salt_pepper_amount > 0:
+            mask = torch.rand_like(img[0:1])  # single-channel mask [1,H,W]
+            salt = mask < (cfg.salt_pepper_amount / 2.0)
+            pepper = mask > (1.0 - cfg.salt_pepper_amount / 2.0)
+            img = img.clone()
+            img[:, salt.squeeze(0)] = 1.0   # salt (white)
+            img[:, pepper.squeeze(0)] = 0.0  # pepper (black)
 
     return img
