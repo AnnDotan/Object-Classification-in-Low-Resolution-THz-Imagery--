@@ -13,6 +13,7 @@ The repository includes:
 - model training and evaluation
 - robustness analysis under degraded image conditions
 - experiment outputs, logs, and saved artifacts
+- **interactive HTML dashboards** for real-time results visualization and analysis
 
 ## Key Finding (STAGE 1 Complete)
 
@@ -167,14 +168,29 @@ A typical workflow in this project is:
 - ✅ Add visual summaries for degradation-performance curves (top_runs_comparison.py)
 - ✅ Add clear CLI arguments (--degradation_type, --backbone_lr, etc.)
 - ✅ Add degradation type isolation for robustness analysis
+- ✅ **Add interactive HTML dashboard for results** (see [DASHBOARD_README.md](DASHBOARD_README.md))
+
+## Interactive Results Dashboards
+
+Generate live dashboards to explore experiment results:
+
+```bash
+python src/tools/refresh_dashboards.py
+```
+
+Then open in your browser:
+- **Basic Dashboard**: `artifacts/dashboard.html` - Overview charts, filtering, detailed results
+- **Advanced Dashboard**: `artifacts/dashboard_advanced.html` - Interactive learning curves, top runs analysis
+
+See [DASHBOARD_README.md](DASHBOARD_README.md) for complete documentation.
 
 ## Future Improvements
 
 - Add configuration files (YAML/JSON) for experiments
 - Add experiment presets for common scenarios
-- Add interactive HTML dashboard for results
 - Add additional degradation types (motion blur, color noise)
 - Add automated report generation (PDF)
+- Add side-by-side run comparison in dashboard
 
 ## Contributors
 
