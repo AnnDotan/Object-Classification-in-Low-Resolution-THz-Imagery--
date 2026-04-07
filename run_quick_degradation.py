@@ -32,7 +32,7 @@ def build_command(model: str, degradation_type: str) -> list:
         '--train_subset', '2000',  # SHORT
         '--val_subset', '1000',  # SHORT
         '--lr', '1e-3',
-        '--group', 'quick_runs',
+        '--group', 'pilot',
         '--tag', f'{degradation_type}_quick'
     ]
 
