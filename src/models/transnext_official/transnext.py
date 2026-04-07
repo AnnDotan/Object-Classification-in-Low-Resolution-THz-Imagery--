@@ -20,14 +20,13 @@ from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from timm.models.registry import register_model
 from timm.models.vision_transformer import _cfg
 import math
-import pkg_resources
 
 
 def is_installed(package_name):
     try:
-        pkg_resources.get_distribution(package_name)
+        __import__(package_name)
         return True
-    except pkg_resources.DistributionNotFound:
+    except ImportError:
         return False
 
 
