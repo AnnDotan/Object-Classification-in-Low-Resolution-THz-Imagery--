@@ -21,6 +21,7 @@ import timm
 
 from src.data.datasets import DataConfig, THzLikeCIFAR10
 from src.models.transnext_wrapper import create_transnext_model
+from src.tools.visualize_run import RunVisualizer
 
 def train_one_epoch(model, loader, optimizer, criterion, device: str):
     model.train()
@@ -287,6 +288,15 @@ def run_experiment(
         ckpt_path,
     )
     log(f"Saved checkpoint: {ckpt_path}")
+
+    # Auto-generate learning curve visualizations
+    try:
+        log("\n[VISUALIZE] Generating learning curve visualizations...")
+        visualizer = RunVisualizer(run_dir)
+        visualizer.generate_all()
+        log("[OK] Visualizations complete!")
+    except Exception as e:
+        log(f"[WARN] Visualization failed: {e}")
 
 
 def parse_args():
