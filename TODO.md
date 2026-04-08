@@ -1,230 +1,42 @@
-# TODO – Final Project Execution Plan
-
-## Current Phase
-✅ STAGE 1 COMPLETE → Proceeding to STAGE 2
-
----
+# TODO — Project Execution Plan
 
 ## Deadlines
-
-- Poster & Abstracts: 31/05/2026
-- Final Presentation: 21/06/2026
-- Final Submission: 26/07/2026
-
----
-
-## MAIN OBJECTIVE NOW
-
-Turn the project from:
-"working benchmark"
-
-into:
-"clear scientific conclusion with strong evidence"
+- Poster & Abstract: **31/05/2026**
+- Final Presentation: **21/06/2026**
+- Final Submission: **26/07/2026**
 
 ---
 
-## STAGE 1 – Fix TransNeXt (CRITICAL) ✅ COMPLETE
+## STAGE 1 — TransNeXt Validation ✅ COMPLETE
+- TransNeXt LP: 68.75% vs ResNet50: 54.5% (+14.25%)
+- Frozen backbone + head-only training works best
 
-Goal: determine if TransNeXt is viable
+## STAGE 2 — Controlled Experiments ✅ MOSTLY COMPLETE
+- [x] Official runs: ResNet50, DenseNet121, TransNeXt
+- [x] Combined degradation: DenseNet 80.7%, ResNet 78.8%, TransNeXt 64.2%
+- [x] Single-degradation isolation: 7/9 done (TransNeXt pending)
+- [x] Dashboards with filtering and sample images
+- [ ] Run systematic experiments (3 levels x 3 models) via `run_systematic.py`
 
-Tasks:
+## STAGE 3 — Analysis
+- [ ] Compare model robustness across degradation levels
+- [ ] Explain WHY results occur (feature reuse vs attention)
+- [ ] Write conclusions with supporting evidence
 
-[x] Run head-only experiment
-    - freeze backbone
-    - train classifier only
-    - ✅ RESULT: 68.75% val_acc (epoch 11)
+## STAGE 4 — Poster & Abstract (31/05)
+- [ ] Select best figures (pipeline diagram, degradation examples, comparison graph)
+- [ ] Write abstract (problem, method, results, conclusion)
 
-[x] Run linear probe
-    - extract features
-    - train linear classifier
-    - ✅ GPU-accelerated training on RTX 4050
+## STAGE 5 — Final Experiments (June)
+- [ ] Run missing experiments, verify reproducibility
+- [ ] Lock final results, save best weights
 
-[x] Compare to ResNet baseline
-    - ✅ 68.75% TransNeXt vs 54.5% ResNet50
-    - ✅ 14.25% IMPROVEMENT
+## STAGE 6 — Final Report
+- [ ] Write methodology, experiments, results, discussion
+- [ ] Include plots, tables, comparisons
 
-[x] Answer:
-    → does pretrained TransNeXt contain useful features?
-    → YES! Frozen backbone + head training is highly effective
+## STAGE 7 — Final Presentation (21/06)
+- [ ] Update slides with final results and conclusions
 
-Decision:
-
-✅ SIGNAL EXISTS:
-    → TransNeXt is VIABLE and outperforms baselines
-    → proceed to STAGE 2 with confidence
-    → TransNeXt = PRIMARY MODEL
-
----
-
-## STAGE 2 – Controlled Experiments (IN PROGRESS)
-
-Goal: build strong comparison across degradation levels
-
-Tasks:
-
-[x] Run official experiments for:
-    - ResNet50 ✓
-    - DenseNet121 ✓
-    - TransNeXt ✓ (validated in STAGE 1)
-
-[ ] Complete robustness evaluation:
-    - [x] TransNeXt low_res=16: 68.75% ✓
-    - [ ] TransNeXt low_res=8: (initialize and complete)
-    - [x] ResNet50: 54.5% (low_res=16), 47.95% (low_res=8) ✓
-    - [x] DenseNet121: 51.15% (low_res=16), 45.05% (low_res=8) ✓
-
-[x] Single-degradation isolation experiments:
-    - [x] 9 systematic runs (3 models x 3 types) - 7/9 done
-    - [x] Downsampling-only: ResNet 80.75%, DenseNet 77.40%
-    - [x] Blur-only: DenseNet 66.40%, ResNet 65.65%
-    - [x] Salt & Pepper: ResNet 64.60%, DenseNet 62.05%
-    - [ ] TransNeXt single-deg runs (3 pending)
-
-[x] Generate:
-    - [x] accuracy vs epoch ✓
-    - [x] accuracy vs degradation ✓
-    - [x] robustness curves ✓
-
-[x] Export:
-    - [x] tables (CSV → 56 runs aggregated) ✓
-    - [x] plots (3 publication-ready figures) ✓
-
-[x] Dashboards:
-    - [x] Separate full-pipeline vs single-degradation experiments ✓
-    - [x] Color-coded degradation groups for fair comparison ✓
-    - [x] Sample image viewer (original vs degraded) ✓
-
----
-
-## STAGE 3 – Analysis (VERY IMPORTANT)
-
-Goal: produce real insight
-
-Tasks:
-
-[ ] Compare models:
-    - who is most robust?
-    - where does each fail?
-
-[ ] Analyze:
-    - effect of resolution
-    - effect of noise
-    - behavior trends
-
-[ ] Validate hypothesis:
-    - feature reuse vs attention
-
-[ ] Write conclusions:
-    - NOT just numbers
-    - explain WHY results happen
-
----
-
-## STAGE 4 – Poster & Abstract (DEADLINE: 31/05)
-
-Tasks:
-
-[ ] Select best figures:
-    - pipeline diagram
-    - degradation examples
-    - main comparison graph
-
-[ ] Write abstract:
-    - problem
-    - method
-    - key results
-    - conclusion
-
-[ ] Keep it:
-    - visual
-    - minimal text
-    - strong message
-
----
-
-## STAGE 5 – Final Experiments (JUNE)
-
-Goal: close all gaps
-
-Tasks:
-
-[ ] Run any missing experiments
-[ ] Verify reproducibility
-[ ] Lock final results
-[ ] Save best model weights
-
----
-
-## STAGE 6 – Final Report
-
-Tasks:
-
-[ ] Write:
-    - methodology
-    - experiments
-    - results
-    - discussion
-
-[ ] Include:
-    - plots
-    - tables
-    - comparisons
-
-[ ] Emphasize:
-    - robustness
-    - architecture insight
-
----
-
-## STAGE 7 – Final Presentation (21/06)
-
-Tasks:
-
-[ ] Update slides from progress version
-[ ] Replace:
-    - interim results → final results
-    - open questions → conclusions
-
-[ ] Prepare:
-    - strong narrative
-    - clear takeaway
-
----
-
-## STAGE 8 – Final Submission (26/07)
-
-Tasks:
-
-[ ] Clean repository
-[ ] Organize runs and artifacts
-[ ] Finalize report
-[ ] Submit all materials
-
----
-
-## KEY STRATEGY
-
-DO NOT:
-- waste time on random experiments
-- blindly fine-tune models
-
-DO:
-- run controlled experiments
-- compare fairly
-- extract insight
-
----
-
-## SUCCESS CONDITION
-
-Project is successful if:
-
-- experiments are reproducible
-- comparison is fair
-- conclusions are clear and justified
-
-Even if:
-TransNeXt fails
-
-The project is still strong if:
-you explain WHY
+## STAGE 8 — Final Submission (26/07)
+- [ ] Clean repository, finalize report, submit

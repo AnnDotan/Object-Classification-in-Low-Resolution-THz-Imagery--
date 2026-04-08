@@ -1,196 +1,70 @@
-
-
 # Object Classification in Low-Resolution THz Imagery
 
-A deep learning project for evaluating image classification robustness under simulated low-resolution, high-noise conditions inspired by THz-like imaging constraints.
+Deep learning robustness evaluation under simulated THz-like imaging: low resolution, blur, noise, and grayscale degradation.
 
-## Overview
+## Key Results
 
-This repository presents a framework for analyzing how image classification models perform under challenging visual conditions, including reduced resolution and added noise. The project focuses on benchmarking model robustness, comparing architectures, and organizing reproducible experiments for future development.
+| Model | Combined Degradation | Method |
+|-------|---------------------|--------|
+| **DenseNet121** | **80.7%** | differential LR fine-tuning |
+| ResNet50 | 78.8% | differential LR fine-tuning |
+| TransNeXt Micro | 68.8% | linear probe (frozen backbone) |
 
-The repository includes:
-- dataset preparation and preprocessing
-- model training and evaluation
-- robustness analysis under degraded image conditions
-- experiment outputs, logs, and saved artifacts
-- **interactive HTML dashboards** for real-time results visualization and analysis
+## Quick Start
 
-## Key Finding (STAGE 1 Complete)
+```bash
+# Setup
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
 
-**TransNeXt with Linear Probe significantly outperforms CNN baselines:**
+# Run systematic experiments (3 degradation levels x 3 models)
+python run_systematic.py --level all --mode pilot   # quick test (5 epochs)
+python run_systematic.py --level 2 --mode full      # full training (30 epochs)
 
-| Model | Low-Res=16 | Improvement |
-|-------|-----------|-------------|
-| **TransNeXt (Linear Probe)** | **68.75%** | **+14.25%** |
-| ResNet50 | 54.50% | baseline |
-| DenseNet121 | 51.15% | -3.35% |
+# Generate dashboard
+python src/tools/generate_systematic_dashboard.py
+# Open artifacts/dashboard_systematic.html in browser
 
-**Conclusion**: Pretrained TransNeXt features are highly effective for degraded images. Frozen backbone with head-only training outperforms full fine-tuning (10-11%).
+# Single experiment
+python main.py --model resnet50 --pretrained --epochs 20 --degradation_type all
+```
 
-## Degradation Type Isolation (STAGE 2)
+## Degradation Levels (Systematic)
 
-**New Feature**: Separate analysis of robustness to specific degradation types:
-
-- **Downsampling**: Low-resolution information loss
-- **Blur**: Edge and detail loss
-- **Noise**: Random signal corruption
-
-This enables understanding which degradation types each model handles best, informing design decisions for robust systems.
-
-## Motivation
-
-In practical sensing systems, especially under constrained or noisy imaging conditions, model performance may degrade significantly. This project studies that behavior systematically by simulating difficult visual conditions and measuring how different architectures respond in terms of:
-- classification accuracy
-- robustness trends across degradation levels
-- inference behavior
-- experiment reproducibility
+| Level | Resolution | Blur | Noise | Salt & Pepper |
+|-------|-----------|------|-------|---------------|
+| 1 (Mild) | 16px | k=3, σ=0.5 | std=0.04 | 2% |
+| 2 (Moderate) | 16px | k=5, σ=1.0 | std=0.08 | 5% |
+| 3 (Severe) | 8px | k=7, σ=1.5 | std=0.12 | 8% |
 
 ## Repository Structure
 
-```text
-.
-├── artifacts/                  # Saved outputs, figures, summaries, tables, and model-related artifacts
-├── data/                       # Dataset files and local data resources
-├── docs/                       # Project documentation and supporting material
-├── runs/                       # Training and evaluation runs, checkpoints, and logs
-├── src/                        # Main source code
-├── main.py                     # Main entry point
-├── requirements.txt            # Python dependencies
-└── README.md
+```
+src/                — source code (models, data pipeline, tools)
+run_systematic.py   — systematic experiment launcher
+main.py             — single experiment entry point
+runs/               — experiment outputs and checkpoints
+artifacts/          — dashboards, figures, tables
+scripts/archive/    — old experiment scripts
+docs/               — detailed documentation
 ```
 
-## Main Features
+## Dashboard
 
-- Training and evaluating image classification models in Python
-- Testing model robustness under simulated degradation
-- Comparing multiple architectures under identical conditions
-- Organizing experiment outputs for later analysis
-- Reproducible environment setup with `requirements.txt`
+Interactive HTML dashboard at `artifacts/dashboard_systematic.html`:
+- Original vs degraded sample images per configuration
+- Filterable results tables (by group, model)
+- Learning curves on click
+- Auto-filters incomplete runs and <30% accuracy
 
-## Tech Stack
+Regenerate after new experiments: `python src/tools/generate_systematic_dashboard.py`
 
-- Python
-- PyTorch
-- Torchvision
-- timm
-- NumPy
-- Matplotlib
+## Models
 
-## Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/AnnDotan/Object-Classification-in-Low-Resolution-THz-Imagery.git
-cd Object-Classification-in-Low-Resolution-THz-Imagery
-```
-
-### 2. Create a virtual environment
-
-**Windows**
-
-```bash
-py -3.12 -m venv .venv
-.\.venv\Scripts\activate
-```
-
-**macOS / Linux**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Basic Training
-
-Run the main project entry point:
-
-```bash
-python main.py
-```
-
-### Advanced Usage
-
-**Specify model and degradation:**
-
-```bash
-# Train ResNet50 with all degradation types (default)
-python main.py --model resnet50 --pretrained --epochs 20
-
-# Train TransNeXt with only blur degradation
-python main.py --model transnext_micro --pretrained --degradation_type blur --epochs 20
-
-# Train DenseNet with only noise degradation
-python main.py --model densenet121 --pretrained --degradation_type noise --epochs 20
-
-# Train with only downsampling (low resolution)
-python main.py --model resnet50 --degradation_type downsampling --epochs 20
-```
-
-**Degradation types:**
-- `all` (default): Downsampling + Blur + Noise + optional Grayscale
-- `downsampling`: Low-resolution information loss only
-- `blur`: Gaussian blur only
-- `noise`: Gaussian noise only
-
-If your workflow uses additional scripts inside `src/`, run them from the repository root after activating the virtual environment.
-
-## Expected Workflow
-
-A typical workflow in this project is:
-
-1. Prepare or load the dataset
-2. Apply the desired degradation and preprocessing pipeline
-3. Train or evaluate the selected model
-4. Save logs, outputs, and artifacts
-5. Compare robustness across runs and architectures
-
-## Notes
-
-- `data/` may contain local dataset files that are not always necessary to version-control
-- `runs/` and `artifacts/` may contain large outputs and checkpoints
-- `.venv/` should remain local and should not be committed
-- Large model files such as `.pt` and `.pth` may require Git LFS
-
-## Improvements Implemented
-
-- ✅ Add pretrained model loading options (already exists)
-- ✅ Add automated robustness report generation (visualize_run.py)
-- ✅ Add visual summaries for degradation-performance curves (top_runs_comparison.py)
-- ✅ Add clear CLI arguments (--degradation_type, --backbone_lr, etc.)
-- ✅ Add degradation type isolation for robustness analysis
-- ✅ **Add interactive HTML dashboard for results** (see [DASHBOARD_README.md](DASHBOARD_README.md))
-
-## Interactive Results Dashboards
-
-Generate live dashboards to explore experiment results:
-
-```bash
-python src/tools/refresh_dashboards.py
-```
-
-Then open in your browser:
-- **Basic Dashboard**: `artifacts/dashboard.html` - Overview charts, filtering, detailed results
-- **Advanced Dashboard**: `artifacts/dashboard_advanced.html` - Interactive learning curves, top runs analysis
-
-See [DASHBOARD_README.md](DASHBOARD_README.md) for complete documentation.
-
-## Future Improvements
-
-- Add configuration files (YAML/JSON) for experiments
-- Add experiment presets for common scenarios
-- Add additional degradation types (motion blur, color noise)
-- Add automated report generation (PDF)
-- Add side-by-side run comparison in dashboard
+- **ResNet50** — CNN baseline
+- **DenseNet121** — dense connections for feature reuse
+- **TransNeXt Micro** — aggregated attention (ImageNet pretrained, linear probe)
 
 ## Contributors
 
@@ -198,4 +72,4 @@ See [DASHBOARD_README.md](DASHBOARD_README.md) for complete documentation.
 
 ## License
 
-This project is intended for academic and research use.
+Academic and research use.

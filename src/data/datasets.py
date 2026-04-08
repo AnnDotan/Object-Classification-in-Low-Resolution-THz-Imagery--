@@ -22,6 +22,12 @@ class DataConfig:
     train: bool = True
     download: bool = True
     degradation_type: str = "all"  # "all", "downsampling", "blur", "noise"
+    # Optional custom degradation overrides (None = use DegradeConfig defaults)
+    blur_kernel: int | None = None
+    blur_sigma: float | None = None
+    gaussian_noise_std: float | None = None
+    salt_pepper_amount: float | None = None
+    p_grayscale: float | None = None
 
 
 class THzLikeCIFAR10(Dataset):
@@ -38,11 +44,23 @@ class THzLikeCIFAR10(Dataset):
             transform=self.base_tf,
         )
 
-        self.deg_cfg = DegradeConfig(
+        deg_kwargs = dict(
             low_res=cfg.low_res,
             out_size=cfg.out_size,
             degradation_type=cfg.degradation_type,
         )
+        # Apply custom degradation overrides if provided
+        if cfg.blur_kernel is not None:
+            deg_kwargs["blur_kernel"] = cfg.blur_kernel
+        if cfg.blur_sigma is not None:
+            deg_kwargs["blur_sigma"] = cfg.blur_sigma
+        if cfg.gaussian_noise_std is not None:
+            deg_kwargs["gaussian_noise_std"] = cfg.gaussian_noise_std
+        if cfg.salt_pepper_amount is not None:
+            deg_kwargs["salt_pepper_amount"] = cfg.salt_pepper_amount
+        if cfg.p_grayscale is not None:
+            deg_kwargs["p_grayscale"] = cfg.p_grayscale
+        self.deg_cfg = DegradeConfig(**deg_kwargs)
 
         self.norm = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],

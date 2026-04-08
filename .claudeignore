@@ -1,29 +1,35 @@
-# External & Virtual
+# Large / external
 venv/
 .venv/
 __pycache__/
 .git/
+node_modules/
 
-# Data (large)
+# Data
 data/
 datasets/
 *.zip
 *.tar.gz
 
-# Models & checkpoints
+# Model weights
 *.pth
 *.pt
 *.h5
 *.pkl
 
-# Experiment outputs
+# Experiment outputs (read on demand via tools)
 runs/
 artifacts/
 logs/
-results/
 outputs/
+
+# Old scripts
+scripts/archive/
+
+# Papers
+papers/
 
 # IDE
 .vscode/
 .history/
-.DS_Store
+desktop.ini

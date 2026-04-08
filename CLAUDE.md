@@ -1,255 +1,60 @@
-# Project Context – Low-Resolution Image Classification (THz-like)
+# Project: Low-Resolution Image Classification (THz-like)
 
-## Overview
-This project investigates the robustness of deep learning models for image classification under severe visual degradation, simulating Terahertz (THz) imaging conditions.
-
-The core idea is that standard CNNs rely on high-frequency details that are lost under low resolution, blur, and noise. The project evaluates whether advanced architectures can preserve classification performance under these constraints.
-
----
-
-## Research Question
-How robust can image classification remain when visual information is severely degraded (low resolution, blur, noise, grayscale)?
-
----
-
-## Objectives and Success Criteria
-
-1. **Accuracy on degraded data** ✅ PROGRESSING
-   - Target: Top-1 accuracy ≥ 80%
-   - Current: 68.75% on low_res=16 (significant improvement from 54.5% baseline)
-   - Status: Approaching target with further fine-tuning potential
-
-2. **Robustness** ✅ IN PROGRESS
-   - Target: Accuracy drop ≤ 15% compared to original images
-   - Status: Measuring across low_res=8 and low_res=16
-
-3. **Architecture comparison** ✅ ACHIEVED
-   - Target: Identify model that outperforms ResNet50 (>5%)
-   - Result: **TransNeXt achieves 14.25% improvement** ✓
-   - Baselines: ResNet50 54.5%, DenseNet121 51.15%
-
-4. **Efficiency** ⏳ PENDING
-   - Target: Inference time < 50ms per image (GPU)
-   - Note: GPU infrastructure ready, inference benchmarking next
-
----
-
-## Dataset and Degradation Pipeline
-
-Datasets:
-- CIFAR-10 (primary benchmark)
-- MNIST (optional extension)
-
-Degradation:
-- Downsampling (32 → 16 → 8)
-- Gaussian blur
-- Noise (Gaussian / Speckle)
-- Grayscale
-
-Pipeline:
-Original → Degradation → Upsample → Normalize → Model
-
----
+## Goal
+Evaluate deep learning robustness under severe visual degradation (low resolution, blur, noise, grayscale) simulating THz imaging.
 
 ## Models
+- **ResNet50** — baseline CNN
+- **DenseNet121** — feature reuse CNN
+- **TransNeXt Micro** — aggregated attention (primary model, linear probe)
 
-Baseline:
-- ResNet50
+## Dataset
+CIFAR-10 with degradation pipeline: Original -> Degrade -> Upsample -> Normalize -> Model
 
-Intermediate:
-- DenseNet121 (feature reuse)
+## Current Best Results (combined degradation)
+| Model | Val Acc | Method |
+|-------|---------|--------|
+| DenseNet121 | 80.7% | differential LR fine-tuning |
+| ResNet50 | 78.8% | differential LR fine-tuning |
+| TransNeXt | 68.8% | linear probe (frozen backbone) |
 
-Advanced:
-- TransNeXt (aggregated attention)
+## Experiment System
 
----
-
-## Current Project Status
-
-### ✅ STAGE 1 COMPLETE
-
-DONE:
-- Full repo structure (src, runs, artifacts)
-- Degradation pipeline (downsampling, blur, noise, grayscale)
-- Training pipeline (PyTorch with GPU support)
-- Logging, checkpoints, metrics
-- Summary scripts (summarize_runs.py, plot_experiments.py)
-- Baseline runs (ResNet50, DenseNet121) ✓
-- TransNeXt integration (wrapper + pretrained + GPU) ✓
-- **TransNeXt Linear Probe validation ✓**
-
-RESULTS (STAGE 1):
-- TransNeXt Linear Probe: **68.75%** (low_res=16, epoch 11) ✓
-- ResNet50 baseline: 54.50% (low_res=16)
-- DenseNet121: 51.15% (low_res=16)
-- Improvement: +14.25% vs ResNet50 ✓
-- Accuracy decreases with degradation (as expected)
-- Benchmark is valid and stable
-
-INSIGHT:
-- TransNeXt pretrained features ARE highly useful for degraded images
-- Frozen backbone + head training is effective
-- Full fine-tuning fails (~10%) due to overfitting
-- GPU acceleration (RTX 4050) reduced runtime from hours to ~82 minutes
-- System is stable, reproducible, and ready for STAGE 2
-
----
-
-## Key Achievements
-
-1. **Python 3.14 Compatibility Fix**
-   - Replaced `pkg_resources` with importlib-based check in transnext.py
-   - Enables use of latest Python versions
-
-2. **GPU Acceleration**
-   - Installed PyTorch 2.11 with CUDA 13.0
-   - RTX 4050 support confirmed and working
-   - 10x faster training on GPU
-
-3. **Code Enhancement**
-   - Added `--backbone_lr` parameter for selective fine-tuning
-   - Supports different learning rates for backbone vs head
-   - Ready for STAGE 2 fine-tuning experiments
-
-4. **Analysis Complete**
-   - 3 publication-ready plots generated
-   - Summary table with 38 runs aggregated
-   - Results documentation (RESULTS_SUMMARY.md)
-
----
-
-## Current Focus (STAGE 2)
-
-Tasks IN PROGRESS:
-
-1. Complete TransNeXt low_res=8 experiment
-   - Currently initialized but no epochs recorded
-   - Investigate and restart if needed
-
-2. Build complete robustness curves
-   - Compare across low_res=16 and low_res=8
-   - Measure accuracy drop vs degradation
-
-3. Final analysis and conclusions
-   - Which architecture is most robust?
-   - Under what conditions does each fail?
-   - Why does TransNeXt succeed while fine-tuning fails?
-
-### STAGE 2 Extension: Single-Degradation Type Isolation
-- 9 systematic experiments (3 models x 3 degradation types)
-- Each experiment uses only ONE degradation type (downsampling / blur / salt & pepper)
-- Purpose: understand which degradation type is hardest for each model
-- Results separated from main full-pipeline comparison in dashboards
-- Status: 7/9 completed (TransNeXt pending)
-
----
-
-## Dashboard Architecture
-
-Two interactive HTML dashboards in `artifacts/`:
-
-### Basic Dashboard (`dashboard.html`)
-- Model/degradation comparison charts
-- Filterable results table with color-coded degradation groups
-
-### Advanced Dashboard (`dashboard_advanced.html`)
-- **Main section**: Full-pipeline model comparison (core project goal)
-  - Only includes runs where ALL degradations applied simultaneously
-  - Color-coded rows: same color = same degradation parameters = comparable runs
-- **Extension section**: Single-degradation experiments (separated below divider)
-  - Detailed table with degradation type column
-  - 3x3 systematic grid
-  - Per-model learning curves by degradation type
-- **Sample images**: Both dashboards have "View" buttons showing original vs degraded image per experiment
-
-### Generating Dashboards
+**Systematic runner**: `run_systematic.py` — 3 degradation levels x 3 models with early stopping
 ```bash
-python src/tools/generate_sample_images.py   # Generate sample image data
-python src/tools/generate_dashboard.py        # Basic dashboard
-python src/tools/generate_advanced_dashboard.py  # Advanced dashboard
+python run_systematic.py --level all --mode pilot   # quick test
+python run_systematic.py --level 1,2,3 --mode full  # full training
 ```
 
----
-
-## Next Steps
-
-[ ] Complete TransNeXt low_res=8 experiment (or investigate failure)
-[ ] Generate final robustness comparison plots
-[ ] Write analysis explaining WHY results occur
-[ ] Prepare figures for poster (deadline: 31/05/2026)
-[ ] Final presentation prep (deadline: 21/06/2026)
-
----
+**Dashboard**: `python src/tools/generate_systematic_dashboard.py` -> `artifacts/dashboard_systematic.html`
+- Filters out incomplete runs and <30% accuracy
+- Shows original vs degraded images per config
+- Interactive learning curves
 
 ## Codebase Structure
+```
+src/              — main code (models, data, tools)
+src/data/         — datasets + degradation pipeline (degrade.py, datasets.py)
+src/models/       — model wrappers (transnext_wrapper.py)
+src/tools/        — dashboard generators, summarizers, visualizers
+runs/             — experiment outputs (systematic/, official/, pilot/)
+artifacts/        — dashboards, figures, tables
+scripts/archive/  — old experiment scripts (not active)
+docs/             — detailed documentation
+```
 
-src/ – main code  
-src/models/ – models  
-src/data/ – datasets + degradation  
-src/tools/ – utilities (dashboard generators, summarizers, sample image generator)  
-runs/ – experiments  
-artifacts/ – outputs (dashboards, tables, figures, sample_images.json)  
+## Key Files
+- `src/runner.py` — training loop with early stopping, custom degradation params
+- `src/data/degrade.py` — DegradeConfig: low_res, blur, noise, salt_pepper, grayscale
+- `run_systematic.py` — systematic experiment launcher (3 levels x 3 models)
 
-Each run must include:
-- metrics.csv
-- log.txt
-- run_config.txt (includes degradation_type field for single-deg runs)
-- checkpoints
+## Coding Rules
+- Minimal changes, no rewrites
+- Keep pipeline intact, log everything
+- Same protocol/dataset/degradation across models (fair comparison)
+- Reproducibility first
 
----
-
-## Experiment Rules
-
-- Same protocol across models
-- Same dataset split
-- Same degradation
-- Same preprocessing
-
-Goal: fair comparison only
-
----
-
-## Key Concepts
-
-- Information preservation > depth
-- Low resolution → rely on low-level features
-- Transfer learning may fail under domain shift
-- Robustness measured across degradation severity
-
----
-
-## Coding Guidelines
-
-- Minimal changes (no rewrites)
-- Keep pipeline intact
-- Log everything
-- Ensure reproducibility
-
----
-
-## Experiment Strategy
-
-- Start small (pilot runs)
-- Scale gradually
-- Tag runs clearly
-- Always compare to baseline
-
----
-
-## Analysis Guidelines
-
-- Focus on trends, not single runs
-- Compare across models and degradations
-- Highlight failures clearly
-- Avoid overclaiming
-
----
-
-## Final Goal
-
-Even if TransNeXt fails:
-
-The project is successful if it clearly demonstrates:
-- which architecture is most robust
-- under what conditions
-- supported by strong experiments
+## Deadlines
+- Poster: 31/05/2026
+- Presentation: 21/06/2026
+- Submission: 26/07/2026

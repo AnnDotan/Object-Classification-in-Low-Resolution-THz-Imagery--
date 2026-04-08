@@ -2,7 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.Python
 *.egg-info/
 *.egg
 
@@ -15,12 +14,13 @@ ENV/
 .vscode/
 .history/
 .DS_Store
+desktop.ini
 
 # Jupyter
 .ipynb_checkpoints/
 
 # Data & Models
-data/
+/data/
 datasets/
 raw_data/
 *.zip
@@ -40,3 +40,6 @@ logs/
 results/
 outputs/
 *.log
+
+# Papers (local references)
+papers/

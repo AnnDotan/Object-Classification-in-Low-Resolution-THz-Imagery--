@@ -116,6 +116,13 @@ def run_experiment(
     mixup_alpha: float = 0.0,
     cutmix_alpha: float = 0.0,
     drop_path_rate: float = 0.0,
+    # Custom degradation parameters (override defaults when provided)
+    blur_kernel: int | None = None,
+    blur_sigma: float | None = None,
+    gaussian_noise_std: float | None = None,
+    salt_pepper_amount: float | None = None,
+    p_grayscale: float | None = None,
+    early_stopping_patience: int = 0,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -172,6 +179,12 @@ def run_experiment(
         f.write(f"mixup_alpha={mixup_alpha}\n")
         f.write(f"cutmix_alpha={cutmix_alpha}\n")
         f.write(f"drop_path_rate={drop_path_rate}\n")
+        f.write(f"blur_kernel={blur_kernel}\n")
+        f.write(f"blur_sigma={blur_sigma}\n")
+        f.write(f"gaussian_noise_std={gaussian_noise_std}\n")
+        f.write(f"salt_pepper_amount={salt_pepper_amount}\n")
+        f.write(f"p_grayscale={p_grayscale}\n")
+        f.write(f"early_stopping_patience={early_stopping_patience}\n")
 
     log(f"Device: {device}")
     log(f"Model: {model_name}, pretrained={pretrained}")
@@ -191,9 +204,21 @@ def run_experiment(
         print(f"[INFO] Overriding out_size from {out_size} to 224 for TransNeXt")
         out_size = 224
 
-    # data
-    cfg_train = DataConfig(train=True, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type)
-    cfg_val = DataConfig(train=False, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type)
+    # data – pass custom degradation overrides if provided
+    deg_overrides = {}
+    if blur_kernel is not None:
+        deg_overrides["blur_kernel"] = blur_kernel
+    if blur_sigma is not None:
+        deg_overrides["blur_sigma"] = blur_sigma
+    if gaussian_noise_std is not None:
+        deg_overrides["gaussian_noise_std"] = gaussian_noise_std
+    if salt_pepper_amount is not None:
+        deg_overrides["salt_pepper_amount"] = salt_pepper_amount
+    if p_grayscale is not None:
+        deg_overrides["p_grayscale"] = p_grayscale
+
+    cfg_train = DataConfig(train=True, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
+    cfg_val = DataConfig(train=False, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
 
     train_ds = THzLikeCIFAR10(cfg_train)
     val_ds = THzLikeCIFAR10(cfg_val)
@@ -297,6 +322,7 @@ def run_experiment(
 
     best_val_acc = -1.0
     best_path = run_dir / "best.pt"
+    epochs_without_improvement = 0
 
     t0 = time.time()
     for ep in range(1, epochs + 1):
@@ -323,6 +349,7 @@ def run_experiment(
 
         if va_acc > best_val_acc:
             best_val_acc = va_acc
+            epochs_without_improvement = 0
             torch.save(
                 {
                     "model": model.state_dict(),
@@ -339,6 +366,14 @@ def run_experiment(
                 best_path,
             )
             log(f"New best: val_acc={best_val_acc:.4f} (epoch {ep}) -> {best_path}")
+        else:
+            epochs_without_improvement += 1
+
+        # Early stopping
+        if early_stopping_patience > 0 and epochs_without_improvement >= early_stopping_patience:
+            log(f"[EARLY STOP] No improvement for {early_stopping_patience} epochs. "
+                f"Best val_acc={best_val_acc:.4f}. Stopping at epoch {ep}.")
+            break
 
     dt = time.time() - t0
     log(f"Total time: {dt:.1f}s")
