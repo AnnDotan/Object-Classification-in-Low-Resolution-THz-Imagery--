@@ -164,7 +164,7 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
     models = sorted(set(r.get("model_name", "") for r in runs if r.get("model_name")))
     completed_runs = [r for r in runs if r.get("best_val_acc") is not None]
 
-    # Enrich runs with degradation config key for sample images
+    # Enrich runs with degradation config key and strength details
     for r in runs:
         run_dir = r.get("run_dir", "")
         low_res = r.get("low_res", "16")
@@ -172,6 +172,37 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         cfg_data = get_run_config(run_dir)
         deg_type = cfg_data.get("degradation_type", "all")
         r["_config_key"] = make_config_key(low_res, out_size, deg_type) if low_res and out_size else ""
+        r["_deg_type"] = deg_type
+        # Build degradation strength details based on active degradation type
+        # Defaults from DegradeConfig
+        lr_val = int(low_res) if low_res and low_res.isdigit() else 0
+        details = {}
+        if deg_type in ("all", "downsampling"):
+            details["low_res"] = lr_val
+        if deg_type in ("all", "blur"):
+            details["blur_kernel"] = 5
+            details["blur_sigma"] = 1.0
+        if deg_type in ("all", "noise"):
+            details["noise_std"] = 0.08
+        if deg_type in ("all", "salt_pepper"):
+            details["salt_pepper"] = 0.05
+        if deg_type == "all":
+            details["p_grayscale"] = 0.3
+        r["_deg_details"] = details
+        # Compute a single "degradation severity" score for sorting
+        # Lower low_res = more severe; more active degradations = more severe
+        severity = 0.0
+        if "low_res" in details and details["low_res"] > 0:
+            severity += (32.0 / details["low_res"])  # lr=8->4, lr=16->2, lr=32->1
+        if "blur_kernel" in details:
+            severity += details["blur_kernel"] * details["blur_sigma"]
+        if "noise_std" in details:
+            severity += details["noise_std"] * 50  # 0.08*50=4
+        if "salt_pepper" in details:
+            severity += details["salt_pepper"] * 50  # 0.05*50=2.5
+        if "p_grayscale" in details:
+            severity += details["p_grayscale"] * 3  # 0.3*3=0.9
+        r["_deg_severity"] = round(severity, 2)
 
     # Classify runs into full-pipeline vs single-degradation
     full_pipeline_runs = []
@@ -687,6 +718,10 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
                         </select>
                         <button onclick="filterTable()">Filter</button>
                         <button onclick="resetFilters()" style="background:#999;">Reset</button>
+                        <span style="margin-left:15px; font-size:12px; color:#666;">Sort by:</span>
+                        <button onclick="sortTable('config')" style="background:#43a047; font-size:11px; padding:5px 10px;">Config Group</button>
+                        <button onclick="sortTable('severity')" style="background:#e65100; font-size:11px; padding:5px 10px;">Severity</button>
+                        <button onclick="sortTable('accuracy')" style="background:#1565c0; font-size:11px; padding:5px 10px;">Accuracy</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -697,9 +732,9 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
                                 <th>Run Name</th>
                                 <th>Model</th>
                                 <th>Degradation Config</th>
+                                <th>Degradation Details</th>
+                                <th>Severity</th>
                                 <th>Best Val Acc</th>
-                                <th>Out Size</th>
-                                <th>Batch</th>
                                 <th>Epochs</th>
                                 <th>Sample</th>
                             </tr>
@@ -970,17 +1005,42 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             return `lr=${{m[1]}} out=${{m[2]}} ${{deg}}`;
         }}
 
+        function degDetailsToHtml(d) {{
+            if (!d || Object.keys(d).length === 0) return '-';
+            const parts = [];
+            if (d.low_res !== undefined) parts.push(`<span title="Downsampling resolution">DS=${{d.low_res}}</span>`);
+            if (d.blur_kernel !== undefined) parts.push(`<span title="Blur kernel=${{d.blur_kernel}} sigma=${{d.blur_sigma}}">Blur=${{d.blur_kernel}}/${{d.blur_sigma}}</span>`);
+            if (d.noise_std !== undefined) parts.push(`<span title="Gaussian noise std=${{d.noise_std}}">Noise=${{d.noise_std}}</span>`);
+            if (d.salt_pepper !== undefined) parts.push(`<span title="Salt & pepper amount=${{d.salt_pepper}}">S&P=${{d.salt_pepper}}</span>`);
+            if (d.p_grayscale !== undefined) parts.push(`<span title="Grayscale probability=${{d.p_grayscale}}">Gray=${{d.p_grayscale}}</span>`);
+            return parts.join(' <small style="color:#ccc">|</small> ');
+        }}
+
+        let currentSortMode = 'config';
+
+        function sortTable(mode) {{
+            currentSortMode = mode;
+            filterTable();
+        }}
+
         function populateTable(data) {{
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            // Sort by config key so groups are together
             const sorted = [...data].sort((a, b) => {{
-                const ka = a._config_key || 'zzz';
-                const kb = b._config_key || 'zzz';
-                if (ka !== kb) return ka.localeCompare(kb);
-                const aa = a.best_val_acc || 0;
-                const ab = b.best_val_acc || 0;
-                return ab - aa;
+                if (currentSortMode === 'severity') {{
+                    const sa = a._deg_severity || 0;
+                    const sb = b._deg_severity || 0;
+                    if (sa !== sb) return sb - sa;
+                    return (b.best_val_acc || 0) - (a.best_val_acc || 0);
+                }} else if (currentSortMode === 'accuracy') {{
+                    return (b.best_val_acc || 0) - (a.best_val_acc || 0);
+                }} else {{
+                    // config group
+                    const ka = a._config_key || 'zzz';
+                    const kb = b._config_key || 'zzz';
+                    if (ka !== kb) return ka.localeCompare(kb);
+                    return (b.best_val_acc || 0) - (a.best_val_acc || 0);
+                }}
             }});
             const keyMap = {{}};
             sorted.forEach(run => {{
@@ -997,14 +1057,16 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
                 const sampleBtn = (ck && sampleImages[ck])
                     ? `<button class="btn-sample" onclick="showSampleModal('${{ck}}')">View</button>`
                     : '-';
+                const sev = run._deg_severity || 0;
+                const sevColor = sev >= 12 ? '#c62828' : sev >= 8 ? '#f57c00' : sev >= 4 ? '#1976d2' : '#666';
                 tr.innerHTML = `
                     <td><span class="badge badge-${{run.group}}">${{run.group}}</span></td>
                     <td><small title="${{run.run_name}}">${{run.run_name.substring(0,45)}}</small></td>
                     <td><strong>${{run.model_name || '-'}}</strong></td>
                     <td><code>${{configKeyToLabel(ck)}}</code></td>
+                    <td style="font-size:11px;">${{degDetailsToHtml(run._deg_details)}}</td>
+                    <td style="font-weight:bold; color:${{sevColor}}">${{sev.toFixed(1)}}</td>
                     <td class="acc-cell ${{accColor}}">${{run.best_val_acc !== null ? (run.best_val_acc*100).toFixed(2)+'%' : '-'}}</td>
-                    <td>${{run.out_size || '-'}}</td>
-                    <td>${{run.batch_size || '-'}}</td>
                     <td>${{run.epochs || '-'}}</td>
                     <td>${{sampleBtn}}</td>`;
                 tbody.appendChild(tr);
