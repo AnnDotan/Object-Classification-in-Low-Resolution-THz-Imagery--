@@ -1232,6 +1232,8 @@ def main():
         return
     print("[GENERATE] Generating advanced dashboard...")
     runs = load_run_summary(csv_path)
+    # Filter: minimum 10 epochs, exclude incomplete/pilot runs
+    runs = [r for r in runs if r.get("epochs") and int(r["epochs"]) >= 10]
     output = Path("artifacts/dashboard_advanced.html")
     generate_advanced_html(runs, output)
 

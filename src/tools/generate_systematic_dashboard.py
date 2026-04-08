@@ -101,6 +101,10 @@ def scan_all_runs(runs_root: Path) -> list[dict]:
 
             best_val_acc = max(m["val_acc"] for m in metrics)
 
+            # Filter: minimum 10 epochs
+            if len(metrics) < 10:
+                continue
+
             # Filter: accuracy >= 30%
             if best_val_acc < 0.30:
                 continue
@@ -321,6 +325,75 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
 
     sections_html = "\n".join(group_sections)
     metrics_json = json.dumps(all_metrics)
+
+    # ── Main Comparison: only full-pipeline (degradation_type=all) runs ──
+    full_pipeline_runs = [r for r in runs if r["degradation_type"] == "all"]
+    full_pipeline_runs.sort(key=lambda r: -r["best_val_acc"])
+
+    main_rows = ""
+    for run in full_pipeline_runs:
+        model_label = MODEL_LABELS.get(run["model_name"], run["model_name"])
+        color = MODEL_COLORS.get(run["model_name"], "#999")
+        acc_pct = run["best_val_acc"] * 100
+        acc_class = "acc-high" if acc_pct >= 70 else ("acc-mid" if acc_pct >= 50 else "acc-low")
+        freeze_str = "LP (frozen)" if run["freeze_backbone"] == "True" else "Full FT"
+        wd = run.get("weight_decay", "—")
+        ls = run.get("label_smoothing", "—")
+        main_rows += f"""
+            <tr>
+                <td><span class="model-dot" style="background:{color}"></span> {model_label}</td>
+                <td class="{acc_class}" style="font-size:1.1em">{acc_pct:.1f}%</td>
+                <td>{run['epochs']}</td>
+                <td>{run['lr']}</td>
+                <td>{run.get('backbone_lr', '—')}</td>
+                <td>{freeze_str}</td>
+                <td>{wd}</td>
+                <td>{ls}</td>
+            </tr>"""
+
+    main_comparison_html = ""
+    if full_pipeline_runs:
+        best_fp = full_pipeline_runs[0]
+        best_fp_model = MODEL_LABELS.get(best_fp["model_name"], best_fp["model_name"])
+        main_comparison_html = f"""
+<div class="deg-group" style="border: 2px solid var(--accent); margin-bottom: 32px;">
+    <div class="deg-header" style="background: rgba(88,166,255,0.08);">
+        <div>
+            <h2 style="color: var(--accent); font-size: 1.3em; margin-bottom: 4px;">
+                ★ Main Comparison — Full Degradation Pipeline
+            </h2>
+            <div style="color: var(--text-dim); font-size: 0.85em;">
+                Combined degradation: downsampling (16→224) + blur + noise + salt &amp; pepper + grayscale<br>
+                Only models trained with the complete pipeline are included
+            </div>
+        </div>
+        <div class="deg-summary">
+            <div class="best-result">
+                <span class="best-label">Best:</span>
+                <span class="best-value">{best_fp['best_val_acc']*100:.1f}%</span>
+                <span class="best-model">({best_fp_model})</span>
+            </div>
+            <div class="run-count">{len(full_pipeline_runs)} experiment(s)</div>
+        </div>
+    </div>
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Best Val Acc</th>
+                <th>Epochs</th>
+                <th>Head LR</th>
+                <th>Backbone LR</th>
+                <th>Strategy</th>
+                <th>Weight Decay</th>
+                <th>Label Smooth</th>
+            </tr>
+        </thead>
+        <tbody>{main_rows}
+        </tbody>
+    </table>
+</div>
+"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -568,14 +641,18 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
         <div class="stat-label">Degradation Configs</div>
     </div>
     <div class="stat-card">
-        <div class="stat-value">{max(r['best_val_acc'] for r in runs)*100:.1f}%</div>
-        <div class="stat-label">Best Accuracy</div>
+        <div class="stat-value">{max((r['best_val_acc'] for r in runs if r['degradation_type'] == 'all'), default=0)*100:.1f}%</div>
+        <div class="stat-label">Best (Full Pipeline)</div>
     </div>
     <div class="stat-card">
         <div class="stat-value">{len(set(r['model_name'] for r in runs))}</div>
         <div class="stat-label">Models Tested</div>
     </div>
 </div>
+
+{main_comparison_html}
+
+<h2 style="color: var(--text-dim); font-size: 1.1em; margin-bottom: 12px;">All Experiments by Degradation Type</h2>
 
 <div class="filters">
     <div>

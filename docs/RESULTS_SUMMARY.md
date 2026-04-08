@@ -110,13 +110,43 @@ This confirms that the combination of degradations is what makes the task hard.
 
 ---
 
-## 🚀 Next Steps (STAGE 2 & 3)
+## 🚀 Upcoming: Systematic Experiment Plan (36 Experiments)
 
-### STAGE 2: Controlled Official Runs
-- Complete Experiment 2 (low_res=8) if needed
-- Complete TransNeXt single-degradation runs (3 pending)
-- Collect robustness curves for all models
-- Document accuracy drop vs degradation severity
+> Full plan: [`../EXPERIMENT_PLAN.md`](../EXPERIMENT_PLAN.md)
+
+### Phase A: CIFAR-10 Systematic (9 experiments) — 🔴 Critical
+3 degradation levels × 3 models with identical protocol.
+- Level 1 (Mild): low_res=16, blur k=3 σ=0.5, noise 0.04, S&P 2%
+- Level 2 (Moderate): low_res=16, blur k=5 σ=1.0, noise 0.08, S&P 5%
+- Level 3 (Severe): low_res=8, blur k=7 σ=1.5, noise 0.12, S&P 8%
+
+### Phase B: MNIST Systematic (9 experiments) — 🔴 Critical
+Same protocol as Phase A on MNIST (28×28 grayscale → 3ch).
+
+### Phase C: Single-Degradation Isolation (12 experiments) — 🟡 Important
+7/12 already completed. Remaining: TransNeXt isolation runs + noise-only experiments.
+
+### Phase D: Clean Baselines (6 experiments) — 🟡 Important
+No degradation — establishes upper bounds (3 models × 2 datasets).
+
+### Hyperparameters (sourced from papers)
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Optimizer | AdamW (β₁=0.9, β₂=0.999) | TransNeXt paper |
+| Scheduler | Cosine LR decay | TransNeXt / EfficientNetV2 papers |
+| Head LR / Backbone LR | 1e-3 / 1e-4 (CNNs), frozen (TransNeXt) | Standard transfer learning |
+| Weight decay | 1e-4 | DenseNet paper |
+| Label smoothing | 0.1 (CNNs) / 0.0 (TransNeXt LP) | TransNeXt paper |
+| Gradient clipping | max_norm=1.0 | TransNeXt paper |
+| Early stopping | patience=5 | — |
+| Epochs | 30 (full) / 5 (pilot) | — |
+
+### Expected Analysis Outputs
+- Table: Model accuracy × degradation level (3×3 matrix, per dataset)
+- Table: Cross-dataset comparison (CIFAR-10 vs MNIST)
+- Table: Clean vs degraded accuracy drop (Δ)
+- Figure: Bar charts, learning curves, heatmaps
+- Answers to 5 research questions (see EXPERIMENT_PLAN.md §10.3)
 
 ### STAGE 3: Analysis & Conclusions
 - Compare TransNeXt LP against ResNet/DenseNet across degradation levels

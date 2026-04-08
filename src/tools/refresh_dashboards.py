@@ -42,8 +42,8 @@ def main():
 
     steps = [
         (["python", "src/tools/summarize_runs.py"], "Generate run summary from experiments"),
-        (["python", "src/tools/generate_dashboard.py"], "Generate basic interactive dashboard"),
         (["python", "src/tools/generate_advanced_dashboard.py"], "Generate advanced dashboard with learning curves"),
+        (["python", "src/tools/generate_systematic_dashboard.py"], "Generate systematic dashboard"),
     ]
 
     success_count = 0
@@ -58,8 +58,8 @@ def main():
     if success_count == len(steps):
         print("\n[SUCCESS] All dashboards refreshed!")
         print("\nOpen in your browser:")
-        print("  - Basic:    artifacts/dashboard.html")
-        print("  - Advanced: artifacts/dashboard_advanced.html")
+        print("  - Advanced:   artifacts/dashboard_advanced.html")
+        print("  - Systematic: artifacts/dashboard_systematic.html")
         return 0
     else:
         print("\n[WARNING] Some steps failed. Check output above.")
