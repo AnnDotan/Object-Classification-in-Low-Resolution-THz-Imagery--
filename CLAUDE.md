@@ -135,6 +135,40 @@ Tasks IN PROGRESS:
    - Under what conditions does each fail?
    - Why does TransNeXt succeed while fine-tuning fails?
 
+### STAGE 2 Extension: Single-Degradation Type Isolation
+- 9 systematic experiments (3 models x 3 degradation types)
+- Each experiment uses only ONE degradation type (downsampling / blur / salt & pepper)
+- Purpose: understand which degradation type is hardest for each model
+- Results separated from main full-pipeline comparison in dashboards
+- Status: 7/9 completed (TransNeXt pending)
+
+---
+
+## Dashboard Architecture
+
+Two interactive HTML dashboards in `artifacts/`:
+
+### Basic Dashboard (`dashboard.html`)
+- Model/degradation comparison charts
+- Filterable results table with color-coded degradation groups
+
+### Advanced Dashboard (`dashboard_advanced.html`)
+- **Main section**: Full-pipeline model comparison (core project goal)
+  - Only includes runs where ALL degradations applied simultaneously
+  - Color-coded rows: same color = same degradation parameters = comparable runs
+- **Extension section**: Single-degradation experiments (separated below divider)
+  - Detailed table with degradation type column
+  - 3x3 systematic grid
+  - Per-model learning curves by degradation type
+- **Sample images**: Both dashboards have "View" buttons showing original vs degraded image per experiment
+
+### Generating Dashboards
+```bash
+python src/tools/generate_sample_images.py   # Generate sample image data
+python src/tools/generate_dashboard.py        # Basic dashboard
+python src/tools/generate_advanced_dashboard.py  # Advanced dashboard
+```
+
 ---
 
 ## Next Steps
@@ -152,14 +186,14 @@ Tasks IN PROGRESS:
 src/ – main code  
 src/models/ – models  
 src/data/ – datasets + degradation  
-src/tools/ – utilities  
+src/tools/ – utilities (dashboard generators, summarizers, sample image generator)  
 runs/ – experiments  
-artifacts/ – outputs  
+artifacts/ – outputs (dashboards, tables, figures, sample_images.json)  
 
 Each run must include:
 - metrics.csv
 - log.txt
-- run_config.txt
+- run_config.txt (includes degradation_type field for single-deg runs)
 - checkpoints
 
 ---

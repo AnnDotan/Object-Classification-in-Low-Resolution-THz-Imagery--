@@ -18,26 +18,40 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Subset
 import timm
+from timm.data import Mixup
+from timm.scheduler import CosineLRScheduler
 
 from src.data.datasets import DataConfig, THzLikeCIFAR10
 from src.models.transnext_wrapper import create_transnext_model
 from src.tools.visualize_run import RunVisualizer
 
-def train_one_epoch(model, loader, optimizer, criterion, device: str):
+def train_one_epoch(model, loader, optimizer, criterion, device: str,
+                    mixup_fn=None, max_grad_norm: float = 0.0):
     model.train()
     total_loss, correct, total = 0.0, 0, 0
 
     for x, y in loader:
         x, y = x.to(device), y.to(device)
 
+        if mixup_fn is not None:
+            x, y = mixup_fn(x, y)
+
         optimizer.zero_grad(set_to_none=True)
         logits = model(x)
         loss = criterion(logits, y)
         loss.backward()
+
+        if max_grad_norm > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+
         optimizer.step()
 
         total_loss += loss.item() * x.size(0)
-        correct += (logits.argmax(dim=1) == y).sum().item()
+        # When mixup is active, y is soft labels — skip accuracy count
+        if mixup_fn is None:
+            correct += (logits.argmax(dim=1) == y).sum().item()
+        else:
+            correct += (logits.argmax(dim=1) == y.argmax(dim=1)).sum().item()
         total += x.size(0)
 
     return total_loss / total, correct / total
@@ -94,6 +108,14 @@ def run_experiment(
     freeze_backbone: bool = False,
     backbone_lr: float | None = None,
     degradation_type: str = "all",
+    weight_decay: float = 1e-4,
+    label_smoothing: float = 0.0,
+    scheduler_type: str = "none",
+    warmup_epochs: int = 0,
+    max_grad_norm: float = 0.0,
+    mixup_alpha: float = 0.0,
+    cutmix_alpha: float = 0.0,
+    drop_path_rate: float = 0.0,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -142,6 +164,14 @@ def run_experiment(
         f.write(f"group={group}\n")
         f.write(f"run_name={run_name}\n")
         f.write(f"freeze_backbone={freeze_backbone}\n")
+        f.write(f"weight_decay={weight_decay}\n")
+        f.write(f"label_smoothing={label_smoothing}\n")
+        f.write(f"scheduler_type={scheduler_type}\n")
+        f.write(f"warmup_epochs={warmup_epochs}\n")
+        f.write(f"max_grad_norm={max_grad_norm}\n")
+        f.write(f"mixup_alpha={mixup_alpha}\n")
+        f.write(f"cutmix_alpha={cutmix_alpha}\n")
+        f.write(f"drop_path_rate={drop_path_rate}\n")
 
     log(f"Device: {device}")
     log(f"Model: {model_name}, pretrained={pretrained}")
@@ -151,6 +181,10 @@ def run_experiment(
     log(f"Degradation type: {degradation_type}")
     log(f"Group: {group}")
     log(f"Freeze backbone: {freeze_backbone}")
+    log(f"Weight decay: {weight_decay}, Label smoothing: {label_smoothing}")
+    log(f"Scheduler: {scheduler_type}, Warmup: {warmup_epochs} epochs")
+    log(f"Mixup: {mixup_alpha}, CutMix: {cutmix_alpha}, DropPath: {drop_path_rate}")
+    log(f"Max grad norm: {max_grad_norm}")
     log(f"Saved run config: {run_config_path}")
 
     if model_name.startswith("transnext_") and out_size != 224:
@@ -193,6 +227,7 @@ def run_experiment(
             num_classes=10,
             pretrained=pretrained,
             checkpoint_path=transnext_ckpt,
+            drop_path_rate=drop_path_rate,
         )
     else:
         model = timm.create_model(
@@ -213,18 +248,46 @@ def run_experiment(
         else:
             raise RuntimeError("freeze_backbone=True but model has no attribute 'head'")
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+
+    # Mixup / CutMix setup
+    mixup_fn = None
+    if mixup_alpha > 0 or cutmix_alpha > 0:
+        mixup_fn = Mixup(
+            mixup_alpha=mixup_alpha,
+            cutmix_alpha=cutmix_alpha,
+            prob=1.0,
+            switch_prob=0.5,
+            mode='batch',
+            label_smoothing=label_smoothing,
+            num_classes=10,
+        )
+        # When using timm Mixup, it handles label smoothing internally
+        # Use soft cross-entropy instead
+        criterion = nn.CrossEntropyLoss()  # mixup provides soft targets
 
     if backbone_lr is not None:
         backbone_params = [p for n, p in model.named_parameters() if 'head' not in n and p.requires_grad]
         head_params = [p for n, p in model.named_parameters() if 'head' in n and p.requires_grad]
         optimizer = torch.optim.AdamW([
-            {'params': backbone_params, 'lr': backbone_lr},
-            {'params': head_params, 'lr': lr}
+            {'params': backbone_params, 'lr': backbone_lr, 'weight_decay': weight_decay},
+            {'params': head_params, 'lr': lr, 'weight_decay': weight_decay}
         ])
     else:
         trainable_params = [p for p in model.parameters() if p.requires_grad]
-        optimizer = torch.optim.AdamW(trainable_params, lr=lr)
+        optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=weight_decay)
+
+    # LR Scheduler
+    scheduler = None
+    if scheduler_type == "cosine":
+        scheduler = CosineLRScheduler(
+            optimizer,
+            t_initial=epochs,
+            lr_min=1e-5,
+            warmup_t=warmup_epochs,
+            warmup_lr_init=1e-6,
+            warmup_prefix=True,
+        )
 
     # metrics + best tracking
     metrics_path = run_dir / "metrics.csv"
@@ -237,13 +300,21 @@ def run_experiment(
 
     t0 = time.time()
     for ep in range(1, epochs + 1):
-        tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
+        if scheduler is not None:
+            scheduler.step(ep - 1)
+
+        tr_loss, tr_acc = train_one_epoch(
+            model, train_loader, optimizer, criterion, device,
+            mixup_fn=mixup_fn, max_grad_norm=max_grad_norm,
+        )
         va_loss, va_acc = eval_one_epoch(model, val_loader, criterion, device)
 
+        current_lr = optimizer.param_groups[-1]['lr']
         log(
             f"Epoch {ep}/{epochs} | "
             f"Train: loss={tr_loss:.4f}, acc={tr_acc:.4f} | "
-            f"Val: loss={va_loss:.4f}, acc={va_acc:.4f}"
+            f"Val: loss={va_loss:.4f}, acc={va_acc:.4f} | "
+            f"LR={current_lr:.2e}"
         )
 
         with open(metrics_path, "a", newline="", encoding="utf-8") as f:
@@ -320,6 +391,14 @@ def parse_args():
     p.add_argument("--tag", type=str, default="")
     p.add_argument("--group", type=str, default="pilot", choices=["pilot", "official"])
     p.add_argument("--freeze_backbone", action="store_true")
+    p.add_argument("--weight_decay", type=float, default=1e-4)
+    p.add_argument("--label_smoothing", type=float, default=0.0)
+    p.add_argument("--scheduler_type", type=str, default="none", choices=["none", "cosine"])
+    p.add_argument("--warmup_epochs", type=int, default=0)
+    p.add_argument("--max_grad_norm", type=float, default=0.0)
+    p.add_argument("--mixup_alpha", type=float, default=0.0)
+    p.add_argument("--cutmix_alpha", type=float, default=0.0)
+    p.add_argument("--drop_path_rate", type=float, default=0.0)
     return p.parse_args()
 
 
@@ -340,4 +419,12 @@ def main():
         freeze_backbone=args.freeze_backbone,
         backbone_lr=args.backbone_lr,
         degradation_type=args.degradation_type,
+        weight_decay=args.weight_decay,
+        label_smoothing=args.label_smoothing,
+        scheduler_type=args.scheduler_type,
+        warmup_epochs=args.warmup_epochs,
+        max_grad_norm=args.max_grad_norm,
+        mixup_alpha=args.mixup_alpha,
+        cutmix_alpha=args.cutmix_alpha,
+        drop_path_rate=args.drop_path_rate,
     )

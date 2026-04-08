@@ -1,17 +1,43 @@
 #!/usr/bin/env python3
 """
 Generate an advanced interactive HTML dashboard with:
-- Latest experiment results with hyperparameters
-- Per-model robustness analysis (3 graphs x 3 curves)
-- Learning curve viewer
-- Train vs Validation comparison
-- Detailed results table
+- Full-pipeline model comparison (main project goal)
+- Learning curve viewer for full-pipeline runs
+- Separate section for single-degradation experiments (extension)
+- Detailed results tables
 """
 
 import csv
 from pathlib import Path
 import json
-import re
+import sys
+
+
+SINGLE_DEG_TAGS = {
+    "blur": "Gaussian Blur",
+    "downsampling": "Downsampling",
+    "salt_pepper": "Salt & Pepper",
+    "noise": "Gaussian Noise",
+}
+
+MODELS = ["resnet50", "densenet121", "transnext_micro"]
+DEGRADATIONS = ["downsampling", "blur", "salt_pepper"]
+
+DEG_COLORS = {
+    "downsampling": "#2196F3",
+    "blur": "#FF9800",
+    "salt_pepper": "#E91E63",
+}
+DEG_LABELS = {
+    "downsampling": "Downsampling Only",
+    "blur": "Gaussian Blur Only",
+    "salt_pepper": "Salt & Pepper Only",
+}
+MODEL_LABELS = {
+    "resnet50": "ResNet-50",
+    "densenet121": "DenseNet-121",
+    "transnext_micro": "TransNeXt Micro",
+}
 
 
 def load_run_summary(csv_path: Path) -> list[dict]:
@@ -66,75 +92,137 @@ def get_run_config(run_dir: str) -> dict:
     return data
 
 
+def classify_single_degradation(run: dict) -> str | None:
+    """Return degradation label if single-degradation run, else None."""
+    tag = run.get("tag", "")
+    for keyword, label in SINGLE_DEG_TAGS.items():
+        # Match tags like "blur_resnet50", "downsampling_quick", "noise_quick",
+        # "salt_pepper_densenet121", "exp1_resnet50_downsampling"
+        if tag.startswith(keyword + "_") or tag.startswith(f"exp1_resnet50_{keyword}"):
+            return label
+        if tag == keyword:
+            return label
+        # Match "downsampling_robustness"
+        if keyword == "downsampling" and tag == "downsampling_robustness":
+            return label
+    return None
+
+
 def find_systematic_experiments(runs: list[dict]) -> dict:
     """Find the 9 systematic experiments (3 models x 3 degradation types)."""
-    MODELS = ["resnet50", "densenet121", "transnext_micro"]
-    DEGRADATIONS = ["downsampling", "blur", "salt_pepper"]
-
     experiments = {}
     for model in MODELS:
         for deg in DEGRADATIONS:
             key = f"{deg}_{model}"
-            # Find matching run
             for run in runs:
                 tag = run.get("tag", "")
-                run_name = run.get("run_name", "")
                 model_name = run.get("model_name", "")
                 if model_name == model and tag == key and run.get("group") == "official":
                     experiments[key] = run
                     break
-            # Fallback: search by run_name pattern
             if key not in experiments:
                 for run in runs:
                     if key in run.get("run_name", "") and run.get("model_name") == model:
                         experiments[key] = run
                         break
-
     return experiments
+
+
+def _acc_class(val):
+    if val is None:
+        return "acc-pending"
+    if val >= 0.7:
+        return "acc-good"
+    if val >= 0.5:
+        return "acc-warn"
+    return "acc-poor"
+
+
+def _acc_fmt(val):
+    if val is None:
+        return "pending..."
+    return f"{val*100:.2f}%"
+
+
+def load_sample_images() -> dict:
+    """Load pre-generated sample images from JSON."""
+    path = Path("artifacts/tables/sample_images.json")
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def make_config_key(low_res, out_size, deg_type):
+    return f"lr{low_res}_out{out_size}_deg{deg_type}"
 
 
 def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    sample_images = load_sample_images()
 
     models = sorted(set(r.get("model_name", "") for r in runs if r.get("model_name")))
     completed_runs = [r for r in runs if r.get("best_val_acc") is not None]
 
-    # Find the 9 systematic experiments
-    systematic = find_systematic_experiments(runs)
+    # Enrich runs with degradation config key for sample images
+    for r in runs:
+        run_dir = r.get("run_dir", "")
+        low_res = r.get("low_res", "16")
+        out_size = r.get("out_size", "32")
+        cfg_data = get_run_config(run_dir)
+        deg_type = cfg_data.get("degradation_type", "all")
+        r["_config_key"] = make_config_key(low_res, out_size, deg_type) if low_res and out_size else ""
 
-    # Load learning curves for systematic experiments
+    # Classify runs into full-pipeline vs single-degradation
+    full_pipeline_runs = []
+    single_deg_runs = []
+    for r in runs:
+        deg_label = classify_single_degradation(r)
+        if deg_label:
+            r["_deg_label"] = deg_label
+            single_deg_runs.append(r)
+        else:
+            full_pipeline_runs.append(r)
+
+    fp_completed = [r for r in full_pipeline_runs if r.get("best_val_acc") is not None]
+    sd_completed = [r for r in single_deg_runs if r.get("best_val_acc") is not None]
+
+    # --- Full-pipeline model comparison (main goal) ---
+    fp_model_comparison = []
+    for model in models:
+        model_runs = [r for r in fp_completed if r.get("model_name") == model]
+        if model_runs:
+            accs = [r.get("best_val_acc", 0) for r in model_runs]
+            fp_model_comparison.append({
+                "model": model, "avg_acc": sum(accs)/len(accs),
+                "max_acc": max(accs), "count": len(model_runs),
+            })
+
+    # Top full-pipeline runs for learning curve viewer
+    top_runs = sorted(fp_completed, key=lambda x: x.get("best_val_acc", 0), reverse=True)[:10]
+    learning_curves = {}
+    for run in top_runs:
+        metrics = get_metrics_csv(run["run_dir"])
+        if metrics:
+            learning_curves[run["run_name"]] = metrics
+    top_runs_data = [
+        {"name": r["run_name"], "model": r["model_name"],
+         "acc": r["best_val_acc"], "deg": r["low_res"]}
+        for r in top_runs
+    ]
+
+    # --- Single-degradation systematic experiments ---
+    systematic = find_systematic_experiments(runs)
     systematic_curves = {}
     for key, run in systematic.items():
         metrics = get_metrics_csv(run["run_dir"])
         if metrics:
             systematic_curves[key] = metrics
 
-    # Load configs for systematic experiments
     systematic_configs = {}
     for key, run in systematic.items():
         cfg = get_run_config(run["run_dir"])
         systematic_configs[key] = cfg
-
-    # Top runs for general learning curve viewer
-    top_runs = sorted(completed_runs, key=lambda x: x.get("best_val_acc", 0), reverse=True)[:10]
-    learning_curves = {}
-    for run in top_runs:
-        metrics = get_metrics_csv(run["run_dir"])
-        if metrics:
-            learning_curves[run["run_name"]] = metrics
-    top_runs_data = [{"name": r["run_name"], "model": r["model_name"], "acc": r["best_val_acc"], "deg": r["low_res"]} for r in top_runs]
-
-    # Model comparison
-    model_comparison = []
-    for model in models:
-        model_runs = [r for r in completed_runs if r.get("model_name") == model]
-        if model_runs:
-            accs = [r.get("best_val_acc", 0) for r in model_runs]
-            model_comparison.append({"model": model, "avg_acc": sum(accs)/len(accs), "max_acc": max(accs), "count": len(model_runs)})
-
-    # Build systematic experiment summary table data
-    MODELS = ["resnet50", "densenet121", "transnext_micro"]
-    DEGRADATIONS = ["downsampling", "blur", "salt_pepper"]
 
     systematic_table = []
     for model in MODELS:
@@ -144,21 +232,11 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             cfg = systematic_configs.get(key, {})
             acc = run.get("best_val_acc")
             systematic_table.append({
-                "model": model,
-                "degradation": deg,
+                "model": model, "degradation": deg,
                 "best_val_acc": acc,
-                "epochs": cfg.get("epochs", run.get("epochs", "")),
-                "batch_size": cfg.get("batch_size", run.get("batch_size", "")),
-                "lr": cfg.get("lr", run.get("lr", "")),
-                "low_res": cfg.get("low_res", run.get("low_res", "")),
-                "out_size": cfg.get("out_size", run.get("out_size", "")),
-                "pretrained": cfg.get("pretrained", run.get("pretrained", "")),
-                "degradation_type": cfg.get("degradation_type", deg),
-                "total_time": run.get("total_time", ""),
                 "status": "completed" if acc is not None else "pending",
             })
 
-    # Build per-model curve data for the 3 comparison charts
     per_model_curves = {}
     for model in MODELS:
         per_model_curves[model] = {}
@@ -167,23 +245,8 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             if key in systematic_curves:
                 per_model_curves[model][deg] = systematic_curves[key]
 
-    DEG_COLORS = {
-        "downsampling": "#2196F3",
-        "blur": "#FF9800",
-        "salt_pepper": "#E91E63",
-    }
-    DEG_LABELS = {
-        "downsampling": "Downsampling",
-        "blur": "Gaussian Blur",
-        "salt_pepper": "Salt & Pepper Noise",
-    }
-    MODEL_LABELS = {
-        "resnet50": "ResNet-50",
-        "densenet121": "DenseNet-121",
-        "transnext_micro": "TransNeXt Micro",
-    }
-
-    # Pre-build summary table rows (avoid f-string brace issues)
+    # --- Pre-build HTML fragments ---
+    # 3x3 summary table
     summary_rows_html = ""
     for m in MODELS:
         cells = ""
@@ -194,18 +257,52 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             cells += f'<td class="acc-cell {_acc_class(acc_val)}">{_acc_fmt(acc_val)}</td>'
         summary_rows_html += f'<tr><td><strong>{MODEL_LABELS.get(m, m)}</strong></td>{cells}</tr>\n'
 
-    # Pre-build model robustness chart divs
+    # Single-degradation detailed table (all sd runs with degradation type column)
+    sd_sorted = sorted(sd_completed, key=lambda x: x.get("best_val_acc", 0), reverse=True)
+    sd_table_rows = ""
+    for r in sd_sorted:
+        acc_val = r.get("best_val_acc")
+        deg_label = r.get("_deg_label", "?")
+        ck = r.get("_config_key", "")
+        sample_btn = (
+            f'<button class="btn-sample" onclick="showSampleModal(\'{ck}\')">View</button>'
+            if ck and ck in sample_images else '-'
+        )
+        sd_table_rows += (
+            f'<tr>'
+            f'<td><span class="badge badge-{r.get("group", "")}">{r.get("group", "")}</span></td>'
+            f'<td><small title="{r.get("run_name", "")}">{r.get("run_name", "")[:50]}</small></td>'
+            f'<td><strong>{r.get("model_name", "-")}</strong></td>'
+            f'<td><span class="deg-badge">{deg_label}</span></td>'
+            f'<td class="acc-cell {_acc_class(acc_val)}">{_acc_fmt(acc_val)}</td>'
+            f'<td>{r.get("low_res", "-")}</td>'
+            f'<td>{r.get("out_size", "-")}</td>'
+            f'<td>{r.get("epochs", "-")}</td>'
+            f'<td>{sample_btn}</td>'
+            f'</tr>\n'
+        )
+
+    # Model robustness chart divs (for single-deg section)
     model_chart_divs = ""
     for m in MODELS:
-        model_chart_divs += f'<div class="chart-wrapper"><h3 class="chart-title">{MODEL_LABELS.get(m, m)}</h3><div id="modelRobust_{m}" style="height:380px;"></div></div>\n'
+        model_chart_divs += (
+            f'<div class="chart-wrapper"><h3 class="chart-title">'
+            f'{MODEL_LABELS.get(m, m)}</h3>'
+            f'<div id="modelRobust_{m}" style="height:380px;"></div></div>\n'
+        )
 
-    # Pre-build train vs val chart divs
+    # Train vs val chart divs (for single-deg section)
     trainval_chart_divs = ""
     for m in MODELS:
-        trainval_chart_divs += f'<div class="chart-wrapper"><h3 class="chart-title">{MODEL_LABELS.get(m, m)} - Train vs Val</h3><div id="trainVal_{m}" style="height:380px;"></div></div>\n'
+        trainval_chart_divs += (
+            f'<div class="chart-wrapper"><h3 class="chart-title">'
+            f'{MODEL_LABELS.get(m, m)} - Train vs Val</h3>'
+            f'<div id="trainVal_{m}" style="height:380px;"></div></div>\n'
+        )
 
-    # Pre-build model filter options
     model_options_html = "".join(f'<option value="{m}">{m}</option>' for m in models)
+
+    best_fp_acc = max([r.get('best_val_acc', 0) for r in fp_completed], default=0)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -309,34 +406,6 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         .acc-warn {{ color: #f57c00; }}
         .acc-poor {{ color: #c62828; }}
         .acc-pending {{ color: #999; font-style: italic; }}
-        .hyperparams-box {{
-            background: #f0f4ff;
-            border: 1px solid #c5cae9;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }}
-        .hyperparams-title {{
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 12px;
-            color: #333;
-        }}
-        .hyperparams-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 10px;
-        }}
-        .hp-item {{
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 10px;
-            background: white;
-            border-radius: 4px;
-            font-size: 13px;
-        }}
-        .hp-label {{ color: #666; }}
-        .hp-value {{ font-weight: 600; color: #333; }}
         .top-runs-list {{
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -393,6 +462,15 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         .badge-official {{ background: #e3f2fd; color: #1976d2; }}
         .badge-pilot {{ background: #f3e5f5; color: #7b1fa2; }}
         .badge-archive {{ background: #f5f5f5; color: #666; }}
+        .deg-badge {{
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #fff3e0;
+            color: #e65100;
+        }}
         .filter-section {{
             margin-bottom: 20px;
             padding: 15px;
@@ -421,6 +499,28 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             font-size: 13px;
         }}
         button:hover {{ background: #764ba2; }}
+        .extension-header {{
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            border: 2px solid #bdbdbd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }}
+        .extension-header h2 {{
+            font-size: 20px;
+            color: #555;
+            margin-bottom: 8px;
+        }}
+        .extension-header p {{
+            font-size: 13px;
+            color: #888;
+        }}
+        .divider {{
+            border: none;
+            border-top: 3px dashed #ccc;
+            margin: 60px 0 40px 0;
+        }}
         footer {{
             background: #f0f0f0;
             padding: 15px;
@@ -428,121 +528,140 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             font-size: 12px;
             color: #666;
         }}
+        /* Sample image modal */
+        .modal-overlay {{
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }}
+        .modal-overlay.active {{ display: flex; }}
+        .modal-content {{
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            position: relative;
+        }}
+        .modal-close {{
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 5px;
+        }}
+        .modal-close:hover {{ color: #333; }}
+        .modal-title {{
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }}
+        .sample-images {{
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }}
+        .sample-box {{
+            text-align: center;
+        }}
+        .sample-box img {{
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            image-rendering: pixelated;
+        }}
+        .sample-box .sample-label {{
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+            color: #555;
+        }}
+        .sample-info {{
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }}
+        .btn-sample {{
+            padding: 3px 8px;
+            font-size: 11px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            cursor: pointer;
+        }}
+        .btn-sample:hover {{ background: #bbdefb; }}
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Advanced Results Dashboard</h1>
-            <p class="subtitle">Low-Resolution Image Classification - Degradation Robustness Analysis</p>
-            <p class="subtitle">3 Models x 3 Degradation Types = 9 Systematic Experiments</p>
+            <p class="subtitle">Low-Resolution Image Classification - Full Degradation Pipeline</p>
+            <p class="subtitle">Comparing model robustness under combined degradation (downsampling + blur + noise + grayscale)</p>
         </header>
 
         <div class="content">
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value">{len(runs)}</div>
-                    <div class="stat-label">Total Runs</div>
+                    <div class="stat-value">{len(full_pipeline_runs)}</div>
+                    <div class="stat-label">Full-Pipeline Runs</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{len(completed_runs)}</div>
+                    <div class="stat-value">{len(fp_completed)}</div>
                     <div class="stat-label">Completed</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{len(systematic)}</div>
-                    <div class="stat-label">Systematic (9)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{max([r.get('best_val_acc', 0) for r in completed_runs], default=0):.1%}</div>
-                    <div class="stat-label">Best Accuracy</div>
+                    <div class="stat-value">{best_fp_acc:.1%}</div>
+                    <div class="stat-label">Best Accuracy (Full Pipeline)</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{len(models)}</div>
-                    <div class="stat-label">Models</div>
+                    <div class="stat-label">Models Tested</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{len(sd_completed)}</div>
+                    <div class="stat-label">Single-Degradation Runs</div>
                 </div>
             </div>
 
-            <!-- SECTION 1: Latest Systematic Experiments -->
+            <!-- ============================================================ -->
+            <!-- MAIN: Full Degradation Pipeline - Model Comparison            -->
+            <!-- ============================================================ -->
+
+            <!-- SECTION 1: Model Comparison Chart (Full Pipeline Only) -->
             <div class="section">
-                <h2 class="section-title">Latest Systematic Experiments (3x3)</h2>
-
-                <!-- Hyperparameters -->
-                <div class="hyperparams-box">
-                    <div class="hyperparams-title">Common Hyperparameters (Identical Across All 9 Runs)</div>
-                    <div class="hyperparams-grid">
-                        <div class="hp-item"><span class="hp-label">Epochs:</span><span class="hp-value">20</span></div>
-                        <div class="hp-item"><span class="hp-label">Batch Size:</span><span class="hp-value">32</span></div>
-                        <div class="hp-item"><span class="hp-label">Learning Rate:</span><span class="hp-value">0.001</span></div>
-                        <div class="hp-item"><span class="hp-label">Low Res:</span><span class="hp-value">16</span></div>
-                        <div class="hp-item"><span class="hp-label">Output Size:</span><span class="hp-value">224</span></div>
-                        <div class="hp-item"><span class="hp-label">Pretrained:</span><span class="hp-value">True</span></div>
-                        <div class="hp-item"><span class="hp-label">Train Subset:</span><span class="hp-value">5,000</span></div>
-                        <div class="hp-item"><span class="hp-label">Val Subset:</span><span class="hp-value">2,000</span></div>
-                        <div class="hp-item"><span class="hp-label">Dataset:</span><span class="hp-value">CIFAR-10</span></div>
-                        <div class="hp-item"><span class="hp-label">Optimizer:</span><span class="hp-value">AdamW</span></div>
-                    </div>
-                </div>
-
-                <!-- Results summary table -->
-                <table class="params-table">
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Downsampling</th>
-                            <th>Gaussian Blur</th>
-                            <th>Salt & Pepper</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {summary_rows_html}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- SECTION 2: Per-Model Robustness (3 graphs, 3 curves each) -->
-            <div class="section">
-                <h2 class="section-title">Model Robustness Analysis - Learning Curves by Degradation</h2>
+                <h2 class="section-title">Model Comparison - Full Degradation Pipeline</h2>
                 <p style="margin-bottom:20px; color:#666; font-size:14px;">
-                    Each graph shows one model tested on three different degradation types.
-                    Compare how each model handles different types of visual corruption.
+                    Models compared on data that underwent the <strong>complete degradation pipeline</strong>
+                    (downsampling + blur + noise + grayscale). This is the core project objective.
                 </p>
-                <div class="charts-grid">
-                    {model_chart_divs}
-                </div>
-            </div>
-
-            <!-- SECTION 3: Train vs Validation Analysis -->
-            <div class="section">
-                <h2 class="section-title">Train vs Validation - Overfitting Analysis</h2>
-                <p style="margin-bottom:20px; color:#666; font-size:14px;">
-                    Compare training accuracy vs validation accuracy. Large gaps indicate overfitting.
-                </p>
-                <div class="charts-grid">
-                    {trainval_chart_divs}
-                </div>
-            </div>
-
-            <!-- SECTION 4: Performance Overview -->
-            <div class="section">
-                <h2 class="section-title">Performance Overview</h2>
                 <div class="charts-grid">
                     <div class="chart-wrapper">
-                        <h3 class="chart-title">Model Comparison (All Runs)</h3>
+                        <h3 class="chart-title">Max &amp; Average Accuracy per Model (Full Pipeline Only)</h3>
                         <div id="modelChart" style="height:350px;"></div>
                     </div>
-                    <div class="chart-wrapper">
-                        <h3 class="chart-title">Degradation Type Comparison</h3>
-                        <div id="degradationBarChart" style="height:350px;"></div>
-                    </div>
                 </div>
             </div>
 
-            <!-- SECTION 5: Interactive Learning Curve Viewer -->
+            <!-- SECTION 2: Learning Curves (Full Pipeline Only) -->
             <div class="section">
-                <h2 class="section-title">Interactive Learning Curve Viewer</h2>
+                <h2 class="section-title">Learning Curves - Full Pipeline Runs</h2>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">
-                    Click a run card to view its full learning curve.
+                    Click a run card to view its full learning curve. Only full-pipeline runs shown.
                 </p>
                 <div class="top-runs-list" id="topRunsList"></div>
                 <div class="chart-wrapper">
@@ -550,9 +669,9 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
                 </div>
             </div>
 
-            <!-- SECTION 6: Detailed Results Table -->
+            <!-- SECTION 3: Full Pipeline Results Table -->
             <div class="section">
-                <h2 class="section-title">All Experiment Results</h2>
+                <h2 class="section-title">Full Pipeline - All Experiment Results</h2>
                 <div class="filter-section">
                     <div class="filter-group">
                         <input type="text" id="searchBox" placeholder="Search..." style="flex:1; max-width:250px;">
@@ -577,29 +696,141 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
                                 <th>Group</th>
                                 <th>Run Name</th>
                                 <th>Model</th>
-                                <th>Degradation</th>
+                                <th>Degradation Config</th>
                                 <th>Best Val Acc</th>
                                 <th>Out Size</th>
                                 <th>Batch</th>
                                 <th>Epochs</th>
+                                <th>Sample</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody"></tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- ============================================================ -->
+            <!-- DIVIDER                                                       -->
+            <!-- ============================================================ -->
+            <hr class="divider">
+
+            <!-- ============================================================ -->
+            <!-- EXTENSION: Single-Degradation Experiments                     -->
+            <!-- ============================================================ -->
+            <div class="extension-header">
+                <h2>Extension: Single-Degradation Type Isolation</h2>
+                <p>The experiments below tested models with only <strong>one degradation type at a time</strong>
+                   (not the full pipeline). This is an additional analysis, not the main project objective.</p>
+            </div>
+
+            <!-- SECTION 4: Single-Degradation Summary Table -->
+            <div class="section">
+                <h2 class="section-title">Single-Degradation - All Runs</h2>
+                <p style="margin-bottom:15px; color:#666; font-size:14px;">
+                    Each row shows an experiment that used only one degradation type.
+                    The "Degradation Type" column indicates which single degradation was applied.
+                </p>
+                <div class="table-container">
+                    <table class="params-table">
+                        <thead>
+                            <tr>
+                                <th>Group</th>
+                                <th>Run Name</th>
+                                <th>Model</th>
+                                <th>Degradation Type</th>
+                                <th>Best Val Acc</th>
+                                <th>Low Res</th>
+                                <th>Out Size</th>
+                                <th>Epochs</th>
+                                <th>Sample</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sd_table_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 5: 3x3 Systematic Grid -->
+            <div class="section">
+                <h2 class="section-title">Single-Degradation - Systematic 3x3 Grid</h2>
+                <p style="margin-bottom:15px; color:#666; font-size:14px;">
+                    3 models tested on 3 isolated degradation types (official runs only, 20 epochs).
+                </p>
+                <table class="params-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Downsampling Only</th>
+                            <th>Gaussian Blur Only</th>
+                            <th>Salt &amp; Pepper Only</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {summary_rows_html}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- SECTION 6: Single-Degradation Learning Curves -->
+            <div class="section">
+                <h2 class="section-title">Single-Degradation - Learning Curves by Model</h2>
+                <p style="margin-bottom:20px; color:#666; font-size:14px;">
+                    Each graph shows one model tested on three different single degradation types.
+                </p>
+                <div class="charts-grid">
+                    {model_chart_divs}
+                </div>
+            </div>
+
+            <!-- SECTION 7: Train vs Val (Single-Degradation) -->
+            <div class="section">
+                <h2 class="section-title">Single-Degradation - Train vs Validation</h2>
+                <p style="margin-bottom:20px; color:#666; font-size:14px;">
+                    Compare training accuracy vs validation accuracy per degradation type.
+                    Large gaps indicate overfitting.
+                </p>
+                <div class="charts-grid">
+                    {trainval_chart_divs}
+                </div>
+            </div>
         </div>
 
         <footer>
-            <p>Advanced Results Dashboard | {len(completed_runs)}/{len(runs)} runs completed | Generated by generate_advanced_dashboard.py</p>
+            <p>Advanced Results Dashboard | {len(fp_completed)} full-pipeline + {len(sd_completed)} single-degradation completed | Generated by generate_advanced_dashboard.py</p>
         </footer>
     </div>
 
+    <!-- Sample Image Modal -->
+    <div class="modal-overlay" id="sampleModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeSampleModal()">&times;</button>
+            <div class="modal-title" id="modalTitle">Degradation Example</div>
+            <div class="sample-images">
+                <div class="sample-box">
+                    <img id="modalOriginal" src="" width="128" height="128" alt="Original">
+                    <div class="sample-label">Original</div>
+                </div>
+                <div class="sample-box">
+                    <img id="modalDegraded" src="" width="128" height="128" alt="Degraded">
+                    <div class="sample-label">After Degradation</div>
+                </div>
+            </div>
+            <div class="sample-info" id="modalInfo"></div>
+        </div>
+    </div>
+
     <script>
-        const runsData = {json.dumps(runs)};
-        const completedRuns = runsData.filter(r => r.best_val_acc !== null);
+        // Sample images data
+        const sampleImages = {json.dumps(sample_images)};
+
+        // Full-pipeline runs only (for main sections)
+        const fpRunsData = {json.dumps(full_pipeline_runs)};
         const learningCurvesData = {json.dumps(learning_curves)};
         const topRunsData = {json.dumps(top_runs_data)};
+
+        // Single-degradation data (for extension section)
         const perModelCurves = {json.dumps(per_model_curves)};
         const systematicTable = {json.dumps(systematic_table)};
 
@@ -610,135 +841,40 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         const DEGRADATIONS = {json.dumps(DEGRADATIONS)};
 
         // =====================================================
-        // Per-Model Robustness Charts (3 graphs x 3 curves)
+        // Model Comparison Chart (Full Pipeline Only)
         // =====================================================
-        function createModelRobustnessCharts() {{
-            MODELS.forEach(model => {{
-                const traces = [];
-                DEGRADATIONS.forEach(deg => {{
-                    const curveData = perModelCurves[model]?.[deg];
-                    if (curveData && curveData.length > 0) {{
-                        traces.push({{
-                            x: curveData.map(d => d.epoch),
-                            y: curveData.map(d => d.val_acc),
-                            name: DEG_LABELS[deg] || deg,
-                            type: 'scatter',
-                            mode: 'lines+markers',
-                            line: {{color: DEG_COLORS[deg], width: 2.5}},
-                            marker: {{size: 5}}
-                        }});
-                    }}
-                }});
-
-                const layout = {{
-                    hovermode: 'x unified',
-                    xaxis: {{title: 'Epoch'}},
-                    yaxis: {{title: 'Validation Accuracy', range: [0, 1]}},
-                    legend: {{x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)'}},
-                    margin: {{t: 10, r: 20}}
-                }};
-
-                Plotly.newPlot('modelRobust_' + model, traces, layout, {{responsive: true}});
-            }});
-        }}
-
-        // =====================================================
-        // Train vs Validation Analysis (overfitting detection)
-        // =====================================================
-        function createTrainValCharts() {{
-            MODELS.forEach(model => {{
-                const traces = [];
-                DEGRADATIONS.forEach(deg => {{
-                    const curveData = perModelCurves[model]?.[deg];
-                    if (curveData && curveData.length > 0) {{
-                        // Train accuracy - dashed
-                        traces.push({{
-                            x: curveData.map(d => d.epoch),
-                            y: curveData.map(d => d.train_acc),
-                            name: DEG_LABELS[deg] + ' (Train)',
-                            type: 'scatter',
-                            mode: 'lines',
-                            line: {{color: DEG_COLORS[deg], width: 1.5, dash: 'dash'}},
-                            legendgroup: deg
-                        }});
-                        // Val accuracy - solid
-                        traces.push({{
-                            x: curveData.map(d => d.epoch),
-                            y: curveData.map(d => d.val_acc),
-                            name: DEG_LABELS[deg] + ' (Val)',
-                            type: 'scatter',
-                            mode: 'lines+markers',
-                            line: {{color: DEG_COLORS[deg], width: 2.5}},
-                            marker: {{size: 4}},
-                            legendgroup: deg
-                        }});
-                    }}
-                }});
-
-                const layout = {{
-                    hovermode: 'x unified',
-                    xaxis: {{title: 'Epoch'}},
-                    yaxis: {{title: 'Accuracy', range: [0, 1]}},
-                    legend: {{x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)', font: {{size: 10}}}},
-                    margin: {{t: 10, r: 20}}
-                }};
-
-                Plotly.newPlot('trainVal_' + model, traces, layout, {{responsive: true}});
-            }});
-        }}
-
-        // =====================================================
-        // Overview Charts
-        // =====================================================
-        function createOverviewCharts() {{
-            const modelComparison = {json.dumps(model_comparison)};
+        function createModelChart() {{
+            const modelComparison = {json.dumps(fp_model_comparison)};
+            if (!modelComparison.length) return;
             Plotly.newPlot('modelChart', [
                 {{
                     x: modelComparison.map(m => m.model),
                     y: modelComparison.map(m => m.max_acc),
                     name: 'Max Accuracy',
                     type: 'bar',
-                    marker: {{color: '#667eea'}}
+                    marker: {{color: '#667eea'}},
+                    text: modelComparison.map(m => (m.max_acc*100).toFixed(1)+'%'),
+                    textposition: 'outside'
                 }},
                 {{
                     x: modelComparison.map(m => m.model),
                     y: modelComparison.map(m => m.avg_acc),
                     name: 'Avg Accuracy',
                     type: 'bar',
-                    marker: {{color: '#764ba2'}}
+                    marker: {{color: '#764ba2'}},
+                    text: modelComparison.map(m => (m.avg_acc*100).toFixed(1)+'%'),
+                    textposition: 'outside'
                 }}
             ], {{
                 xaxis: {{title: 'Model'}},
-                yaxis: {{title: 'Accuracy'}},
-                barmode: 'group',
-                hovermode: 'closest'
-            }}, {{responsive: true}});
-
-            // Degradation comparison from systematic experiments
-            const degData = {{}};
-            systematicTable.forEach(row => {{
-                if (row.best_val_acc !== null) {{
-                    if (!degData[row.degradation]) degData[row.degradation] = [];
-                    degData[row.degradation].push(row.best_val_acc);
-                }}
-            }});
-            const degLabels = Object.keys(degData).map(d => DEG_LABELS[d] || d);
-            const degAvg = Object.values(degData).map(accs => accs.reduce((a,b) => a+b, 0) / accs.length);
-            const degMax = Object.values(degData).map(accs => Math.max(...accs));
-
-            Plotly.newPlot('degradationBarChart', [
-                {{ x: degLabels, y: degMax, name: 'Max Accuracy', type: 'bar', marker: {{color: '#2196F3'}} }},
-                {{ x: degLabels, y: degAvg, name: 'Avg Accuracy', type: 'bar', marker: {{color: '#E91E63'}} }}
-            ], {{
-                xaxis: {{title: 'Degradation Type'}},
-                yaxis: {{title: 'Accuracy'}},
+                yaxis: {{title: 'Accuracy', range: [0, 1]}},
                 barmode: 'group',
                 hovermode: 'closest'
             }}, {{responsive: true}});
         }}
 
         // =====================================================
-        // Interactive Learning Curve Viewer
+        // Interactive Learning Curve Viewer (Full Pipeline)
         // =====================================================
         let selectedRunName = null;
 
@@ -787,24 +923,90 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         }}
 
         // =====================================================
-        // Results Table
+        // Full Pipeline Results Table (color-coded by degradation config)
         // =====================================================
+        const CONFIG_GROUP_COLORS = [
+            'rgba(33,150,243,0.10)',   // blue
+            'rgba(76,175,80,0.10)',    // green
+            'rgba(255,152,0,0.10)',    // orange
+            'rgba(156,39,176,0.10)',   // purple
+            'rgba(0,150,136,0.10)',    // teal
+            'rgba(244,67,54,0.10)',    // red
+            'rgba(121,85,72,0.10)',    // brown
+            'rgba(63,81,181,0.10)',    // indigo
+        ];
+        const CONFIG_GROUP_BORDERS = [
+            'rgba(33,150,243,0.35)',
+            'rgba(76,175,80,0.35)',
+            'rgba(255,152,0,0.35)',
+            'rgba(156,39,176,0.35)',
+            'rgba(0,150,136,0.35)',
+            'rgba(244,67,54,0.35)',
+            'rgba(121,85,72,0.35)',
+            'rgba(63,81,181,0.35)',
+        ];
+
+        function getConfigGroupColor(configKey, keyMap) {{
+            if (!configKey) return '';
+            if (!(configKey in keyMap)) {{
+                keyMap[configKey] = Object.keys(keyMap).length;
+            }}
+            return CONFIG_GROUP_COLORS[keyMap[configKey] % CONFIG_GROUP_COLORS.length];
+        }}
+
+        function getConfigGroupBorder(configKey, keyMap) {{
+            if (!configKey) return '';
+            if (!(configKey in keyMap)) {{
+                keyMap[configKey] = Object.keys(keyMap).length;
+            }}
+            return CONFIG_GROUP_BORDERS[keyMap[configKey] % CONFIG_GROUP_BORDERS.length];
+        }}
+
+        function configKeyToLabel(ck) {{
+            if (!ck) return '-';
+            const m = ck.match(/lr(\\d+)_out(\\d+)_deg(\\w+)/);
+            if (!m) return ck;
+            const deg = m[3] === 'all' ? 'Full Pipeline' : m[3];
+            return `lr=${{m[1]}} out=${{m[2]}} ${{deg}}`;
+        }}
+
         function populateTable(data) {{
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            data.forEach(run => {{
+            // Sort by config key so groups are together
+            const sorted = [...data].sort((a, b) => {{
+                const ka = a._config_key || 'zzz';
+                const kb = b._config_key || 'zzz';
+                if (ka !== kb) return ka.localeCompare(kb);
+                const aa = a.best_val_acc || 0;
+                const ab = b.best_val_acc || 0;
+                return ab - aa;
+            }});
+            const keyMap = {{}};
+            sorted.forEach(run => {{
                 const tr = document.createElement('tr');
                 const accColor = run.best_val_acc === null ? '' :
                     (run.best_val_acc >= 0.6 ? 'acc-good' : run.best_val_acc >= 0.5 ? 'acc-warn' : 'acc-poor');
+                const ck = run._config_key || '';
+                const bgColor = getConfigGroupColor(ck, keyMap);
+                const bdColor = getConfigGroupBorder(ck, keyMap);
+                if (bgColor) {{
+                    tr.style.background = bgColor;
+                    tr.style.borderLeft = '4px solid ' + bdColor;
+                }}
+                const sampleBtn = (ck && sampleImages[ck])
+                    ? `<button class="btn-sample" onclick="showSampleModal('${{ck}}')">View</button>`
+                    : '-';
                 tr.innerHTML = `
                     <td><span class="badge badge-${{run.group}}">${{run.group}}</span></td>
                     <td><small title="${{run.run_name}}">${{run.run_name.substring(0,45)}}</small></td>
                     <td><strong>${{run.model_name || '-'}}</strong></td>
-                    <td><code>${{run.low_res ? 'lr='+run.low_res : '-'}}</code></td>
+                    <td><code>${{configKeyToLabel(ck)}}</code></td>
                     <td class="acc-cell ${{accColor}}">${{run.best_val_acc !== null ? (run.best_val_acc*100).toFixed(2)+'%' : '-'}}</td>
                     <td>${{run.out_size || '-'}}</td>
                     <td>${{run.batch_size || '-'}}</td>
-                    <td>${{run.epochs || '-'}}</td>`;
+                    <td>${{run.epochs || '-'}}</td>
+                    <td>${{sampleBtn}}</td>`;
                 tbody.appendChild(tr);
             }});
         }}
@@ -813,7 +1015,7 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             const search = document.getElementById('searchBox').value.toLowerCase();
             const group = document.getElementById('groupFilter').value;
             const model = document.getElementById('modelFilter').value;
-            populateTable(runsData.filter(r =>
+            populateTable(fpRunsData.filter(r =>
                 (!search || r.run_name.toLowerCase().includes(search)) &&
                 (!group || r.group === group) &&
                 (!model || r.model_name === model)
@@ -824,18 +1026,126 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
             document.getElementById('searchBox').value = '';
             document.getElementById('groupFilter').value = '';
             document.getElementById('modelFilter').value = '';
-            populateTable(runsData);
+            populateTable(fpRunsData);
         }}
+
+        // =====================================================
+        // Single-Degradation: Per-Model Robustness Charts
+        // =====================================================
+        function createModelRobustnessCharts() {{
+            MODELS.forEach(model => {{
+                const traces = [];
+                DEGRADATIONS.forEach(deg => {{
+                    const curveData = perModelCurves[model]?.[deg];
+                    if (curveData && curveData.length > 0) {{
+                        traces.push({{
+                            x: curveData.map(d => d.epoch),
+                            y: curveData.map(d => d.val_acc),
+                            name: DEG_LABELS[deg] || deg,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            line: {{color: DEG_COLORS[deg], width: 2.5}},
+                            marker: {{size: 5}}
+                        }});
+                    }}
+                }});
+
+                const layout = {{
+                    hovermode: 'x unified',
+                    xaxis: {{title: 'Epoch'}},
+                    yaxis: {{title: 'Validation Accuracy', range: [0, 1]}},
+                    legend: {{x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)'}},
+                    margin: {{t: 10, r: 20}}
+                }};
+
+                Plotly.newPlot('modelRobust_' + model, traces, layout, {{responsive: true}});
+            }});
+        }}
+
+        // =====================================================
+        // Single-Degradation: Train vs Validation
+        // =====================================================
+        function createTrainValCharts() {{
+            MODELS.forEach(model => {{
+                const traces = [];
+                DEGRADATIONS.forEach(deg => {{
+                    const curveData = perModelCurves[model]?.[deg];
+                    if (curveData && curveData.length > 0) {{
+                        traces.push({{
+                            x: curveData.map(d => d.epoch),
+                            y: curveData.map(d => d.train_acc),
+                            name: DEG_LABELS[deg] + ' (Train)',
+                            type: 'scatter',
+                            mode: 'lines',
+                            line: {{color: DEG_COLORS[deg], width: 1.5, dash: 'dash'}},
+                            legendgroup: deg
+                        }});
+                        traces.push({{
+                            x: curveData.map(d => d.epoch),
+                            y: curveData.map(d => d.val_acc),
+                            name: DEG_LABELS[deg] + ' (Val)',
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            line: {{color: DEG_COLORS[deg], width: 2.5}},
+                            marker: {{size: 4}},
+                            legendgroup: deg
+                        }});
+                    }}
+                }});
+
+                const layout = {{
+                    hovermode: 'x unified',
+                    xaxis: {{title: 'Epoch'}},
+                    yaxis: {{title: 'Accuracy', range: [0, 1]}},
+                    legend: {{x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)', font: {{size: 10}}}},
+                    margin: {{t: 10, r: 20}}
+                }};
+
+                Plotly.newPlot('trainVal_' + model, traces, layout, {{responsive: true}});
+            }});
+        }}
+
+        // =====================================================
+        // Sample Image Modal
+        // =====================================================
+        function showSampleModal(configKey) {{
+            const data = sampleImages[configKey];
+            if (!data) {{
+                alert('No sample image available for this configuration.');
+                return;
+            }}
+            const degTypeLabel = data.degradation_type === 'all'
+                ? 'Full Pipeline (all degradations)'
+                : data.degradation_type.charAt(0).toUpperCase() + data.degradation_type.slice(1) + ' Only';
+            document.getElementById('modalTitle').textContent =
+                'Degradation Example: ' + degTypeLabel;
+            document.getElementById('modalOriginal').src =
+                'data:image/png;base64,' + data.original_b64;
+            document.getElementById('modalDegraded').src =
+                'data:image/png;base64,' + data.degraded_b64;
+            document.getElementById('modalInfo').textContent =
+                'CIFAR-10 "' + data.label + '" | low_res=' + data.low_res +
+                ' | out_size=' + data.out_size + ' | degradation=' + data.degradation_type;
+            document.getElementById('sampleModal').classList.add('active');
+        }}
+
+        function closeSampleModal() {{
+            document.getElementById('sampleModal').classList.remove('active');
+        }}
+
+        document.getElementById('sampleModal').addEventListener('click', function(e) {{
+            if (e.target === this) closeSampleModal();
+        }});
 
         // =====================================================
         // Initialize
         // =====================================================
         document.addEventListener('DOMContentLoaded', function() {{
+            createModelChart();
+            populateTopRunsList();
+            populateTable(fpRunsData);
             createModelRobustnessCharts();
             createTrainValCharts();
-            createOverviewCharts();
-            populateTopRunsList();
-            populateTable(runsData);
             document.getElementById('searchBox').addEventListener('keypress', e => {{
                 if (e.key === 'Enter') filterTable();
             }});
@@ -849,22 +1159,8 @@ def generate_advanced_html(runs: list[dict], output_path: Path) -> None:
         f.write(html_content)
 
     print(f"[OK] Advanced dashboard generated: {output_path}")
-
-
-def _acc_class(val):
-    if val is None:
-        return "acc-pending"
-    if val >= 0.7:
-        return "acc-good"
-    if val >= 0.5:
-        return "acc-warn"
-    return "acc-poor"
-
-
-def _acc_fmt(val):
-    if val is None:
-        return "pending..."
-    return f"{val*100:.2f}%"
+    print(f"     Full-pipeline runs: {len(fp_completed)} completed / {len(full_pipeline_runs)} total")
+    print(f"     Single-degradation runs: {len(sd_completed)} completed / {len(single_deg_runs)} total")
 
 
 def main():

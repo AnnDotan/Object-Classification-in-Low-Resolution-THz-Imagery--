@@ -28,21 +28,28 @@ Open the generated HTML files in your web browser:
 - **Accuracy Distribution**: Histogram showing distribution of achieved accuracies
 - **Results Table**: 
   - Searchable and filterable by group (official/pilot/archive), model, and run name
-  - Shows: group, run name, model, degradation level, best accuracy, output size, batch size, epochs, and total time
+  - **Color-coded rows**: Runs with identical degradation parameters share the same background color - this groups comparable experiments for fair model comparison
+  - "Degradation Config" column shows full config (lr, out_size, degradation type)
+  - **Sample image viewer**: Click "View" to see original vs degraded image comparison per experiment
   - Color-coded accuracy: green (≥60%), orange (50-60%), red (<50%)
 
 ### Advanced Dashboard (`dashboard_advanced.html`)
-- **All features from basic dashboard** plus:
-- **Top 6 Runs Section**: 
-  - Display the 6 best-performing runs ranked by accuracy
-  - Click any run card to view its learning curve
-  - Shows rank, model, accuracy, and degradation level
+- **Main Section - Full Pipeline Comparison** (core project goal):
+  - Only includes experiments where ALL degradations are applied simultaneously
+  - Model comparison chart (full-pipeline runs only)
+  - Top 10 runs with interactive learning curve viewer
+  - **Color-coded results table** grouped by degradation parameters
+  - **Sample image viewer**: Click "View" to see original vs degraded
+- **Extension Section - Single-Degradation Type Isolation** (separated by divider):
+  - Detailed table of all single-degradation runs with degradation type column
+  - 3x3 systematic grid (3 models x 3 degradation types)
+  - Per-model learning curves by degradation type
+  - Train vs Validation overfitting analysis
 - **Interactive Learning Curves**:
   - Train/Validation accuracy across epochs
   - Train/Validation loss (toggle visibility)
   - Hover for detailed values
   - Real-time display updates when selecting different runs
-- **Enhanced Analytics**: Same detailed results table with better organization
 
 ## How to Use
 
@@ -112,11 +119,17 @@ The dashboards are completely self-contained (single HTML file) and don't requir
 - Output: `artifacts/dashboard.html` (~33KB)
 
 #### `src/tools/generate_advanced_dashboard.py`
-- Extends basic dashboard with learning curve support
-- Loads metrics.csv from top 6 runs
-- Creates interactive scatter plots with dual axes (accuracy + loss)
-- Implements run selection cards
-- Output: `artifacts/dashboard_advanced.html` (~46KB)
+- Separates full-pipeline vs single-degradation experiments
+- Full-pipeline section: model comparison, learning curves, color-coded table
+- Extension section: single-degradation analysis (3x3 grid, per-model curves)
+- Interactive learning curves with dual axes (accuracy + loss)
+- Sample image modal (original vs degraded comparison)
+- Output: `artifacts/dashboard_advanced.html`
+
+#### `src/tools/generate_sample_images.py`
+- Generates base64-encoded sample degradation images for each unique config
+- Creates side-by-side original vs degraded comparisons from CIFAR-10
+- Output: `artifacts/tables/sample_images.json` (used by both dashboards)
 
 #### `refresh_dashboards.py`
 - Convenience script to update all dashboards
@@ -184,5 +197,8 @@ Possible improvements:
 - [ ] Compare specific runs side-by-side
 - [ ] Statistical significance testing
 - [ ] Per-epoch performance comparison
-- [ ] Heatmaps of accuracy by model × degradation
+- [ ] Heatmaps of accuracy by model x degradation
 - [ ] Automatic dashboard refresh when new runs complete
+- [x] ~~Sample degradation image viewer~~ (implemented)
+- [x] ~~Separate single-degradation experiments from main comparison~~ (implemented)
+- [x] ~~Color-coded grouping by degradation parameters~~ (implemented)

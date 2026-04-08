@@ -19,6 +19,7 @@ def create_transnext_model(
     num_classes: int = 10,
     pretrained: bool = False,
     checkpoint_path: str | None = None,
+    drop_path_rate: float = 0.0,
 ) -> nn.Module:
     """
     מחזיר מודל TransNeXt מתוך הקוד הרשמי.
@@ -55,10 +56,13 @@ def create_transnext_model(
 
     # ניסיון בסיסי: כמו מודלי timm - num_classes ניתן להחלפה
     try:
-        model = ctor(num_classes=num_classes)
+        model = ctor(num_classes=num_classes, drop_path_rate=drop_path_rate)
     except TypeError:
         # fallback אם החתימה שונה
-        model = ctor()
+        try:
+            model = ctor(num_classes=num_classes)
+        except TypeError:
+            model = ctor()
         # מנסים להחליף ראש סיווג ידנית
         if hasattr(model, "head") and isinstance(model.head, nn.Module):
             in_features = getattr(model.head, "in_features", None)

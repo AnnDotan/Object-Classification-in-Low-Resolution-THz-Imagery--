@@ -73,14 +73,26 @@ Tasks:
     - [x] ResNet50: 54.5% (low_res=16), 47.95% (low_res=8) ✓
     - [x] DenseNet121: 51.15% (low_res=16), 45.05% (low_res=8) ✓
 
+[x] Single-degradation isolation experiments:
+    - [x] 9 systematic runs (3 models x 3 types) - 7/9 done
+    - [x] Downsampling-only: ResNet 80.75%, DenseNet 77.40%
+    - [x] Blur-only: DenseNet 66.40%, ResNet 65.65%
+    - [x] Salt & Pepper: ResNet 64.60%, DenseNet 62.05%
+    - [ ] TransNeXt single-deg runs (3 pending)
+
 [x] Generate:
     - [x] accuracy vs epoch ✓
     - [x] accuracy vs degradation ✓
     - [x] robustness curves ✓
 
 [x] Export:
-    - [x] tables (CSV → 38 runs aggregated) ✓
+    - [x] tables (CSV → 56 runs aggregated) ✓
     - [x] plots (3 publication-ready figures) ✓
+
+[x] Dashboards:
+    - [x] Separate full-pipeline vs single-degradation experiments ✓
+    - [x] Color-coded degradation groups for fair comparison ✓
+    - [x] Sample image viewer (original vs degraded) ✓
 
 ---
 

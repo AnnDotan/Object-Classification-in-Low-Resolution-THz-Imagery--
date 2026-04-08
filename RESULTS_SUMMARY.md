@@ -93,10 +93,28 @@ Three publication-ready figures were generated:
 
 ---
 
+## STAGE 2 Progress: Single-Degradation Isolation
+
+In addition to full-pipeline runs, 9 systematic experiments were conducted
+(3 models x 3 degradation types), testing each degradation in isolation:
+
+| Model | Downsampling Only | Gaussian Blur Only | Salt & Pepper Only |
+|-------|-------------------|--------------------|--------------------|
+| ResNet-50 | **80.75%** | 65.65% | 64.60% |
+| DenseNet-121 | 77.40% | 66.40% | 62.05% |
+| TransNeXt Micro | pending | pending | pending |
+
+**Key Finding**: When only downsampling is applied (no blur/noise), accuracy
+reaches 80%+. Blur and salt & pepper reduce accuracy by ~15-18%.
+This confirms that the combination of degradations is what makes the task hard.
+
+---
+
 ## 🚀 Next Steps (STAGE 2 & 3)
 
 ### STAGE 2: Controlled Official Runs
 - Complete Experiment 2 (low_res=8) if needed
+- Complete TransNeXt single-degradation runs (3 pending)
 - Collect robustness curves for all models
 - Document accuracy drop vs degradation severity
 
@@ -115,9 +133,12 @@ artifacts/
 │   ├── accuracy_vs_epoch.png          ✅ Generated
 │   ├── model_comparison_bar.png       ✅ Generated
 │   └── accuracy_vs_degradation.png    ✅ Generated
-└── tables/
-    ├── run_summary.csv               ✅ Generated (38 runs)
-    └── plot_summary.csv              ✅ Generated
+├── tables/
+│   ├── run_summary.csv               ✅ Generated (56 runs)
+│   ├── sample_images.json            ✅ Generated (10 configs)
+│   └── plot_summary.csv              ✅ Generated
+├── dashboard.html                     ✅ Basic dashboard
+└── dashboard_advanced.html            ✅ Advanced dashboard (full-pipeline + single-deg)
 
 runs/official/
 ├── transnext_linear_probe_gpu_transnext_micro_pt_out224_lowres16_lr1e-03/

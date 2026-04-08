@@ -72,9 +72,38 @@ def get_metrics_csv(run_dir: str) -> list[dict] | None:
     return rows if rows else None
 
 
+def get_run_config(run_dir: str) -> dict:
+    config_path = Path(run_dir) / "run_config.txt"
+    data = {}
+    if config_path.exists():
+        for line in config_path.read_text(encoding="utf-8").splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                data[k.strip()] = v.strip()
+    return data
+
+
+def load_sample_images() -> dict:
+    path = Path("artifacts/tables/sample_images.json")
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
 def generate_html(runs: list[dict], output_path: Path) -> None:
     """Generate interactive HTML dashboard."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    sample_images = load_sample_images()
+
+    # Enrich runs with config key for sample images
+    for r in runs:
+        run_dir = r.get("run_dir", "")
+        low_res = r.get("low_res", "16")
+        out_size = r.get("out_size", "32")
+        cfg_data = get_run_config(run_dir)
+        deg_type = cfg_data.get("degradation_type", "all")
+        r["_config_key"] = f"lr{low_res}_out{out_size}_deg{deg_type}" if low_res and out_size else ""
 
     # Group runs by model and degradation
     runs_by_model = {}
@@ -340,6 +369,78 @@ def generate_html(runs: list[dict], output_path: Path) -> None:
             color: #666;
             border-top: 1px solid #ddd;
         }}
+        .modal-overlay {{
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }}
+        .modal-overlay.active {{ display: flex; }}
+        .modal-content {{
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            position: relative;
+        }}
+        .modal-close {{
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 5px;
+        }}
+        .modal-close:hover {{ color: #333; }}
+        .modal-title {{
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }}
+        .sample-images {{
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }}
+        .sample-box {{ text-align: center; }}
+        .sample-box img {{
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            image-rendering: pixelated;
+        }}
+        .sample-box .sample-label {{
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+            color: #555;
+        }}
+        .sample-info {{
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }}
+        .btn-sample {{
+            padding: 3px 8px;
+            font-size: 11px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            cursor: pointer;
+        }}
+        .btn-sample:hover {{ background: #bbdefb; }}
     </style>
 </head>
 <body>
@@ -422,12 +523,13 @@ def generate_html(runs: list[dict], output_path: Path) -> None:
                                 <th>Group</th>
                                 <th>Run Name</th>
                                 <th>Model</th>
-                                <th>Degradation</th>
+                                <th>Degradation Config</th>
                                 <th>Best Val Acc</th>
                                 <th>Output Size</th>
                                 <th>Batch Size</th>
                                 <th>Epochs</th>
                                 <th>Total Time</th>
+                                <th>Sample</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -442,31 +544,112 @@ def generate_html(runs: list[dict], output_path: Path) -> None:
         </footer>
     </div>
 
+    <!-- Sample Image Modal -->
+    <div class="modal-overlay" id="sampleModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeSampleModal()">&times;</button>
+            <div class="modal-title" id="modalTitle">Degradation Example</div>
+            <div class="sample-images">
+                <div class="sample-box">
+                    <img id="modalOriginal" src="" width="128" height="128" alt="Original">
+                    <div class="sample-label">Original</div>
+                </div>
+                <div class="sample-box">
+                    <img id="modalDegraded" src="" width="128" height="128" alt="Degraded">
+                    <div class="sample-label">After Degradation</div>
+                </div>
+            </div>
+            <div class="sample-info" id="modalInfo"></div>
+        </div>
+    </div>
+
     <script>
+        const sampleImages = {json.dumps(sample_images)};
         const runsData = {json.dumps(runs)};
         const completedRuns = runsData.filter(r => r.best_val_acc !== null);
+
+        // Color coding for degradation config groups
+        const CONFIG_GROUP_COLORS = [
+            'rgba(33,150,243,0.10)',
+            'rgba(76,175,80,0.10)',
+            'rgba(255,152,0,0.10)',
+            'rgba(156,39,176,0.10)',
+            'rgba(0,150,136,0.10)',
+            'rgba(244,67,54,0.10)',
+            'rgba(121,85,72,0.10)',
+            'rgba(63,81,181,0.10)',
+        ];
+        const CONFIG_GROUP_BORDERS = [
+            'rgba(33,150,243,0.35)',
+            'rgba(76,175,80,0.35)',
+            'rgba(255,152,0,0.35)',
+            'rgba(156,39,176,0.35)',
+            'rgba(0,150,136,0.35)',
+            'rgba(244,67,54,0.35)',
+            'rgba(121,85,72,0.35)',
+            'rgba(63,81,181,0.35)',
+        ];
+
+        function getConfigGroupColor(configKey, keyMap) {{
+            if (!configKey) return '';
+            if (!(configKey in keyMap)) keyMap[configKey] = Object.keys(keyMap).length;
+            return CONFIG_GROUP_COLORS[keyMap[configKey] % CONFIG_GROUP_COLORS.length];
+        }}
+        function getConfigGroupBorder(configKey, keyMap) {{
+            if (!configKey) return '';
+            if (!(configKey in keyMap)) keyMap[configKey] = Object.keys(keyMap).length;
+            return CONFIG_GROUP_BORDERS[keyMap[configKey] % CONFIG_GROUP_BORDERS.length];
+        }}
+        function configKeyToLabel(ck) {{
+            if (!ck) return '-';
+            const m = ck.match(/lr(\\d+)_out(\\d+)_deg(\\w+)/);
+            if (!m) return ck;
+            const deg = m[3] === 'all' ? 'Full Pipeline' : m[3];
+            return `lr=${{m[1]}} out=${{m[2]}} ${{deg}}`;
+        }}
 
         // Populate table
         function populateTable(dataToShow) {{
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            dataToShow.forEach(run => {{
+            // Sort by config key so groups are together
+            const sorted = [...dataToShow].sort((a, b) => {{
+                const ka = a._config_key || 'zzz';
+                const kb = b._config_key || 'zzz';
+                if (ka !== kb) return ka.localeCompare(kb);
+                const aa = a.best_val_acc || 0;
+                const ab = b.best_val_acc || 0;
+                return ab - aa;
+            }});
+            const keyMap = {{}};
+            sorted.forEach(run => {{
                 const tr = document.createElement('tr');
                 const accColor = run.best_val_acc === null ? '' :
                     (run.best_val_acc >= 0.6 ? 'metric-good' :
                      run.best_val_acc >= 0.5 ? 'metric-warn' : 'metric-poor');
 
+                const ck = run._config_key || '';
+                const bgColor = getConfigGroupColor(ck, keyMap);
+                const bdColor = getConfigGroupBorder(ck, keyMap);
+                if (bgColor) {{
+                    tr.style.background = bgColor;
+                    tr.style.borderLeft = '4px solid ' + bdColor;
+                }}
+                const sampleBtn = (ck && sampleImages[ck])
+                    ? `<button class="btn-sample" onclick="showSampleModal('${{ck}}')">View</button>`
+                    : '-';
                 tr.innerHTML = `
                     <td><span class="badge badge-${{run.group}}">${{run.group}}</span></td>
                     <td><small>${{run.run_name}}</small></td>
                     <td><strong>${{run.model_name || '-'}}</strong></td>
-                    <td><code>low_res=${{run.low_res || '-'}}</code></td>
+                    <td><code>${{configKeyToLabel(ck)}}</code></td>
                     <td class="${{accColor}}">${{run.best_val_acc !== null ? (run.best_val_acc * 100).toFixed(2) + '%' : '-'}}</td>
                     <td>${{run.out_size || '-'}}</td>
                     <td>${{run.batch_size || '-'}}</td>
                     <td>${{run.epochs || '-'}}</td>
                     <td><small>${{run.total_time || '-'}}</small></td>
+                    <td>${{sampleBtn}}</td>
                 `;
                 tbody.appendChild(tr);
             }});
@@ -557,6 +740,36 @@ def generate_html(runs: list[dict], output_path: Path) -> None:
                 hovermode: 'closest'
             }}, {{responsive: true}});
         }}
+
+        // Sample Image Modal
+        function showSampleModal(configKey) {{
+            const data = sampleImages[configKey];
+            if (!data) {{
+                alert('No sample image available for this configuration.');
+                return;
+            }}
+            const degTypeLabel = data.degradation_type === 'all'
+                ? 'Full Pipeline (all degradations)'
+                : data.degradation_type.charAt(0).toUpperCase() + data.degradation_type.slice(1) + ' Only';
+            document.getElementById('modalTitle').textContent =
+                'Degradation Example: ' + degTypeLabel;
+            document.getElementById('modalOriginal').src =
+                'data:image/png;base64,' + data.original_b64;
+            document.getElementById('modalDegraded').src =
+                'data:image/png;base64,' + data.degraded_b64;
+            document.getElementById('modalInfo').textContent =
+                'CIFAR-10 "' + data.label + '" | low_res=' + data.low_res +
+                ' | out_size=' + data.out_size + ' | degradation=' + data.degradation_type;
+            document.getElementById('sampleModal').classList.add('active');
+        }}
+
+        function closeSampleModal() {{
+            document.getElementById('sampleModal').classList.remove('active');
+        }}
+
+        document.getElementById('sampleModal').addEventListener('click', function(e) {{
+            if (e.target === this) closeSampleModal();
+        }});
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {{
