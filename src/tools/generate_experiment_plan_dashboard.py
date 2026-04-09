@@ -339,13 +339,14 @@ def tensor_to_base64(t: torch.Tensor, size: int = 112) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def generate_degraded_image(deg_params: dict, original_img: torch.Tensor) -> str:
+def generate_degraded_image(deg_params: dict, original_img: torch.Tensor,
+                            degradation_type: str = "all") -> str:
     """Generate base64 degraded image for given params."""
     kwargs = dict(
         low_res=deg_params.get("low_res", 16),
         out_size=224,
         p_grayscale=0.0,  # deterministic for display
-        degradation_type="all",
+        degradation_type=degradation_type,
     )
     bk = deg_params.get("blur_kernel", 5)
     if bk and int(bk) > 1:
@@ -1880,8 +1881,9 @@ def main():
         if params.get("low_res", 224) < 200:  # Only degrade if there's actual degradation
             try:
                 src_img = dataset_originals.get(exp["dataset"], cifar_img)
-                degraded_images[deg_key] = generate_degraded_image(params, src_img)
-                print(f"       {deg_key}: generated ({exp['dataset']})")
+                deg_type = exp.get("degradation_type", "all")
+                degraded_images[deg_key] = generate_degraded_image(params, src_img, deg_type)
+                print(f"       {deg_key}: generated ({exp['dataset']}, type={deg_type})")
             except Exception as e:
                 print(f"       {deg_key}: FAILED ({e})")
 
