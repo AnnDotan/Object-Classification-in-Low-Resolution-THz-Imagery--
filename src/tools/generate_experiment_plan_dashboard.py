@@ -685,7 +685,7 @@ def generate_html(experiments: list[dict], runs: list[dict],
     # ── Build experiment table rows ──
     def build_experiment_rows(phase_exps):
         rows_html = ""
-        for exp in phase_exps:
+        for idx, exp in enumerate(phase_exps):
             run = exp.get("run")
             status = "completed" if run else "pending"
             status_icon = "✅" if run else "⏳"
@@ -732,7 +732,8 @@ def generate_html(experiments: list[dict], runs: list[dict],
 
             rows_html += f"""
             <tr class="exp-row {status}" data-phase="{exp['phase']}" data-model="{exp['model']}"
-                data-dataset="{exp['dataset']}" data-status="{status}" data-expid="{exp['exp_id']}" {click_attr}>
+                data-dataset="{exp['dataset']}" data-status="{status}" data-expid="{exp['exp_id']}"
+                data-order="{idx}" {click_attr}>
                 <td class="id-cell">{exp['exp_id']}</td>
                 <td>{status_icon}</td>
                 <td><span class="model-dot" style="background:{model_color}"></span>{model_label}</td>
@@ -804,6 +805,26 @@ def generate_html(experiments: list[dict], runs: list[dict],
 
             {phase_info_html}
 
+            <div class="table-filter-bar" data-phase="{phase_id}">
+                <div class="filter-item">
+                    <label>Status</label>
+                    <select onchange="filterTableRows(this)">
+                        <option value="all">All</option>
+                        <option value="completed">Completed ✅</option>
+                        <option value="pending">Pending ⏳</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Model</label>
+                    <select onchange="filterTableRows(this)">
+                        <option value="all">All</option>
+                        <option value="resnet50">ResNet-50</option>
+                        <option value="densenet121">DenseNet-121</option>
+                        <option value="transnext_micro">TransNeXt Micro</option>
+                    </select>
+                </div>
+                <button class="btn-reset" onclick="resetTable(this)" title="Reset filters and sorting to original order">⟲ Reset</button>
+            </div>
             <table class="exp-table">
                 <thead>
                     <tr>
@@ -1103,6 +1124,55 @@ body {{
 }}
 .exp-table tr.exp-row.completed td {{
     opacity: 1;
+}}
+
+/* Inline table filter bar */
+.table-filter-bar {{
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+}}
+.table-filter-bar select {{
+    background: var(--surface3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+}}
+.table-filter-bar select:hover {{ border-color: var(--accent); }}
+.table-filter-bar select:focus {{ outline: none; border-color: var(--accent); }}
+.table-filter-bar label {{
+    font-size: 0.72em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}}
+.table-filter-bar .filter-item {{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}}
+.btn-reset {{
+    background: var(--surface3);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.2s;
+}}
+.btn-reset:hover {{
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--surface2);
 }}
 .id-cell {{
     font-family: 'Consolas', 'Monaco', monospace;
@@ -1726,6 +1796,42 @@ function sortTable(th, colIdx) {{
     }});
 
     rows.forEach(row => tbody.appendChild(row));
+}}
+
+// ── Inline Table Filters ──
+function filterTableRows(selectEl) {{
+    const bar = selectEl.closest('.table-filter-bar');
+    const table = bar.nextElementSibling;
+    const selects = bar.querySelectorAll('select');
+    const statusVal = selects[0].value;
+    const modelVal = selects[1].value;
+
+    table.querySelectorAll('tbody tr.exp-row').forEach(row => {{
+        let show = true;
+        if (statusVal !== 'all' && row.dataset.status !== statusVal) show = false;
+        if (modelVal !== 'all' && row.dataset.model !== modelVal) show = false;
+        row.style.display = show ? '' : 'none';
+    }});
+}}
+
+function resetTable(btn) {{
+    const bar = btn.closest('.table-filter-bar');
+    const table = bar.nextElementSibling;
+
+    // Reset filter dropdowns
+    bar.querySelectorAll('select').forEach(s => s.value = 'all');
+
+    // Clear sort indicators
+    table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+
+    // Restore original order using data-order and show all rows
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.exp-row'));
+    rows.sort((a, b) => parseInt(a.dataset.order) - parseInt(b.dataset.order));
+    rows.forEach(row => {{
+        row.style.display = '';
+        tbody.appendChild(row);
+    }});
 }}
 </script>
 

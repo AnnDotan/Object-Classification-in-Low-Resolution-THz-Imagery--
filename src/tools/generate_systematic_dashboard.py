@@ -253,7 +253,7 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
 
         # Table rows
         table_rows = ""
-        for run in gruns:
+        for idx, run in enumerate(gruns):
             model_label = MODEL_LABELS.get(run["model_name"], run["model_name"])
             color = MODEL_COLORS.get(run["model_name"], "#999")
             acc_pct = run["best_val_acc"] * 100
@@ -262,7 +262,7 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
             run_id = run["run_name"].replace(" ", "_")
 
             table_rows += f"""
-            <tr data-run-id="{run_id}" onclick="showCurve('{run_id}')" style="cursor:pointer;">
+            <tr data-run-id="{run_id}" data-order="{idx}" onclick="showCurve('{run_id}')" style="cursor:pointer;">
                 <td><span class="model-dot" style="background:{color}"></span> {model_label}</td>
                 <td class="{acc_class}">{acc_pct:.1f}%</td>
                 <td>{run['epochs']}</td>
@@ -301,6 +301,27 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
                     <div class="run-count">{len(gruns)} experiment(s)</div>
                 </div>
             </div>
+            <div class="table-filter-bar">
+                <div class="filter-item">
+                    <label>Model</label>
+                    <select onchange="filterTableRows(this)">
+                        <option value="all">All</option>
+                        <option value="resnet-50">ResNet-50</option>
+                        <option value="densenet-121">DenseNet-121</option>
+                        <option value="transnext micro">TransNeXt Micro</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Group</label>
+                    <select onchange="filterTableRows(this)">
+                        <option value="all">All</option>
+                        <option value="systematic">Systematic</option>
+                        <option value="official">Official</option>
+                        <option value="pilot">Pilot</option>
+                    </select>
+                </div>
+                <button class="btn-reset" onclick="resetTable(this)" title="Reset filters and sorting to original order">⟲ Reset</button>
+            </div>
             <table class="results-table">
                 <thead>
                     <tr>
@@ -331,7 +352,7 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
     full_pipeline_runs.sort(key=lambda r: -r["best_val_acc"])
 
     main_rows = ""
-    for run in full_pipeline_runs:
+    for idx, run in enumerate(full_pipeline_runs):
         model_label = MODEL_LABELS.get(run["model_name"], run["model_name"])
         color = MODEL_COLORS.get(run["model_name"], "#999")
         acc_pct = run["best_val_acc"] * 100
@@ -340,7 +361,7 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
         wd = run.get("weight_decay", "—")
         ls = run.get("label_smoothing", "—")
         main_rows += f"""
-            <tr>
+            <tr data-order="{idx}">
                 <td><span class="model-dot" style="background:{color}"></span> {model_label}</td>
                 <td class="{acc_class}" style="font-size:1.1em">{acc_pct:.1f}%</td>
                 <td>{run['epochs']}</td>
@@ -375,6 +396,26 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
             </div>
             <div class="run-count">{len(full_pipeline_runs)} experiment(s)</div>
         </div>
+    </div>
+    <div class="table-filter-bar">
+        <div class="filter-item">
+            <label>Model</label>
+            <select onchange="filterTableRows(this)">
+                <option value="all">All</option>
+                <option value="resnet-50">ResNet-50</option>
+                <option value="densenet-121">DenseNet-121</option>
+                <option value="transnext micro">TransNeXt Micro</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>Strategy</label>
+            <select onchange="filterTableRows(this)">
+                <option value="all">All</option>
+                <option value="full ft">Full FT</option>
+                <option value="lp (frozen)">LP (frozen)</option>
+            </select>
+        </div>
+        <button class="btn-reset" onclick="resetTable(this)" title="Reset filters and sorting to original order">⟲ Reset</button>
     </div>
     <table class="results-table">
         <thead>
@@ -640,6 +681,54 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
         padding: 16px;
         border-top: 1px solid var(--border);
     }}
+    /* Inline table filter bar */
+    .table-filter-bar {{
+        display: flex;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+        align-items: center;
+    }}
+    .table-filter-bar select {{
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        cursor: pointer;
+    }}
+    .table-filter-bar select:hover {{ border-color: var(--accent); }}
+    .table-filter-bar select:focus {{ outline: none; border-color: var(--accent); }}
+    .table-filter-bar label {{
+        font-size: 0.72em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }}
+    .table-filter-bar .filter-item {{
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }}
+    .btn-reset {{
+        background: var(--bg);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        cursor: pointer;
+        margin-left: auto;
+        transition: all 0.2s;
+    }}
+    .btn-reset:hover {{
+        color: var(--text);
+        border-color: var(--accent);
+        background: var(--surface2);
+    }}
 </style>
 </head>
 <body>
@@ -844,6 +933,55 @@ function sortTable(th, colIdx) {{
     }});
 
     rows.forEach(row => tbody.appendChild(row));
+}}
+
+// ── Inline Table Filters ──
+function filterTableRows(selectEl) {{
+    const bar = selectEl.closest('.table-filter-bar');
+    const table = bar.nextElementSibling;
+    const selects = Array.from(bar.querySelectorAll('select'));
+
+    table.querySelectorAll('tbody tr').forEach(row => {{
+        let show = true;
+        selects.forEach((sel, i) => {{
+            if (sel.value === 'all') return;
+            // Determine which column to check based on filter label
+            const label = sel.closest('.filter-item').querySelector('label').textContent.trim().toLowerCase();
+            let colIdx = -1;
+            const ths = table.querySelectorAll('thead th');
+            for (let j = 0; j < ths.length; j++) {{
+                if (ths[j].textContent.trim().toLowerCase().startsWith(label)) {{
+                    colIdx = j;
+                    break;
+                }}
+            }}
+            if (colIdx >= 0 && row.cells[colIdx]) {{
+                const cellText = row.cells[colIdx].textContent.trim().toLowerCase();
+                if (!cellText.includes(sel.value.toLowerCase())) show = false;
+            }}
+        }});
+        row.style.display = show ? '' : 'none';
+    }});
+}}
+
+function resetTable(btn) {{
+    const bar = btn.closest('.table-filter-bar');
+    const table = bar.nextElementSibling;
+
+    // Reset filter dropdowns
+    bar.querySelectorAll('select').forEach(s => s.value = 'all');
+
+    // Clear sort indicators
+    table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+
+    // Restore original order using data-order and show all rows
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => parseInt(a.dataset.order || 0) - parseInt(b.dataset.order || 0));
+    rows.forEach(row => {{
+        row.style.display = '';
+        tbody.appendChild(row);
+    }});
 }}
 </script>
 </body>
