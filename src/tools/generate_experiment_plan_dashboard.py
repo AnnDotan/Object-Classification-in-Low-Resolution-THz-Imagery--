@@ -212,7 +212,8 @@ def get_run_date(run_dir: Path) -> str:
     m = re.search(r"(\d{8})-(\d{6})", run_name)
     if m:
         try:
-            return datetime.strptime(m.group(1), "%Y%m%d").strftime("%d/%m/%Y")
+            dt = datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S")
+            return dt.strftime("%d/%m/%Y %H:%M")
         except ValueError:
             pass
     # Fall back to file modification time
@@ -220,7 +221,7 @@ def get_run_date(run_dir: Path) -> str:
         fp = run_dir / fname
         if fp.exists():
             mtime = os.path.getmtime(fp)
-            return datetime.fromtimestamp(mtime).strftime("%d/%m/%Y")
+            return datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
     return ""
 
 
