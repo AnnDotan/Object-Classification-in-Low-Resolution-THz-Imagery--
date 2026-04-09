@@ -299,7 +299,38 @@ python src/tools/refresh_dashboards.py
 
 ---
 
-## 11. Execution Timeline
+## 11. Current Results (as of April 2025)
+
+### Phase A: CIFAR-10 Systematic — ✅ COMPLETE (9/9)
+
+| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
+|-------|----------|-------------|-----------------|
+| **L1 Mild** | 81.2% (26 ep) | **81.9%** (16 ep) | 68.2% (19 ep) |
+| **L2 Moderate** | 78.7% (26 ep) | **80.4%** (26 ep) | 63.6% (15 ep) |
+| **L3 Severe** | 61.5% (27 ep) | **63.4%** (15 ep) | 44.9% (18 ep) |
+
+### Phase B: MNIST Systematic — 🟡 IN PROGRESS (6/9)
+
+| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
+|-------|----------|-------------|-----------------|
+| **L1 Mild** | **99.1%** (14 ep) | 98.7% (7 ep) | 92.5% (30 ep) |
+| **L2 Moderate** | **99.1%** (22 ep) | 99.0% (15 ep) | 92.8% (26 ep) |
+| **L3 Severe** | Pending | Pending | Pending |
+
+### Phase C: Single-Degradation Isolation — 🔲 TODO (0/12)
+
+### Phase D: Clean Baselines — 🔲 TODO (0/6)
+
+### Key Findings So Far
+
+1. **DenseNet121 is the most robust CNN** — consistently leads on CIFAR-10 across all degradation levels
+2. **MNIST is much easier** — even TransNeXt achieves 92%+ under severe degradation
+3. **Severe degradation (8px)** causes ~20% accuracy drop on CIFAR-10 compared to mild
+4. **Early stopping works well** — most runs converge in 15–27 epochs (out of 30 max)
+
+---
+
+## 12. Execution Timeline
 
 | Week | Dates | Tasks |
 |------|-------|-------|
@@ -321,8 +352,10 @@ python src/tools/refresh_dashboards.py
 
 | File | Change | Status |
 |------|--------|--------|
-| `src/data/datasets.py` | Add `THzLikeMNIST` class | 🔲 TODO |
-| `src/runner.py` | Add `dataset` parameter | 🔲 TODO |
-| `run_systematic.py` | Add `--dataset` argument | 🔲 TODO |
-| `src/tools/generate_systematic_dashboard.py` | Show dataset column in dashboard | 🔲 TODO |
+| `src/data/datasets.py` | Add `THzLikeMNIST` class | ✅ Done |
+| `src/runner.py` | Add `dataset` parameter + auto-dashboard refresh | ✅ Done |
+| `run_systematic.py` | Add `--dataset` argument | ✅ Done |
+| `run_all_phases.py` | Runner for all 36 experiments (4 phases) | ✅ Done |
+| `src/tools/generate_experiment_plan_dashboard.py` | 36-experiment tracker dashboard | ✅ Done |
+| `src/tools/generate_systematic_dashboard.py` | Show dataset column in dashboard | ✅ Done |
 | `EXPERIMENT_PLAN.md` | This document | ✅ Done |

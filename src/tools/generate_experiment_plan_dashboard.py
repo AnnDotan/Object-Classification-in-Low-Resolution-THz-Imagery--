@@ -132,7 +132,7 @@ def build_experiment_plan():
                 "level_name": f"{iso_type} only",
                 "model": model,
                 "degradation_type": iso_type,
-                "tag_pattern": f"{iso_type}_{model}",
+                "tag_pattern": f"iso_{iso_type}_{model}",
                 "deg_params": iso_params[iso_type],
             })
 
@@ -264,15 +264,41 @@ def scan_runs(runs_root: Path) -> list[dict]:
 
 
 def match_experiment_to_run(exp: dict, runs: list[dict]) -> dict | None:
-    """Find the matching systematic run for a planned experiment (by tag)."""
+    """Find the matching systematic run for a planned experiment (by tag).
+    
+    Uses exact tag matching to avoid cross-experiment collisions
+    (e.g. 'transnext_micro' accidentally matching 'transnext_micro_mnist').
+    Falls back to prefix match only when the remaining suffix starts with
+    the model name (i.e. tag contains extra run-name info after the tag).
+    """
     tag_pat = exp["tag_pattern"].lower()
+
+    # Pass 1: exact tag match
     for run in runs:
         tag = run.get("tag", "").lower()
         if tag and tag == tag_pat:
             return run
-        # Partial match: tag starts with the pattern
-        if tag and tag.startswith(tag_pat):
-            return run
+
+    # Pass 2: run tag starts with pattern + '_' + model name
+    # This handles cases where the tag in run_config might have extra suffixes
+    model = exp.get("model", "")
+    expected_suffix = f"_{model}" if model else ""
+    for run in runs:
+        tag = run.get("tag", "").lower()
+        if not tag:
+            continue
+        if tag.startswith(tag_pat):
+            rest = tag[len(tag_pat):]
+            # Only match if the tag is exhausted, or remainder is the run-name part
+            # (starts with underscore + model name, not another experiment suffix)
+            if rest == "":
+                return run
+            if expected_suffix and rest.startswith(expected_suffix):
+                # But reject if what follows is actually a dataset suffix like '_mnist'
+                after_model = rest[len(expected_suffix):]
+                if after_model == "" or after_model[0] == "_":
+                    return run
+
     return None
 
 
@@ -280,8 +306,8 @@ def match_experiment_to_run(exp: dict, runs: list[dict]) -> dict | None:
 # Image generation
 # ──────────────────────────────────────────────────────────────────────
 
-SAMPLE_IDX = 7  # horse from CIFAR-10
-MNIST_SAMPLE_IDX = 3  # sample digit from MNIST
+SAMPLE_IDX = 11  # truck from CIFAR-10
+MNIST_SAMPLE_IDX = 0  # digit 7 from MNIST
 
 
 def get_cifar10_sample(idx=SAMPLE_IDX):
@@ -484,6 +510,178 @@ def generate_html(experiments: list[dict], runs: list[dict],
         })
     cross_level_data["labels"] = ["Level 1 (Mild)", "Level 2 (Moderate)", "Level 3 (Severe)"]
 
+    # ── Phase info cards builder ──
+    def build_phase_info(phase_id):
+        """Build HTML showing shared config and per-experiment parameters for a phase."""
+        shared_html = f"""
+        <table>
+            <tr><td>Optimizer</td><td>AdamW (β₁=0.9, β₂=0.999)</td></tr>
+            <tr><td>Scheduler</td><td>Cosine LR decay</td></tr>
+            <tr><td>Epochs</td><td>30 (early stop patience=5)</td></tr>
+            <tr><td>Batch size</td><td>32</td></tr>
+            <tr><td>Train / Val</td><td>10,000 / 5,000 samples</td></tr>
+            <tr><td>Grad clipping</td><td>max_norm=1.0</td></tr>
+            <tr><td>Weight decay</td><td>1e-4</td></tr>
+            <tr><td>Input size</td><td>224×224</td></tr>
+        </table>"""
+
+        if phase_id == "A":
+            specific_html = """
+            <div class="info-text">
+                <strong>Dataset:</strong> <span class="val">CIFAR-10</span> (10 object classes)<br>
+                <strong>Degradation:</strong> Combined pipeline (downsampling + blur + noise + salt&pepper + grayscale)<br>
+                <strong>Levels:</strong><br>
+                &nbsp;&nbsp;L1 Mild — res=16px, blur k=3 σ=0.5, noise=0.04, s&p=2%<br>
+                &nbsp;&nbsp;L2 Moderate — res=16px, blur k=5 σ=1.0, noise=0.08, s&p=5%<br>
+                &nbsp;&nbsp;L3 Severe — res=8px, blur k=7 σ=1.5, noise=0.12, s&p=8%<br><br>
+                <strong>Models:</strong><br>
+                &nbsp;&nbsp;ResNet-50 — differential LR (head=1e-3, backbone=1e-4), label smoothing=0.1<br>
+                &nbsp;&nbsp;DenseNet-121 — differential LR (head=1e-3, backbone=1e-4), label smoothing=0.1<br>
+                &nbsp;&nbsp;TransNeXt Micro — linear probe (frozen backbone, head LR=1e-3)
+            </div>"""
+        elif phase_id == "B":
+            specific_html = """
+            <div class="info-text">
+                <strong>Dataset:</strong> <span class="val">MNIST</span> (10 digit classes, grayscale→3ch)<br>
+                <strong>Degradation:</strong> Combined pipeline (identical to Phase A)<br>
+                <strong>Levels:</strong><br>
+                &nbsp;&nbsp;L1 Mild — res=16px, blur k=3 σ=0.5, noise=0.04, s&p=2%<br>
+                &nbsp;&nbsp;L2 Moderate — res=16px, blur k=5 σ=1.0, noise=0.08, s&p=5%<br>
+                &nbsp;&nbsp;L3 Severe — res=8px, blur k=7 σ=1.5, noise=0.12, s&p=8%<br><br>
+                <strong>Models:</strong><br>
+                &nbsp;&nbsp;ResNet-50 — differential LR (head=1e-3, backbone=1e-4), label smoothing=0.1<br>
+                &nbsp;&nbsp;DenseNet-121 — differential LR (head=1e-3, backbone=1e-4), label smoothing=0.1<br>
+                &nbsp;&nbsp;TransNeXt Micro — linear probe (frozen backbone, head LR=1e-3)
+            </div>"""
+        elif phase_id == "C":
+            specific_html = """
+            <div class="info-text">
+                <strong>Dataset:</strong> <span class="val">CIFAR-10</span><br>
+                <strong>Goal:</strong> Isolate each degradation type to measure individual impact<br>
+                <strong>Base resolution:</strong> 16px for all types<br>
+                <strong>Types:</strong><br>
+                &nbsp;&nbsp;Downsampling only — 16px→224px upsample, no other degradation<br>
+                &nbsp;&nbsp;Blur only — Gaussian blur k=5 σ=1.0<br>
+                &nbsp;&nbsp;Noise only — Gaussian noise std=0.08<br>
+                &nbsp;&nbsp;Salt &amp; Pepper only — 5% corrupted pixels<br><br>
+                <strong>Models:</strong> Same 3 models, same hyperparameters as Phase A
+            </div>"""
+        else:  # D
+            specific_html = """
+            <div class="info-text">
+                <strong>Datasets:</strong> <span class="val">CIFAR-10</span> + <span class="val">MNIST</span><br>
+                <strong>Goal:</strong> Establish upper-bound accuracy without any degradation<br>
+                <strong>Degradation:</strong> None (native resolution 224×224, no blur/noise/s&p)<br><br>
+                <strong>Models:</strong> Same 3 models, same hyperparameters<br>
+                <strong>Purpose:</strong> Measure how much accuracy each degradation level costs
+            </div>"""
+
+        return f"""
+        <div class="phase-info">
+            <div class="info-card">
+                <h4>🔧 Shared Training Config</h4>
+                {shared_html}
+            </div>
+            <div class="info-card">
+                <h4>📋 Phase-Specific Parameters</h4>
+                {specific_html}
+            </div>
+        </div>"""
+
+    # ── Conclusions generator ──
+    def build_conclusions():
+        """Generate interim conclusions from completed phases."""
+        conclusions = []
+
+        for phase_id, phase_label in [("A", "Phase A — CIFAR-10"), ("B", "Phase B — MNIST"),
+                                       ("C", "Phase C — Isolation"), ("D", "Phase D — Baselines")]:
+            phase_exps = [e for e in experiments if e["phase"] == phase_id]
+            done = [e for e in phase_exps if e.get("run")]
+            total_p = len(phase_exps)
+            done_p = len(done)
+
+            if done_p == 0:
+                conclusions.append({
+                    "phase": phase_label,
+                    "badge": "pending",
+                    "items": [],
+                })
+                continue
+
+            badge = "done" if done_p == total_p else "partial"
+            items = []
+
+            # Gather accs per model
+            model_accs = {}
+            for e in done:
+                m = e["model"]
+                acc = e["run"]["best_val_acc"] * 100
+                model_accs.setdefault(m, []).append(acc)
+
+            # Best model
+            avg_accs = {m: sum(a)/len(a) for m, a in model_accs.items()}
+            if avg_accs:
+                best_m = max(avg_accs, key=avg_accs.get)
+                best_label = MODEL_LABELS.get(best_m, best_m)
+                items.append(f"Best average model: <strong>{best_label}</strong> ({avg_accs[best_m]:.1f}%)")
+
+            # Per-model averages
+            for m in MODELS:
+                if m in avg_accs:
+                    items.append(f"{MODEL_LABELS[m]}: avg {avg_accs[m]:.1f}%")
+
+            # Phase-specific insights
+            if phase_id == "A":
+                # Robustness: compare levels
+                for level_id in [1, 2, 3]:
+                    lev_exps = [e for e in done if e["level"] == level_id]
+                    if lev_exps:
+                        avg = sum(e["run"]["best_val_acc"]*100 for e in lev_exps) / len(lev_exps)
+                        items.append(f"Level {level_id} ({DEGRADATION_LEVELS[level_id]['name']}): avg {avg:.1f}%")
+                if all(any(e["level"]==l and e.get("run") for e in phase_exps) for l in [1,3]):
+                    l1_avg = sum(e["run"]["best_val_acc"]*100 for e in done if e["level"]==1) / max(1,sum(1 for e in done if e["level"]==1))
+                    l3_avg = sum(e["run"]["best_val_acc"]*100 for e in done if e["level"]==3) / max(1,sum(1 for e in done if e["level"]==3))
+                    drop = l1_avg - l3_avg
+                    items.append(f"Mild→Severe accuracy drop: <strong>{drop:.1f}pp</strong>")
+
+            elif phase_id == "B":
+                for level_id in [1, 2, 3]:
+                    lev_exps = [e for e in done if e["level"] == level_id]
+                    if lev_exps:
+                        avg = sum(e["run"]["best_val_acc"]*100 for e in lev_exps) / len(lev_exps)
+                        items.append(f"Level {level_id} ({DEGRADATION_LEVELS[level_id]['name']}): avg {avg:.1f}%")
+
+            elif phase_id == "C":
+                # Which degradation hurts most
+                type_avgs = {}
+                for e in done:
+                    dt = e["degradation_type"]
+                    type_avgs.setdefault(dt, []).append(e["run"]["best_val_acc"]*100)
+                type_means = {dt: sum(v)/len(v) for dt, v in type_avgs.items()}
+                if type_means:
+                    worst = min(type_means, key=type_means.get)
+                    best_t = max(type_means, key=type_means.get)
+                    items.append(f"Most damaging: <strong>{worst.replace('_',' ').title()}</strong> ({type_means[worst]:.1f}%)")
+                    items.append(f"Least damaging: <strong>{best_t.replace('_',' ').title()}</strong> ({type_means[best_t]:.1f}%)")
+
+            elif phase_id == "D":
+                # Compare clean vs degraded
+                for ds in ["cifar10", "mnist"]:
+                    ds_exps = [e for e in done if e["dataset"] == ds]
+                    if ds_exps:
+                        avg = sum(e["run"]["best_val_acc"]*100 for e in ds_exps) / len(ds_exps)
+                        ds_l = "CIFAR-10" if ds == "cifar10" else "MNIST"
+                        items.append(f"{ds_l} clean baseline: avg {avg:.1f}%")
+
+            conclusions.append({
+                "phase": phase_label,
+                "badge": badge,
+                "items": items,
+                "done": done_p,
+                "total": total_p,
+            })
+        return conclusions
+
     # ── Build experiment table rows ──
     def build_experiment_rows(phase_exps):
         rows_html = ""
@@ -569,6 +767,7 @@ def generate_html(experiments: list[dict], runs: list[dict],
         pct = (phase_completed / phase_total * 100) if phase_total else 0
 
         rows = build_experiment_rows(phase_exps)
+        phase_info_html = build_phase_info(phase_id)
 
         # Determine which comparison charts belong to this phase
         chart_keys = []
@@ -603,6 +802,8 @@ def generate_html(experiments: list[dict], runs: list[dict],
                 </div>
             </div>
 
+            {phase_info_html}
+
             <table class="exp-table">
                 <thead>
                     <tr>
@@ -634,6 +835,42 @@ def generate_html(experiments: list[dict], runs: list[dict],
         <p class="section-desc">Accuracy vs. degradation severity for each model (Phase A)</p>
         <div class="cross-chart-container">
             <canvas id="chart-cross-level" height="300"></canvas>
+        </div>
+    </div>"""
+
+    # Build conclusions
+    conclusions_data = build_conclusions()
+    conclusion_cards_html = ""
+    for c in conclusions_data:
+        badge_class = f"badge-{c['badge']}"
+        if c["badge"] == "done":
+            badge_text = "Complete"
+        elif c["badge"] == "partial":
+            badge_text = f"{c['done']}/{c['total']}"
+        else:
+            badge_text = "Pending"
+
+        card_class = "pending" if c["badge"] == "pending" else ""
+        if c["items"]:
+            items_html = "".join(f"<li>{item}</li>" for item in c["items"])
+            body = f"<ul>{items_html}</ul>"
+        else:
+            body = '<div class="no-data">No experiments completed yet</div>'
+
+        conclusion_cards_html += f"""
+        <div class="conclusion-card {card_class}">
+            <h3>{c['phase']} <span class="badge {badge_class}">{badge_text}</span></h3>
+            {body}
+        </div>"""
+
+    conclusions_section_html = f"""
+    <div class="conclusions-section">
+        <div class="conclusions-header">
+            <h2>📊 Interim Conclusions</h2>
+            <div class="subtitle">Auto-generated insights from completed experiments — updates after each phase</div>
+        </div>
+        <div class="conclusions-body">
+            {conclusion_cards_html}
         </div>
     </div>"""
 
@@ -866,17 +1103,17 @@ body {{
 .acc-mid {{ color: var(--orange); font-weight: 600; }}
 .acc-low {{ color: var(--red); font-weight: 600; }}
 .sample-thumb {{
-    width: 48px;
-    height: 48px;
+    width: 64px;
+    height: 64px;
     border-radius: 6px;
     border: 1px solid var(--border);
     image-rendering: pixelated;
     vertical-align: middle;
 }}
 .sample-arrow {{
-    color: var(--text2);
-    font-size: 16px;
-    margin: 0 4px;
+    color: var(--text-dim);
+    font-size: 18px;
+    margin: 0 6px;
     vertical-align: middle;
 }}
 .sample-cell {{
@@ -898,6 +1135,141 @@ body {{
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 16px;
+}}
+
+/* Phase info cards */
+.phase-info {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}}
+@media (max-width: 800px) {{
+    .phase-info {{ grid-template-columns: 1fr; }}
+}}
+.info-card {{
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+}}
+.info-card h4 {{
+    color: var(--accent);
+    font-size: 0.82em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    opacity: 0.85;
+}}
+.info-card table {{
+    width: 100%;
+    border-collapse: collapse;
+}}
+.info-card table td {{
+    padding: 3px 8px;
+    font-size: 0.82em;
+    border: none;
+    color: var(--text);
+}}
+.info-card table td:first-child {{
+    color: var(--text-dim);
+    white-space: nowrap;
+    width: 45%;
+}}
+.info-card .info-text {{
+    color: var(--text);
+    font-size: 0.82em;
+    line-height: 1.7;
+}}
+.info-card .info-text span.val {{
+    color: var(--blue);
+    font-weight: 600;
+}}
+
+/* Conclusions panel */
+.conclusions-section {{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 28px;
+    overflow: hidden;
+}}
+.conclusions-header {{
+    padding: 20px 24px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+}}
+.conclusions-header h2 {{
+    color: var(--accent);
+    font-size: 1.25em;
+    font-weight: 600;
+}}
+.conclusions-header .subtitle {{
+    color: var(--text-dim);
+    font-size: 0.85em;
+}}
+.conclusions-body {{
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}}
+.conclusion-card {{
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+}}
+.conclusion-card.pending {{
+    opacity: 0.45;
+}}
+.conclusion-card h3 {{
+    font-size: 0.92em;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}}
+.conclusion-card h3 .badge {{
+    font-size: 0.7em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}}
+.badge-done {{
+    background: var(--green);
+    color: #fff;
+}}
+.badge-partial {{
+    background: var(--orange);
+    color: #000;
+}}
+.badge-pending {{
+    background: var(--border);
+    color: var(--text-dim);
+}}
+.conclusion-card ul {{
+    list-style: none;
+    padding: 0;
+}}
+.conclusion-card li {{
+    font-size: 0.82em;
+    color: var(--text);
+    padding: 3px 0;
+    line-height: 1.5;
+}}
+.conclusion-card li::before {{
+    content: '▸ ';
+    color: var(--blue);
+}}
+.conclusion-card .no-data {{
+    color: var(--text-dim);
+    font-size: 0.82em;
+    font-style: italic;
+}}
 }}
 
 /* Cross-level section */
@@ -1055,6 +1427,8 @@ footer a {{ color: var(--accent); text-decoration: none; }}
 {phase_sections_html}
 
 {cross_level_chart_html}
+
+{conclusions_section_html}
 
 {learning_curve_html}
 

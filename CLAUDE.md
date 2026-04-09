@@ -14,12 +14,21 @@ Evaluate deep learning robustness under severe visual degradation (low resolutio
 
 Both use identical degradation pipeline: Original → Degrade → Upsample 224×224 → Normalize → Model
 
-## Current Best Results (combined degradation, CIFAR-10)
-| Model | Val Acc | Method |
-|-------|---------|--------|
-| DenseNet121 | 80.7% | differential LR fine-tuning |
-| ResNet50 | 78.8% | differential LR fine-tuning |
-| TransNeXt | 64.2% | linear probe (frozen backbone) |
+## Current Results
+
+### Phase A: CIFAR-10 Systematic (9/9 ✅)
+| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
+|-------|----------|-------------|------------------|
+| L1 Mild | 81.2% | **81.9%** | 68.2% |
+| L2 Moderate | 78.7% | **80.4%** | 63.6% |
+| L3 Severe | 61.5% | **63.4%** | 44.9% |
+
+### Phase B: MNIST Systematic (6/9 🟡)
+| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
+|-------|----------|-------------|------------------|
+| L1 Mild | **99.1%** | 98.7% | 92.5% |
+| L2 Moderate | **99.1%** | 99.0% | 92.8% |
+| L3 Severe | Pending | Pending | Pending |
 
 ## Experiment Plan (36 experiments)
 
@@ -27,9 +36,9 @@ Both use identical degradation pipeline: Original → Degrade → Upsample 224×
 
 | Phase | Description | # Experiments | Status |
 |-------|-------------|--------------|--------|
-| **A** | CIFAR-10 × 3 levels × 3 models | 9 | 🔲 TODO |
-| **B** | MNIST × 3 levels × 3 models | 9 | 🔲 TODO (needs MNIST pipeline) |
-| **C** | Single-degradation isolation | 12 | 🟡 7/12 done |
+| **A** | CIFAR-10 × 3 levels × 3 models | 9 | ✅ Complete |
+| **B** | MNIST × 3 levels × 3 models | 9 | 🟡 6/9 done |
+| **C** | Single-degradation isolation | 12 | 🔲 TODO |
 | **D** | Clean baselines (no degradation) | 6 | 🔲 TODO |
 
 ## Degradation Levels
@@ -50,6 +59,12 @@ Both use identical degradation pipeline: Original → Degrade → Upsample 224×
 - **Batch size**: 32, **Epochs**: 30 (full) / 5 (pilot)
 
 ## Experiment System
+
+**All phases runner**: `run_all_phases.py` — runs all 36 experiments sequentially
+```bash
+python run_all_phases.py --phase all                           # all 4 phases
+python run_all_phases.py --phase A,B --skip-existing           # specific phases
+```
 
 **Systematic runner**: `run_systematic.py` — 3 degradation levels × 3 models with early stopping
 ```bash
@@ -79,17 +94,18 @@ src/               — main code (models, data, tools)
 src/data/          — datasets + degradation pipeline (degrade.py, datasets.py)
 src/models/        — model wrappers (transnext_wrapper.py)
 src/tools/         — dashboard generators (incl. experiment plan dashboard), summarizers, visualizers
-runs/              — experiment outputs (systematic/, official/, pilot/)
+runs/systematic/   — current experiment plan runs (15 completed)
+runs/official/     — best previous results (3 kept)
 artifacts/         — dashboards, figures, tables
 papers/            — reference papers (TransNeXt, DenseNet, TResNet, EfficientNetV2, NASNet)
-scripts/archive/   — old experiment scripts (not active)
 docs/              — detailed documentation
 ```
 
 ## Key Files
-- `src/runner.py` — training loop with early stopping, custom degradation params
+- `src/runner.py` — training loop with early stopping, auto-dashboard refresh
 - `src/data/degrade.py` — DegradeConfig: low_res, blur, noise, salt_pepper, grayscale
 - `src/data/datasets.py` — THzLikeCIFAR10 + THzLikeMNIST dataset wrappers
+- `run_all_phases.py` — sequential runner for all 36 experiments (4 phases)
 - `run_systematic.py` — systematic experiment launcher (3 levels × 3 models × 2 datasets)
 - `src/tools/generate_experiment_plan_dashboard.py` — 36-experiment plan dashboard (scans `runs/systematic/` only)
 
