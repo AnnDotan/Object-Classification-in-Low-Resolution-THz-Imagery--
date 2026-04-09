@@ -304,13 +304,13 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
             <table class="results-table">
                 <thead>
                     <tr>
-                        <th>Model</th>
-                        <th>Best Val Acc</th>
-                        <th>Epochs</th>
-                        <th>LR</th>
-                        <th>Frozen</th>
-                        <th>Group</th>
-                        <th>Tag</th>
+                        <th onclick="sortTable(this, 0)">Model<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 1)">Best Val Acc<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 2)">Epochs<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 3)">LR<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 4)">Frozen<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 5)">Group<span class="sort-arrow"></span></th>
+                        <th onclick="sortTable(this, 6)">Tag<span class="sort-arrow"></span></th>
                     </tr>
                 </thead>
                 <tbody>{table_rows}
@@ -379,14 +379,14 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
     <table class="results-table">
         <thead>
             <tr>
-                <th>Model</th>
-                <th>Best Val Acc</th>
-                <th>Epochs</th>
-                <th>Head LR</th>
-                <th>Backbone LR</th>
-                <th>Strategy</th>
-                <th>Weight Decay</th>
-                <th>Label Smooth</th>
+                <th onclick="sortTable(this, 0)">Model<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 1)">Best Val Acc<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 2)">Epochs<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 3)">Head LR<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 4)">Backbone LR<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 5)">Strategy<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 6)">Weight Decay<span class="sort-arrow"></span></th>
+                <th onclick="sortTable(this, 7)">Label Smooth<span class="sort-arrow"></span></th>
             </tr>
         </thead>
         <tbody>{main_rows}
@@ -566,6 +566,25 @@ def generate_html(runs: list[dict], original_b64: str, sample_images: dict,
         text-transform: uppercase;
         letter-spacing: 0.5px;
         border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+    }}
+    .results-table th:hover {{
+        color: var(--text);
+        background: var(--surface3);
+    }}
+    .results-table th .sort-arrow {{
+        margin-left: 4px;
+        font-size: 0.85em;
+        opacity: 0.5;
+    }}
+    .results-table th.sort-asc .sort-arrow::after {{
+        content: ' \25b2';
+        opacity: 1;
+    }}
+    .results-table th.sort-desc .sort-arrow::after {{
+        content: ' \25bc';
+        opacity: 1;
     }}
     .results-table td {{
         padding: 10px 14px;
@@ -796,6 +815,35 @@ function applyFilters() {{
         }}
         row.style.display = show ? '' : 'none';
     }});
+}}
+
+// ── Table Sorting ──
+function sortTable(th, colIdx) {{
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const isAsc = th.classList.contains('sort-asc');
+
+    table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+    th.classList.add(isAsc ? 'sort-desc' : 'sort-asc');
+
+    rows.sort((a, b) => {{
+        let aVal = a.cells[colIdx] ? a.cells[colIdx].textContent.trim() : '';
+        let bVal = b.cells[colIdx] ? b.cells[colIdx].textContent.trim() : '';
+
+        const aNum = parseFloat(aVal.replace('%', ''));
+        const bNum = parseFloat(bVal.replace('%', ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) {{
+            return isAsc ? bNum - aNum : aNum - bNum;
+        }}
+
+        if (aVal === '—' || aVal === '') aVal = isAsc ? '\uffff' : '';
+        if (bVal === '—' || bVal === '') bVal = isAsc ? '\uffff' : '';
+
+        return isAsc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+    }});
+
+    rows.forEach(row => tbody.appendChild(row));
 }}
 </script>
 </body>
