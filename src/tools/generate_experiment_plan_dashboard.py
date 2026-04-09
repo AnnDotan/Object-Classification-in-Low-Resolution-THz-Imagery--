@@ -281,6 +281,7 @@ def match_experiment_to_run(exp: dict, runs: list[dict]) -> dict | None:
 # ──────────────────────────────────────────────────────────────────────
 
 SAMPLE_IDX = 7  # horse from CIFAR-10
+MNIST_SAMPLE_IDX = 3  # sample digit from MNIST
 
 
 def get_cifar10_sample(idx=SAMPLE_IDX):
@@ -288,6 +289,15 @@ def get_cifar10_sample(idx=SAMPLE_IDX):
                           transform=transforms.ToTensor())
     img, label = ds[idx]
     return img, ds.classes[label]
+
+
+def get_mnist_sample(idx=MNIST_SAMPLE_IDX):
+    ds = datasets.MNIST(root="./data", train=False, download=True,
+                        transform=transforms.ToTensor())
+    img, label = ds[idx]
+    # Convert 1-channel to 3-channel for consistency
+    img = img.repeat(3, 1, 1)
+    return img, str(label)
 
 
 def tensor_to_base64(t: torch.Tensor, size: int = 112) -> str:
@@ -334,8 +344,11 @@ def generate_degraded_image(deg_params: dict, original_img: torch.Tensor) -> str
 # ──────────────────────────────────────────────────────────────────────
 
 def generate_html(experiments: list[dict], runs: list[dict],
-                  original_b64: str, degraded_images: dict):
-    """Generate the full dashboard HTML."""
+                  original_images: dict, degraded_images: dict):
+    """Generate the full dashboard HTML.
+    
+    original_images: dict mapping dataset name ('cifar10', 'mnist') to base64 string
+    """
 
     # Match experiments to runs
     for exp in experiments:
@@ -502,11 +515,22 @@ def generate_html(experiments: list[dict], runs: list[dict],
 
             deg_img_key = f"{exp['phase']}_{exp.get('level', 0)}_{exp.get('degradation_type', 'all')}"
             deg_b64 = degraded_images.get(deg_img_key, "")
+            orig_b64 = original_images.get(exp["dataset"], "")
 
             # Clickable for learning curve
             click_attr = ""
             if run:
                 click_attr = f'onclick="showLearningCurve(\'{exp["exp_id"]}\')" style="cursor:pointer;"'
+
+            # Build sample images HTML: original → degraded
+            sample_html = ""
+            if orig_b64 or deg_b64:
+                orig_tag = f"<img src='data:image/png;base64,{orig_b64}' class='sample-thumb' title='Original'>" if orig_b64 else ""
+                deg_tag = f"<img src='data:image/png;base64,{deg_b64}' class='sample-thumb' title='Degraded'>" if deg_b64 else ""
+                arrow = "<span class='sample-arrow'>→</span>" if orig_b64 and deg_b64 else ""
+                sample_html = f"{orig_tag}{arrow}{deg_tag}"
+            else:
+                sample_html = "—"
 
             rows_html += f"""
             <tr class="exp-row {status}" data-phase="{exp['phase']}" data-model="{exp['model']}"
@@ -521,7 +545,7 @@ def generate_html(experiments: list[dict], runs: list[dict],
                 <td>{date_display}</td>
                 <td>{duration}</td>
                 <td class="sample-cell">
-                    {"<img src='data:image/png;base64," + deg_b64 + "' class='sample-thumb'>" if deg_b64 else "—"}
+                    {sample_html}
                 </td>
             </tr>"""
         return rows_html
@@ -849,8 +873,15 @@ body {{
     image-rendering: pixelated;
     vertical-align: middle;
 }}
+.sample-arrow {{
+    color: var(--text2);
+    font-size: 16px;
+    margin: 0 4px;
+    vertical-align: middle;
+}}
 .sample-cell {{
     padding: 4px 10px !important;
+    white-space: nowrap;
 }}
 
 /* Comparison charts */
@@ -1294,10 +1325,17 @@ def main():
     runs = scan_runs(runs_root)
     print(f"       {len(runs)} completed runs found")
 
-    # Generate sample images
+    # Generate sample images for both datasets
     print("[IMAGES] Generating degradation samples...")
-    original_img, label = get_cifar10_sample()
-    original_b64 = tensor_to_base64(original_img, size=112)
+    cifar_img, cifar_label = get_cifar10_sample()
+    mnist_img, mnist_label = get_mnist_sample()
+
+    original_images = {
+        "cifar10": tensor_to_base64(cifar_img, size=112),
+        "mnist": tensor_to_base64(mnist_img, size=112),
+    }
+    # Map dataset to its original image tensor
+    dataset_originals = {"cifar10": cifar_img, "mnist": mnist_img}
 
     degraded_images = {}
     # For each unique degradation config
@@ -1310,13 +1348,14 @@ def main():
         params = exp["deg_params"]
         if params.get("low_res", 224) < 200:  # Only degrade if there's actual degradation
             try:
-                degraded_images[deg_key] = generate_degraded_image(params, original_img)
-                print(f"       {deg_key}: generated")
+                src_img = dataset_originals.get(exp["dataset"], cifar_img)
+                degraded_images[deg_key] = generate_degraded_image(params, src_img)
+                print(f"       {deg_key}: generated ({exp['dataset']})")
             except Exception as e:
                 print(f"       {deg_key}: FAILED ({e})")
 
     print("[HTML] Generating dashboard...")
-    html = generate_html(experiments, runs, original_b64, degraded_images)
+    html = generate_html(experiments, runs, original_images, degraded_images)
 
     out_path = Path("artifacts") / "dashboard_experiment_plan.html"
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -137,15 +137,17 @@ COMMON = {
 }
 
 
-def run_systematic(levels: list[int], mode: str = "pilot"):
+def run_systematic(levels: list[int], mode: str = "pilot", dataset: str = "cifar10"):
     """Run all 3 models for each specified degradation level."""
     settings = PILOT_SETTINGS if mode == "pilot" else FULL_SETTINGS
+    ds_label = "CIFAR-10" if dataset == "cifar10" else "MNIST"
 
     total_experiments = len(levels) * len(MODEL_CONFIGS)
 
     print("\n" + "=" * 70)
     print(f"  SYSTEMATIC DEGRADATION EXPERIMENTS ({mode.upper()} MODE)")
     print("=" * 70)
+    print(f"  Dataset: {ds_label}")
     print(f"  Degradation levels: {levels}")
     print(f"  Models: ResNet50, DenseNet121, TransNeXt Micro")
     print(f"  Epochs: {settings['epochs']}")
@@ -173,7 +175,8 @@ def run_systematic(levels: list[int], mode: str = "pilot"):
         for model_cfg in MODEL_CONFIGS:
             exp_num += 1
             model = model_cfg["model_name"]
-            tag = f"sys_L{level_id}_{level_name}_{model}"
+            ds_suffix = f"_{dataset}" if dataset != "cifar10" else ""
+            tag = f"sys_L{level_id}_{level_name}_{model}{ds_suffix}"
 
             print(f"\n{'─' * 70}")
             print(f"  [{exp_num}/{total_experiments}] {model} @ Level {level_id} ({level_name})")
@@ -193,6 +196,7 @@ def run_systematic(levels: list[int], mode: str = "pilot"):
                 "p_grayscale": level["p_grayscale"],
                 "early_stopping_patience": 5,
                 "tag": tag,
+                "dataset": dataset,
             }
 
             t0 = time.time()
@@ -244,6 +248,8 @@ if __name__ == "__main__":
                    help="Degradation level: 1, 2, 3, or 'all'")
     p.add_argument("--mode", default="pilot", choices=["pilot", "full"],
                    help="pilot (5 epochs, small data) or full (30 epochs)")
+    p.add_argument("--dataset", default="cifar10", choices=["cifar10", "mnist"],
+                   help="Dataset to use: cifar10 or mnist")
     args = p.parse_args()
 
     if args.level == "all":
@@ -255,4 +261,4 @@ if __name__ == "__main__":
                 print(f"[ERROR] Invalid level {lv}. Choose from 1, 2, 3")
                 sys.exit(1)
 
-    run_systematic(levels, args.mode)
+    run_systematic(levels, args.mode, args.dataset)

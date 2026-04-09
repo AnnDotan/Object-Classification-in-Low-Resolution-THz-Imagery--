@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import warnings
 import csv
 import argparse
@@ -21,7 +22,7 @@ import timm
 from timm.data import Mixup
 from timm.scheduler import CosineLRScheduler
 
-from src.data.datasets import DataConfig, THzLikeCIFAR10
+from src.data.datasets import DataConfig, THzLikeCIFAR10, THzLikeMNIST
 from src.models.transnext_wrapper import create_transnext_model
 from src.tools.visualize_run import RunVisualizer
 
@@ -123,6 +124,7 @@ def run_experiment(
     salt_pepper_amount: float | None = None,
     p_grayscale: float | None = None,
     early_stopping_patience: int = 0,
+    dataset: str = "cifar10",
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -185,10 +187,12 @@ def run_experiment(
         f.write(f"salt_pepper_amount={salt_pepper_amount}\n")
         f.write(f"p_grayscale={p_grayscale}\n")
         f.write(f"early_stopping_patience={early_stopping_patience}\n")
+        f.write(f"dataset={dataset}\n")
 
+    ds_label = "CIFAR10" if dataset == "cifar10" else "MNIST"
     log(f"Device: {device}")
     log(f"Model: {model_name}, pretrained={pretrained}")
-    log(f"Data: CIFAR10 degraded | out_size={out_size}, low_res={low_res}")
+    log(f"Data: {ds_label} degraded | out_size={out_size}, low_res={low_res}")
     log(f"Train subset={train_subset}, Val subset={val_subset}")
     log(f"Epochs={epochs}, batch_size={batch_size}, lr={lr}, backbone_lr={backbone_lr}")
     log(f"Degradation type: {degradation_type}")
@@ -217,11 +221,12 @@ def run_experiment(
     if p_grayscale is not None:
         deg_overrides["p_grayscale"] = p_grayscale
 
-    cfg_train = DataConfig(train=True, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
-    cfg_val = DataConfig(train=False, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
+    cfg_train = DataConfig(dataset=dataset, train=True, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
+    cfg_val = DataConfig(dataset=dataset, train=False, out_size=out_size, low_res=low_res, root="./data", degradation_type=degradation_type, **deg_overrides)
 
-    train_ds = THzLikeCIFAR10(cfg_train)
-    val_ds = THzLikeCIFAR10(cfg_val)
+    DatasetClass = THzLikeMNIST if dataset == "mnist" else THzLikeCIFAR10
+    train_ds = DatasetClass(cfg_train)
+    val_ds = DatasetClass(cfg_val)
 
     # subsets for CPU speed
     if train_subset > 0:
@@ -406,6 +411,20 @@ def run_experiment(
         log("[OK] Visualizations complete!")
     except Exception as e:
         log(f"[WARN] Visualization failed: {e}")
+
+    # Auto-update experiment plan dashboard after each experiment
+    try:
+        log("[DASHBOARD] Updating experiment plan dashboard...")
+        import importlib
+        # Ensure project root is on sys.path for the import
+        project_root = str(Path(__file__).resolve().parent.parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        dashboard_mod = importlib.import_module("src.tools.generate_experiment_plan_dashboard")
+        dashboard_mod.main()
+        log("[OK] Dashboard updated: artifacts/dashboard_experiment_plan.html")
+    except Exception as e:
+        log(f"[WARN] Dashboard update failed: {e}")
 
 
 def parse_args():
