@@ -27,7 +27,13 @@ os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from src.runner import run_experiment
+def _resolve_run_experiment(engine: str):
+    """Pick the legacy or Lightning training entry. Same call signature."""
+    if engine == "lightning":
+        from src.lightning.train import run_experiment
+    else:
+        from src.runner import run_experiment
+    return run_experiment
 
 # ── Shared config ──
 COMMON = {
@@ -44,29 +50,47 @@ COMMON = {
 }
 
 MODEL_CONFIGS = {
+    # ResNet50 — TResNet/EfficientNetV2 paper recommendations
+    # Lower backbone_lr to reduce overfitting (14% train-val gap at L1)
+    # Stronger weight_decay + label_smoothing for regularization
+    # Warmup per EfficientNetV2 progressive training strategy
     "resnet50": {
         "model_name": "resnet50",
         "lr": 1e-3,
-        "backbone_lr": 1e-4,
+        "backbone_lr": 5e-5,          # was 1e-4: slower adaptation, less forgetting
         "freeze_backbone": False,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.1,
+        "weight_decay": 5e-4,          # was 1e-4: stronger L2 regularization
+        "label_smoothing": 0.15,       # was 0.1: moderate increase
+        "warmup_epochs": 3,            # EfficientNetV2 warmup recommendation
     },
+    # DenseNet121 — DenseNet paper recommendations
+    # Train acc hits 99%+ → needs strong label smoothing
+    # Dense feature reuse already regularizes, but gap still ~19%
+    # Lower backbone_lr + stronger weight_decay to combat overfitting
     "densenet121": {
         "model_name": "densenet121",
         "lr": 1e-3,
-        "backbone_lr": 1e-4,
+        "backbone_lr": 5e-5,          # was 1e-4: more conservative
         "freeze_backbone": False,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.1,
+        "weight_decay": 5e-4,          # was 1e-4: stronger regularization
+        "label_smoothing": 0.2,        # was 0.1: strong smoothing for 99%+ train acc
+        "warmup_epochs": 2,            # shorter warmup (DenseNet converges fast)
     },
+    # TransNeXt Micro — TransNeXt paper recommendations
+    # Frozen backbone gave very low overfitting but low accuracy (68% L1)
+    # Paper uses backbone_lr=5e-5 for fine-tuning; we use 1e-5 (conservative)
+    # weight_decay=0.05 per TransNeXt paper fine-tuning recipe
+    # drop_path_rate=0.1 per TransNeXt paper
+    # 5-epoch warmup per TransNeXt training protocol
     "transnext_micro": {
         "model_name": "transnext_micro",
-        "lr": 1e-3,
-        "backbone_lr": None,
-        "freeze_backbone": True,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.0,
+        "lr": 1e-3,                    # head LR
+        "backbone_lr": 1e-5,           # was None/frozen: very conservative unfreeze
+        "freeze_backbone": False,      # was True: allow backbone adaptation
+        "weight_decay": 0.05,          # TransNeXt paper fine-tuning value
+        "label_smoothing": 0.1,        # was 0.0: light smoothing for fine-tuning
+        "warmup_epochs": 5,            # TransNeXt paper training protocol
+        "drop_path_rate": 0.1,         # TransNeXt paper stochastic depth
     },
 }
 
@@ -199,16 +223,17 @@ def find_existing_run(tag: str) -> bool:
     return False
 
 
-def run_single(exp: dict, exp_num: int, total: int):
+def run_single(exp: dict, exp_num: int, total: int, engine: str = "lightning"):
     """Run a single experiment, stripping out internal keys."""
     tag = exp["tag"]
     phase = exp["phase"]
+    run_experiment = _resolve_run_experiment(engine)
 
     # Remove 'phase' key before passing to run_experiment
     config = {k: v for k, v in exp.items() if k != "phase"}
 
     print(f"\n{'━' * 70}")
-    print(f"  [{exp_num}/{total}] Phase {phase} | {config['model_name']} | {tag}")
+    print(f"  [{exp_num}/{total}] Phase {phase} | {config['model_name']} | {tag}  [engine={engine}]")
     print(f"  dataset={config['dataset']}, degradation={config['degradation_type']}, "
           f"low_res={config['low_res']}")
     print(f"{'━' * 70}\n")
@@ -230,6 +255,8 @@ def main():
                         help="Phases to run (comma-separated): A,B,C,D")
     parser.add_argument("--skip-existing", action="store_true",
                         help="Skip experiments that already have results")
+    parser.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
+                        help="Training engine: lightning (default) or legacy hand-rolled trainer")
     args = parser.parse_args()
 
     phases = [p.strip().upper() for p in args.phase.split(",")]
@@ -240,6 +267,7 @@ def main():
     print("\n" + "=" * 70)
     print("  FULL EXPERIMENT PLAN RUNNER")
     print("=" * 70)
+    print(f"  Engine: {args.engine}")
     print(f"  Phases: {', '.join(phases)}")
     print(f"  Total experiments: {len(experiments)}")
     print(f"  Skip existing: {args.skip_existing}")
@@ -256,7 +284,7 @@ def main():
             skipped += 1
             continue
 
-        result = run_single(exp, i - skipped, len(experiments) - skipped)
+        result = run_single(exp, i - skipped, len(experiments) - skipped, engine=args.engine)
         results.append(result)
 
         # Print running tally

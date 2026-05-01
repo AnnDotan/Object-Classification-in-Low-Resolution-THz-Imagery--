@@ -10,18 +10,34 @@ data/
 datasets/
 *.zip
 *.tar.gz
+*.npy
+*.npz
 
 # Model weights
 *.pth
 *.pt
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
 *.h5
 *.pkl
+*.msgpack
+checkpoints/
+weights/
+torch_hub/
+.cache/
 
 # Experiment outputs (read on demand via tools)
 runs/
 artifacts/
 logs/
 outputs/
+
+# W&B and Optuna (Lightning era)
+wandb/
+lightning_logs/
+*.optuna_journal.log
 
 # Old scripts
 scripts/archive/

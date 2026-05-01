@@ -17,6 +17,7 @@ Data engineer obsessed with reproducibility. Any divergence in degradation behav
 2. Own `src/data/degrade.py` and `src/data/datasets.py`.
 3. Gate every change to degradation parameters through MASTER.
 4. Provide the "one-pixel test" fixture used by VALIDATOR.
+5. **Own the index-based seeding contract**: maintain `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants in `src/data/degrade.py`, ensure `degrade_image` uses **local** RNGs only (`np.random.default_rng`, `torch.Generator`) and never mutates global RNG state, and that every `__getitem__` forwards `seed = idx + offset`.
 
 ## Tool Access
 - Read, Glob, Grep
@@ -33,4 +34,7 @@ Data engineer obsessed with reproducibility. Any divergence in degradation behav
 - `DegradeConfig` instance for a given level must be **identical** across datasets (only the source image changes).
 - Upsampling target = 224×224 for all models.
 - Normalization = ImageNet stats for all models.
+- **Validation noise must be byte-identical across all models via index-based seeding.** For any val index `i`, `degrade_image(x_i, cfg, seed=i + SEED_OFFSET_VAL)` is reproducible; two reads of the val batch must satisfy MSE = 0.
+- `degrade_image` may **never** call `random.seed`, `torch.manual_seed`, or `np.random.seed` — only local generators are permitted, otherwise global RNG state leaks into the DataLoader shuffler and model init.
+- `SEED_OFFSET_TRAIN` and `SEED_OFFSET_VAL` must remain disjoint (currently 0 and 10_000_000) so train idx=0 and val idx=0 receive different noise.
 - Any deviation ⇒ immediate P0 escalation to MASTER.

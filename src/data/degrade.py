@@ -9,6 +9,10 @@ import numpy as np
 import torch
 
 
+SEED_OFFSET_TRAIN = 0
+SEED_OFFSET_VAL = 10_000_000
+
+
 @dataclass
 class DegradeConfig:
     # downsample to low_res (e.g., 16 or 8) then upsample back to out_size
@@ -66,15 +70,17 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     - 'blur': Only Gaussian blur
     - 'noise': Only Gaussian noise
     """
+    # Local RNGs only — never mutate global state from inside __getitem__,
+    # or we'd clobber the DataLoader shuffler, model init, dropout, etc.
+    np_rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+    torch_rng = torch.Generator(device=img.device)
     if seed is not None:
-        random.seed(seed)
-        torch.manual_seed(seed)
-        np.random.seed(seed)
+        torch_rng.manual_seed(int(seed))
 
     # Only apply grayscale for 'all' degradation type
     if cfg.degradation_type == 'all':
         # 1) optional grayscale
-        if img.shape[0] == 3 and random.random() < cfg.p_grayscale:
+        if img.shape[0] == 3 and float(np_rng.random()) < cfg.p_grayscale:
             gray = (0.2989 * img[0] + 0.5870 * img[1] + 0.1140 * img[2]).clamp(0, 1)
             img = torch.stack([gray, gray, gray], dim=0)
 
@@ -96,14 +102,18 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     # Apply for: 'all' or 'noise'
     if cfg.degradation_type in ['all', 'noise']:
         if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
-            noise = torch.randn_like(img) * cfg.gaussian_noise_std
+            noise = torch.randn(
+                img.shape, generator=torch_rng, device=img.device, dtype=img.dtype
+            ) * cfg.gaussian_noise_std
             img = (img + noise).clamp(0, 1)
 
     # 5) salt-and-pepper noise
     # Apply for: 'all' or 'salt_pepper'
     if cfg.degradation_type in ['all', 'salt_pepper']:
         if cfg.salt_pepper_amount and cfg.salt_pepper_amount > 0:
-            mask = torch.rand_like(img[0:1])  # single-channel mask [1,H,W]
+            mask = torch.rand(
+                img[0:1].shape, generator=torch_rng, device=img.device, dtype=img.dtype
+            )  # single-channel mask [1,H,W]
             salt = mask < (cfg.salt_pepper_amount / 2.0)
             pepper = mask > (1.0 - cfg.salt_pepper_amount / 2.0)
             img = img.clone()

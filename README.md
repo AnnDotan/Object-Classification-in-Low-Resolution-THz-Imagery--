@@ -206,9 +206,15 @@ docs/                   — detailed documentation
 ## Tech Stack
 
 - Python 3.12+
-- PyTorch 2.x (CUDA supported)
-- torchvision, timm
-- Chart.js / Plotly.js (dashboards)
+- PyTorch 2.x (CUDA supported), torchvision, timm, torchmetrics
+- **PyTorch Lightning** — training engine (LightningModule + LightningDataModule, `pl.seed_everything(42, workers=True)` lock)
+- **Weights & Biases** — experiment tracking (offline mode by default; CSVLogger as fallback)
+- **Optuna** (+ `optuna-integration[pytorch-lightning]`) — hyper-parameter search
+- Chart.js / Plotly.js — interactive dashboards
+
+## Reproducibility
+
+The pipeline is **fully deterministic**. Each validation image is degraded with a per-sample local RNG keyed on its dataset index (`seed = idx + SEED_OFFSET_VAL`), so image *N* receives byte-identical noise across every epoch, every model, and every process re-launch. Two reads of the same val batch satisfy MSE = 0; verified by [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py).
 
 ## Contributors
 

@@ -3,6 +3,12 @@
 ## Goal
 Evaluate deep learning robustness under severe visual degradation (low resolution, blur, noise, grayscale) simulating THz imaging.
 
+## Project Status
+- **Engine**: PyTorch Lightning refactor in `src/lightning/` is live (`THzClassifier`, `THzDataModule`); legacy `src/runner.py` retained for parity.
+- **Validation protocol locked**: per-sample seeded degradation (`seed = idx + SEED_OFFSET_VAL`) gives byte-identical val pixels across all models and runs (MSE = 0), gated by [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py).
+- **TransNeXt absolute-path bug fixed**: checkpoint loads via `Path(__file__).resolve().parents[2]`-rooted lookup, no hard-coded host paths.
+- **Global seed = 42** enforced by `pl.seed_everything(42, workers=True)` in `src/lightning/train.py` and a matching block at the top of `src/runner.py`.
+
 ## Models
 - **ResNet50** — baseline CNN (differential LR fine-tuning)
 - **DenseNet121** — feature reuse CNN (differential LR fine-tuning)

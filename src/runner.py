@@ -126,6 +126,14 @@ def run_experiment(
     early_stopping_patience: int = 0,
     dataset: str = "cifar10",
 ):
+    import random as _random
+    import numpy as _np
+    _random.seed(42)
+    _np.random.seed(42)
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # run folder
@@ -250,7 +258,10 @@ def run_experiment(
         transnext_ckpt = None
 
         if pretrained and model_name == "transnext_micro":
-            transnext_ckpt = r"C:\Users\ib94\Documents\NewFinalProject\artifacts\weights\transnext_micro_224_1k.pth"
+            _project_root = Path(__file__).resolve().parents[1]
+            _candidate = _project_root / "artifacts" / "weights" / "transnext_micro_224_1k.pth"
+            if _candidate.exists():
+                transnext_ckpt = str(_candidate)
 
         model = create_transnext_model(
             model_name=model_name,

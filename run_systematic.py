@@ -43,7 +43,13 @@ os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from src.runner import run_experiment
+def _resolve_run_experiment(engine: str):
+    """Pick the legacy or Lightning training entry. Same call signature."""
+    if engine == "lightning":
+        from src.lightning.train import run_experiment
+    else:
+        from src.runner import run_experiment
+    return run_experiment
 
 # ============================================================
 # DEGRADATION LEVELS
@@ -84,29 +90,36 @@ DEGRADATION_LEVELS = {
 # ============================================================
 
 MODEL_CONFIGS = [
+    # ResNet50 — TResNet/EfficientNetV2 paper recommendations
     {
         "model_name": "resnet50",
         "lr": 1e-3,
-        "backbone_lr": 1e-4,
+        "backbone_lr": 5e-5,          # was 1e-4: slower adaptation, less forgetting
         "freeze_backbone": False,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.1,
+        "weight_decay": 5e-4,          # was 1e-4: stronger L2 regularization
+        "label_smoothing": 0.15,       # was 0.1: moderate increase
+        "warmup_epochs": 3,            # EfficientNetV2 warmup recommendation
     },
+    # DenseNet121 — DenseNet paper recommendations
     {
         "model_name": "densenet121",
         "lr": 1e-3,
-        "backbone_lr": 1e-4,
+        "backbone_lr": 5e-5,          # was 1e-4: more conservative
         "freeze_backbone": False,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.1,
+        "weight_decay": 5e-4,          # was 1e-4: stronger regularization
+        "label_smoothing": 0.2,        # was 0.1: strong smoothing for 99%+ train acc
+        "warmup_epochs": 2,            # shorter warmup (DenseNet converges fast)
     },
+    # TransNeXt Micro — TransNeXt paper recommendations
     {
         "model_name": "transnext_micro",
         "lr": 1e-3,
-        "backbone_lr": None,
-        "freeze_backbone": True,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.0,
+        "backbone_lr": 1e-5,           # was None/frozen: very conservative unfreeze
+        "freeze_backbone": False,      # was True: allow backbone adaptation
+        "weight_decay": 0.05,          # TransNeXt paper fine-tuning value
+        "label_smoothing": 0.1,        # was 0.0: light smoothing for fine-tuning
+        "warmup_epochs": 5,            # TransNeXt paper training protocol
+        "drop_path_rate": 0.1,         # TransNeXt paper stochastic depth
     },
 ]
 
@@ -137,16 +150,19 @@ COMMON = {
 }
 
 
-def run_systematic(levels: list[int], mode: str = "pilot", dataset: str = "cifar10"):
+def run_systematic(levels: list[int], mode: str = "pilot", dataset: str = "cifar10",
+                   engine: str = "lightning"):
     """Run all 3 models for each specified degradation level."""
     settings = PILOT_SETTINGS if mode == "pilot" else FULL_SETTINGS
     ds_label = "CIFAR-10" if dataset == "cifar10" else "MNIST"
+    run_experiment = _resolve_run_experiment(engine)
 
     total_experiments = len(levels) * len(MODEL_CONFIGS)
 
     print("\n" + "=" * 70)
     print(f"  SYSTEMATIC DEGRADATION EXPERIMENTS ({mode.upper()} MODE)")
     print("=" * 70)
+    print(f"  Engine: {engine}")
     print(f"  Dataset: {ds_label}")
     print(f"  Degradation levels: {levels}")
     print(f"  Models: ResNet50, DenseNet121, TransNeXt Micro")
@@ -250,6 +266,8 @@ if __name__ == "__main__":
                    help="pilot (5 epochs, small data) or full (30 epochs)")
     p.add_argument("--dataset", default="cifar10", choices=["cifar10", "mnist"],
                    help="Dataset to use: cifar10 or mnist")
+    p.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
+                   help="Training engine: lightning (default) or legacy hand-rolled trainer")
     args = p.parse_args()
 
     if args.level == "all":
@@ -261,4 +279,4 @@ if __name__ == "__main__":
                 print(f"[ERROR] Invalid level {lv}. Choose from 1, 2, 3")
                 sys.exit(1)
 
-    run_systematic(levels, args.mode, args.dataset)
+    run_systematic(levels, args.mode, args.dataset, args.engine)

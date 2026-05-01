@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 
-from .degrade import DegradeConfig, degrade_image
+from .degrade import DegradeConfig, SEED_OFFSET_TRAIN, SEED_OFFSET_VAL, degrade_image
 
 
 @dataclass
@@ -71,7 +71,8 @@ class THzLikeCIFAR10(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
         x, y = self.ds[idx]  # x: [3,32,32] float in [0,1]
-        x_deg = degrade_image(x, self.deg_cfg)
+        seed = idx + (SEED_OFFSET_TRAIN if self.cfg.train else SEED_OFFSET_VAL)
+        x_deg = degrade_image(x, self.deg_cfg, seed=seed)
         x_deg = self.norm(x_deg)
         return x_deg, y
 
@@ -123,7 +124,8 @@ class THzLikeMNIST(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
         x, y = self.ds[idx]  # x: [1, 28, 28] float in [0,1]
         x = x.repeat(3, 1, 1)  # [3, 28, 28] — grayscale to 3-channel
-        x_deg = degrade_image(x, self.deg_cfg)
+        seed = idx + (SEED_OFFSET_TRAIN if self.cfg.train else SEED_OFFSET_VAL)
+        x_deg = degrade_image(x, self.deg_cfg, seed=seed)
         x_deg = self.norm(x_deg)
         return x_deg, y
 

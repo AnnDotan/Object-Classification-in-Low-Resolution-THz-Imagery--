@@ -19,19 +19,30 @@ desktop.ini
 # Jupyter
 .ipynb_checkpoints/
 
-# Data & Models
+# Data & Datasets
 /data/
 datasets/
 raw_data/
 *.zip
 *.tar.gz
+*.npy
+*.npz
 
-# Model checkpoints
+# Model checkpoints & weights
 *.pth
 *.pt
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
 *.h5
 *.weights
 *.pkl
+*.msgpack
+checkpoints/
+weights/
+torch_hub/
+.cache/
 
 # Experiment outputs
 runs/
@@ -40,6 +51,13 @@ logs/
 results/
 outputs/
 *.log
+
+# W&B and Optuna (Lightning era)
+wandb/
+artifacts/optuna_thz.db
+*.optuna_journal.log
+lightning_logs/
+*.ckpt
 
 # Papers (local references)
 papers/
