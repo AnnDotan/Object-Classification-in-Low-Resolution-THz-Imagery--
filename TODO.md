@@ -1,92 +1,136 @@
-# TODO — Project Execution Plan
+# TODO — Final Research Campaign
+
+> **Pivot — 2026-05-02:** moved from legacy 36-experiment plan (33/36 frozen in `runs/systematic/`) to the **186-cell Final Research Phase**.
+> Master tracker: [`Final_Exp.md`](Final_Exp.md). Plan body: see CLAUDE.md and the original prompt thread.
 
 ## Deadlines
-- Poster & Abstract: **31/05/2026**
-- Final Presentation: **21/06/2026**
-- Final Submission: **26/07/2026**
 
-> Full experiment details: [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md)
+- Poster & abstract: **31/05/2026**
+- Final presentation: **21/06/2026**
+- Final submission: **26/07/2026**
 
 ---
 
-## STAGE 1 — TransNeXt Validation ✅ COMPLETE
-- TransNeXt LP: 68.75% vs ResNet50: 54.5% (+14.25%)
-- Frozen backbone + head-only training works best
+## Sprint 1 — Foundations (in progress, started 2026-05-02)
 
-## STAGE 2 — Controlled Experiments ✅ COMPLETE
-- [x] Official runs: ResNet50, DenseNet121, TransNeXt
-- [x] Combined degradation: DenseNet 80.7%, ResNet 78.8%, TransNeXt 64.2%
-- [x] Single-degradation isolation: 7/12 done
-- [x] Dashboards with filtering and sample images
+### ✅ Done
 
-## STAGE 3 — Systematic Experiments (36 total) 🟡 IN PROGRESS
+- [x] `src/data/degradation_levels.py` — 5-level table (`DEGRADATION_LEVELS`, `LEVEL_NAMES`, `AXIS_KEYS`, `level_params`)
+- [x] `src/data/degrade.py` — saturation axis (deterministic lerp), `'none'` clean-baseline early-return, `'saturation'` isolation mode, `degrade_config_for(level, axis, out_size)` helper
+- [x] `Final_Exp.md` — 186-cell master tracker, all rows seeded `Pending`
+- [x] Smoke tests: Phase A pass-through, saturation=0 produces exact grayscale (max channel diff = 0.000000)
 
-### Phase A: CIFAR-10 Systematic (9/9) — ✅ COMPLETE
-| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
-|-------|----------|-------------|-----------------|
-| L1 Mild | 81.2% | **81.9%** | 68.2% |
-| L2 Moderate | 78.7% | **80.4%** | 63.6% |
-| L3 Severe | 61.5% | **63.4%** | 44.9% |
+### 🟡 Up next (Sprint 1 remaining)
 
-### Phase B: MNIST Systematic (6/9) — 🟡 IN PROGRESS
-| Level | ResNet50 | DenseNet121 | TransNeXt Micro |
-|-------|----------|-------------|-----------------|
-| L1 Mild | **99.1%** | 98.7% | 92.5% |
-| L2 Moderate | **99.1%** | 99.0% | 92.8% |
-| L3 Severe | Pending | Pending | Pending |
+- [ ] Plumb `saturation` through `DataConfig` → `DegradeConfig` in [`src/data/datasets.py`](src/data/datasets.py)
+- [ ] Add `torchmetrics` to `requirements.txt` (PSNR/SSIM)
+- [ ] PSNR/SSIM in [`src/lightning/datamodule.py`](src/lightning/datamodule.py) `setup()` — 256 fixed val indices, write `psnr_mean/std`, `ssim_mean/std` to `metrics.json`
+- [ ] Extend [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py) — assert PSNR/SSIM byte-identical across two `setup()` calls
+- [ ] Add `'saturation'` to the test's degradation-type matrix
 
-### Phase C: Single-Degradation Isolation (0/12) — 🔲 TODO
-- [ ] Downsampling only: ResNet50, DenseNet121, TransNeXt Micro
-- [ ] Blur only: ResNet50, DenseNet121, TransNeXt Micro
-- [ ] Noise only: ResNet50, DenseNet121, TransNeXt Micro
-- [ ] Salt & Pepper only: ResNet50, DenseNet121, TransNeXt Micro
+### Sprint 2 — Training Engine
 
-### Phase D: Clean Baselines (0/6) — 🔲 TODO
-- [ ] CIFAR-10 clean: ResNet50, DenseNet121, TransNeXt Micro
-- [ ] MNIST clean: ResNet50, DenseNet121, TransNeXt Micro
+- [ ] FP16 mixed precision in [`src/lightning/train.py`](src/lightning/train.py) Trainer (`precision="16-mixed"`, `accelerator="auto"`)
+- [ ] CLI flag `--precision` (debug override)
+- [ ] Raise defaults: `max_epochs=60`, `EarlyStopping(patience=10, min_delta=1e-4, monitor="val_acc", mode="max")`
+- [ ] `ModelCheckpoint(dirpath=runs/final/<tag>/, save_top_k=1, save_last=True)` — confirm no checkpoint escapes `runs/final/`
+- [ ] Assertion that refuses `--plan final --mode pilot`
 
-### Infrastructure ✅ COMPLETE
-- [x] run_all_phases.py — runs all 36 experiments sequentially
-- [x] run_systematic.py — systematic launcher (--level, --mode, --dataset)
-- [x] THzLikeMNIST dataset class
-- [x] Auto-dashboard refresh after each experiment
-- [x] Experiment plan dashboard (dark theme, original+degraded images, conclusions)
+### Sprint 3 — TransNeXt Size Selector
 
-## STAGE 4 — Analysis 🔲 TODO
-- [ ] Generate tables: model x level matrices (CIFAR-10 and MNIST)
-- [ ] Generate figures: bar charts, learning curves, heatmaps
-- [ ] Cross-dataset comparison (CIFAR-10 vs MNIST)
-- [ ] Accuracy drop analysis (clean baseline vs degraded)
-- [ ] Single-degradation contribution analysis
-- [ ] Write conclusions with supporting evidence
+- [ ] [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py) — add `size: Literal["micro","small","base"]` arg
+- [ ] Auto-download from official TransNeXt GitHub release with SHA256 verification, cache in `artifacts/weights/`
+- [ ] Route through wrapper from [`src/lightning/module.py`](src/lightning/module.py) when `model_name.startswith("transnext")`
+- [ ] CLI flag `--transnext_size {micro,small,base}` (default `small`) in `train.py`, `run_systematic.py`, `run_all_phases.py`
 
-## STAGE 5 — Poster & Abstract (31/05) 🔲 TODO
-- [ ] Select best figures
+### Sprint 4 — Optuna Pre-Tuning
+
+- [ ] Narrow [`src/tune_hyperparams.py`](src/tune_hyperparams.py) search to paper-anchored ranges (lr, weight_decay, label_smoothing, drop_path_rate, batch_size, warmup_epochs, pos_bias_interp)
+- [ ] CLI surface: `--model {resnet50,densenet121,transnext}`, `--dataset {cifar10,mnist}`, `--transnext_size`, `--n-trials`, `--level`
+- [ ] Write `artifacts/best_hparams/{model}_{dataset}.json` on completion
+- [ ] New `tune_all.py` — loops over 6 `(model, dataset)` pairs, fails loudly on any incomplete sweep
+- [ ] Wire `run_all_phases.py --tune-first` to load best_hparams or fall back to paper centers
+
+### Sprint 5 — Phase Runner
+
+- [ ] `run_all_phases.py --plan final` — replace 36-cell logic with the three product loops (Phase A 6, Phase B 30, Phase C 150)
+- [ ] `--skip-existing` checks `runs/final/<tag>/metrics.json`
+- [ ] Tag scheme: `final_clean_{m}_{d}` / `final_B_L{l}_{m}_{d}` / `final_C_L{l}_{ax}_{m}_{d}`
+- [ ] Replace inline degradation dicts with `from src.data.degradation_levels import DEGRADATION_LEVELS`
+
+### Sprint 6 — Dashboard & Tracker Updates
+
+- [ ] `src/tools/generate_final_dashboard.py` → `artifacts/Final_Exp.html`
+  - [ ] Pre-render all 186 placeholder cells with side-by-side original + degraded thumbnails (cached in `artifacts/.cell_samples/`)
+  - [ ] Phase A 3×2 grid, Phase B 5×3 with dataset toggle, Phase C 5-axis × 5-level sub-grid per (model, dataset)
+  - [ ] Phase end analytics: bars for A, scatter `Val Acc vs SSIM/PSNR` for B, robustness curves per axis for C
+  - [ ] Click cell → modal with learning curves
+  - [ ] `<meta http-equiv="refresh" content="30">` for 30-s polling
+- [ ] `scripts/update_final_exp.py` — scan `runs/final/`, rewrite `Final_Exp.md` in place
+- [ ] `src/lightning/callbacks.py` — `DashboardRefreshCallback` invokes both generators on `on_train_end`
+
+### Sprint 7 — Privacy & Autonomy Hygiene
+
+- [ ] `.gitignore` — add `runs/final/`, `artifacts/weights/*.pth`, `artifacts/optuna_thz.db`, `artifacts/best_hparams/*.json`, `artifacts/.cell_samples/`
+- [ ] `.claudeignore` — add `runs/**/*.pt|.ckpt|.pth`, `artifacts/weights/`, `artifacts/optuna_thz.db`, `artifacts/.cell_samples/`
+- [ ] CLAUDE.md — Weight Privacy addendum (no `Read`/`Bash cat` on weight binaries)
+- [ ] `setup.sh` — env bootstrap (venv, torch+CUDA, deps, TransNeXt weights, verify_env)
+- [ ] `scripts/verify_env.py` — torch/CUDA/cuDNN print + FP16 smoke test
+- [ ] Pre-commit guard — fail if any `.pt`/`.ckpt`/`.pth` is staged
+
+---
+
+## 186-cell Campaign Status
+
+> Updated by `scripts/update_final_exp.py` on every `on_train_end`. Live counts: see [`Final_Exp.md`](Final_Exp.md).
+
+| Phase | Description | Count | Status |
+|---|---|---|---|
+| **A** | Clean baselines (3 models × 2 datasets) | 6 | 🔲 0/6 |
+| **B** | Combined degradation (× 5 levels) | 30 | 🔲 0/30 |
+| **C** | Single-axis isolation (× 5 axes × 5 levels) | 150 | 🔲 0/150 |
+| **Total** | | **186** | 🔲 0/186 |
+
+### Optuna Pre-tuning (`(model, dataset)` pairs)
+
+| # | Model | Dataset | Status |
+|---|---|---|---|
+| 1 | resnet50 | cifar10 | 🔲 |
+| 2 | resnet50 | mnist | 🔲 |
+| 3 | densenet121 | cifar10 | 🔲 |
+| 4 | densenet121 | mnist | 🔲 |
+| 5 | transnext (small) | cifar10 | 🔲 |
+| 6 | transnext (small) | mnist | 🔲 |
+
+---
+
+## Stage 5 — Poster & Abstract (31/05) 🔲
+
+- [ ] Select best figures (robustness curves, isolation heatmap, sample-grid)
 - [ ] Write abstract
 - [ ] Design poster layout
 
-## STAGE 6 — Final Report & Presentation 🔲 TODO
+## Stage 6 — Final Report & Presentation (21/06) 🔲
+
 - [ ] Write full report
 - [ ] Prepare presentation slides
 - [ ] **FINAL PRESENTATION (21/06)**
 
-## STAGE 7 — Final Submission (26/07) 🔲 TODO
-- [ ] Clean repository
-- [ ] Verify reproducibility
+## Stage 7 — Final Submission (26/07) 🔲
+
+- [ ] Clean repository (verify weight privacy via `.gitignore` / `.claudeignore`)
+- [ ] Re-run determinism + autonomy tests from a fresh shell
 - [ ] Submit
 
 ---
 
-## Execution Timeline
+## Frozen Legacy Reference (33/36)
 
-| Week | Dates | Tasks |
-|------|-------|-------|
-| 1 | Apr 8-14 | Phase A (CIFAR-10 systematic) ✅, MNIST pipeline ✅ |
-| 2 | Apr 15-21 | Phase B (MNIST systematic) 🟡, Phase D (baselines) |
-| 3 | Apr 22-28 | Phase C (isolation experiments). Generate dashboards. |
-| 4 | Apr 29-May 5 | Analysis: tables, figures, key findings. |
-| 5 | May 6-12 | Verify reproducibility. Draft analysis. |
-| 6-7 | May 13-26 | Poster design + abstract. |
-| **8** | **May 27-31** | **POSTER & ABSTRACT DEADLINE** |
-| 9-11 | Jun 1-21 | Report + **PRESENTATION (21/06)** |
-| 12-16 | Jun 22-Jul 26 | Polish + **SUBMISSION (26/07)** |
+The previous 36-experiment plan (3 levels × 3 models × 2 datasets + isolation + clean) completed 33/36 runs. Results frozen in `runs/systematic/` and `runs/official/`. Final 3 (Phase B L3 MNIST × 3 models) were superseded by the pivot to L1–L5 and never run. **Do not retroactively run them** — they would not be comparable to the new 5-level grid.
+
+| Phase | Status | Notes |
+|---|---|---|
+| Legacy Phase A (CIFAR-10, 3 levels × 3 models) | 9/9 ✅ | DenseNet 81.9% / 80.4% / 63.4% (L1/L2/L3) |
+| Legacy Phase B (MNIST, 3 levels × 3 models) | 9/9 ✅ | ResNet 99.1%/99.1%/92.5%, DenseNet 98.7%/99.0%/93.0%, TransNeXt 92.5%/92.8%/72.7% |
+| Legacy Phase C (CIFAR-10 isolation, 4 axes × 3 models) | 12/12 ✅ | TransNeXt collapses on blur/noise/S&P (0%) |
+| Legacy Phase D (clean baselines) | 6/6 ✅ | CIFAR-10: ResNet 94.2%, DenseNet 93.2%, TransNeXt 91.7% |

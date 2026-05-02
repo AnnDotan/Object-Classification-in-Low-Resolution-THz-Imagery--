@@ -1,11 +1,9 @@
 # src/data/degrade.py
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
-import numpy as np
 import torch
 
 
@@ -15,42 +13,47 @@ SEED_OFFSET_VAL = 10_000_000
 
 @dataclass
 class DegradeConfig:
-    # downsample to low_res (e.g., 16 or 8) then upsample back to out_size
+    # downsample to low_res (e.g. 20/14/10/7/4) then upsample back to out_size.
     low_res: int = 16
     out_size: int = 224  # set 32 if you decide to stay CIFAR-size
+
+    # Deprecated: stochastic grayscale flip. Replaced by the deterministic
+    # `saturation` lerp below. Field is kept so older configs/JSONs still load,
+    # but the new pipeline ignores it.
     p_grayscale: float = 0.3
-    gaussian_noise_std: float = 0.08  # adjust later
-    blur_kernel: int = 5  # odd number, e.g. 3/5/7
+
+    gaussian_noise_std: float = 0.08
+    blur_kernel: int = 5  # odd number, e.g. 3/5/7/9/11
     blur_sigma: float = 1.0
 
     # Salt-and-pepper noise parameters
     salt_pepper_amount: float = 0.05  # fraction of pixels affected
 
-    # Degradation type isolation (for robustness analysis)
-    # degradation_type: 'all' (default), 'downsampling', 'blur', 'noise', 'salt_pepper'
-    degradation_type: str = 'all'  # 'all', 'downsampling', 'blur', 'noise', 'salt_pepper'
+    # Saturation axis: 1.0 = full color, 0.0 = full grayscale (deterministic lerp).
+    saturation: float = 1.0
+
+    # Degradation type isolation:
+    #   'all'         -> apply every axis (saturation, low_res, blur, noise, salt_pepper)
+    #   'none'        -> Phase A clean baseline: no degradation, only upsample to out_size
+    #   'downsampling','blur','noise','salt_pepper','saturation' -> apply only that axis
+    degradation_type: str = 'all'
 
 
 def _gaussian_blur_torch(img: torch.Tensor, kernel_size: int, sigma: float) -> torch.Tensor:
-    """
-    img: [C,H,W] float in [0,1]
-    """
+    """img: [C,H,W] float in [0,1]"""
     if kernel_size <= 1:
         return img
 
-    # create 1D gaussian
     k = kernel_size
     x = torch.arange(k, device=img.device, dtype=img.dtype) - (k - 1) / 2.0
     g = torch.exp(-(x ** 2) / (2 * (sigma ** 2)))
     g = g / g.sum()
 
-    # separable conv: first H then W
-    # make depthwise conv weights
     c = img.shape[0]
     g_h = g.view(1, 1, k, 1).repeat(c, 1, 1, 1)
     g_w = g.view(1, 1, 1, k).repeat(c, 1, 1, 1)
 
-    img_b = img.unsqueeze(0)  # [1,C,H,W]
+    img_b = img.unsqueeze(0)
     pad = k // 2
     img_b = torch.nn.functional.pad(img_b, (0, 0, pad, pad), mode="reflect")
     img_b = torch.nn.functional.conv2d(img_b, g_h, groups=c)
@@ -64,43 +67,53 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     img: [C,H,W] float tensor in [0,1]
     returns: [C,out_size,out_size] float in [0,1]
 
-    Supports degradation type isolation:
-    - 'all': Apply all degradations (default)
-    - 'downsampling': Only low-resolution degradation
-    - 'blur': Only Gaussian blur
-    - 'noise': Only Gaussian noise
+    Step order (saturation BEFORE noise/S&P so noise color stays correct):
+      0. degradation_type=='none' -> early-return (clean baseline, only upsample).
+      1. saturation lerp (replaces stochastic p_grayscale)
+      2. downsample -> upsample
+      3. gaussian blur
+      4. additive gaussian noise
+      5. salt-and-pepper
     """
-    # Local RNGs only — never mutate global state from inside __getitem__,
+    # Local RNG only — never mutate global state from inside __getitem__,
     # or we'd clobber the DataLoader shuffler, model init, dropout, etc.
-    np_rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
     torch_rng = torch.Generator(device=img.device)
     if seed is not None:
         torch_rng.manual_seed(int(seed))
 
-    # Only apply grayscale for 'all' degradation type
-    if cfg.degradation_type == 'all':
-        # 1) optional grayscale
-        if img.shape[0] == 3 and float(np_rng.random()) < cfg.p_grayscale:
+    # 0) Clean baseline early-return (Phase A): no degradation, only upsample.
+    if cfg.degradation_type == 'none':
+        if img.shape[-1] != cfg.out_size:
+            img = torch.nn.functional.interpolate(
+                img.unsqueeze(0),
+                size=(cfg.out_size, cfg.out_size),
+                mode="bilinear",
+                align_corners=False,
+            ).squeeze(0)
+        return img.clamp(0, 1)
+
+    # 1) Saturation lerp (deterministic; replaces stochastic p_grayscale).
+    if cfg.degradation_type in ('all', 'saturation'):
+        s = float(cfg.saturation)
+        if img.shape[0] == 3 and s < 1.0:
             gray = (0.2989 * img[0] + 0.5870 * img[1] + 0.1140 * img[2]).clamp(0, 1)
-            img = torch.stack([gray, gray, gray], dim=0)
+            gray3 = torch.stack([gray, gray, gray], dim=0)
+            img = (1.0 - s) * gray3 + s * img
 
     # 2) downsample to low_res then upsample to out_size
-    # Apply for: 'all' or 'downsampling'
-    if cfg.degradation_type in ['all', 'downsampling']:
-        img = img.unsqueeze(0)  # [1,C,H,W]
+    if cfg.degradation_type in ('all', 'downsampling'):
+        img = img.unsqueeze(0)
         img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
         img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bilinear", align_corners=False)
         img = img.squeeze(0)
 
     # 3) blur
-    # Apply for: 'all' or 'blur'
-    if cfg.degradation_type in ['all', 'blur']:
+    if cfg.degradation_type in ('all', 'blur'):
         if cfg.blur_kernel and cfg.blur_kernel > 1:
             img = _gaussian_blur_torch(img, kernel_size=cfg.blur_kernel, sigma=cfg.blur_sigma)
 
     # 4) additive gaussian noise
-    # Apply for: 'all' or 'noise'
-    if cfg.degradation_type in ['all', 'noise']:
+    if cfg.degradation_type in ('all', 'noise'):
         if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
             noise = torch.randn(
                 img.shape, generator=torch_rng, device=img.device, dtype=img.dtype
@@ -108,16 +121,55 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
             img = (img + noise).clamp(0, 1)
 
     # 5) salt-and-pepper noise
-    # Apply for: 'all' or 'salt_pepper'
-    if cfg.degradation_type in ['all', 'salt_pepper']:
+    if cfg.degradation_type in ('all', 'salt_pepper'):
         if cfg.salt_pepper_amount and cfg.salt_pepper_amount > 0:
             mask = torch.rand(
                 img[0:1].shape, generator=torch_rng, device=img.device, dtype=img.dtype
-            )  # single-channel mask [1,H,W]
+            )
             salt = mask < (cfg.salt_pepper_amount / 2.0)
             pepper = mask > (1.0 - cfg.salt_pepper_amount / 2.0)
             img = img.clone()
-            img[:, salt.squeeze(0)] = 1.0   # salt (white)
-            img[:, pepper.squeeze(0)] = 0.0  # pepper (black)
+            img[:, salt.squeeze(0)] = 1.0
+            img[:, pepper.squeeze(0)] = 0.0
 
     return img
+
+
+def degrade_config_for(
+    level: Optional[int],
+    axis: Optional[str] = None,
+    out_size: int = 224,
+) -> DegradeConfig:
+    """Build a DegradeConfig from the canonical 5-level table.
+
+    - level=None              -> Phase A clean baseline (no degradation, upsample only).
+    - level=L, axis=None      -> Phase B combined: every axis at level L.
+    - level=L, axis="<name>"  -> Phase C isolation: named axis at L, others pinned to L1.
+    """
+    from .degradation_levels import level_params
+
+    if level is None:
+        return DegradeConfig(
+            low_res=out_size,
+            out_size=out_size,
+            blur_kernel=0,
+            blur_sigma=0.0,
+            gaussian_noise_std=0.0,
+            salt_pepper_amount=0.0,
+            saturation=1.0,
+            p_grayscale=0.0,
+            degradation_type='none',
+        )
+
+    p = level_params(level, axis=axis)
+    return DegradeConfig(
+        low_res=int(p['low_res']),
+        out_size=out_size,
+        blur_kernel=int(p['blur_kernel']),
+        blur_sigma=float(p['blur_sigma']),
+        gaussian_noise_std=float(p['noise_std']),
+        salt_pepper_amount=float(p['salt_pepper']),
+        saturation=float(p['saturation']),
+        p_grayscale=0.0,  # deprecated; saturation lerp replaces stochastic grayscale
+        degradation_type='all',
+    )

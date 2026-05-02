@@ -1,224 +1,234 @@
 # Object Classification in Low-Resolution THz Imagery
 
-## About
+> **Final Research Campaign — 186-cell experiment matrix.**
+> 5-level degradation curve (L1 Mild → L5 Extreme), deterministic saturation axis, FP16 mixed precision, paper-anchored Optuna pre-tuning.
+> Master tracker: [`Final_Exp.md`](Final_Exp.md) — interactive dashboard: `artifacts/Final_Exp.html`.
 
-This project investigates how robust deep learning models can remain when visual information is severely degraded, simulating Terahertz (THz) imaging conditions. Standard CNNs rely on high-frequency details that are lost under low resolution, blur, and noise. We evaluate whether advanced architectures can preserve classification performance under these constraints.
+## Research Question
 
-**Research Question**: How robust can image classification remain when visual information is severely degraded (low resolution, blur, noise, grayscale)?
+How robust does image classification remain when visual information is severely degraded — low resolution, blur, noise, salt-and-pepper, desaturation — simulating Terahertz (THz) imaging conditions? We evaluate three architectures (one residual CNN, one densely-connected CNN, one aggregated-attention ViT) across a 5-level degradation curve on two datasets (CIFAR-10, MNIST), with single-axis isolation runs to attribute the contribution of each degradation type.
 
-## Objectives
+## Implementation Status
 
-1. **Accuracy on degraded data** — Target: Top-1 accuracy >= 80% on combined degradation
-2. **Robustness** — Accuracy drop <= 15% compared to clean images
-3. **Architecture comparison** — Identify which architecture is most robust and why
-4. **Efficiency** — Inference time < 50ms per image (GPU)
+This README describes the **target runbook**. The repo is mid-pivot from a legacy 36-experiment plan to the 186-cell final plan. Live vs. pending:
 
-## Experiment Plan
+| Component | Status |
+|---|---|
+| 5-level degradation table — [`src/data/degradation_levels.py`](src/data/degradation_levels.py) | ✅ live |
+| Saturation axis (deterministic lerp) — [`src/data/degrade.py`](src/data/degrade.py) | ✅ live |
+| `degrade_config_for(level, axis)` helper | ✅ live |
+| `Final_Exp.md` master tracker (186 cells, all Pending) | ✅ live |
+| PyTorch Lightning training loop — [`src/lightning/`](src/lightning/) | ✅ live |
+| Optuna pre-tuning — [`src/tune_hyperparams.py`](src/tune_hyperparams.py) | ✅ live (broad search; needs paper-anchored narrowing) |
+| `saturation` plumbed through `DataConfig` → `DegradeConfig` | 🟡 pending |
+| PSNR/SSIM logging in `setup()` (`metrics.json`) | 🟡 pending |
+| FP16 mixed precision in main Trainer | 🟡 pending (live in tune_hyperparams.py only) |
+| TransNeXt size selector (`--transnext_size {micro,small,base}`) + auto-download | 🟡 pending |
+| `tune_all.py`, `setup.sh`, `scripts/verify_env.py`, `scripts/update_final_exp.py` | 🟡 pending |
+| `src/tools/generate_final_dashboard.py` (`Final_Exp.html`) | 🟡 pending |
+| `runs/final/` tree + `--plan final` switch in `run_all_phases.py` | 🟡 pending |
 
-> Full details: [`EXPERIMENT_PLAN.md`](EXPERIMENT_PLAN.md)
+Until the pending pieces land, the working entry-point remains the legacy [`src/lightning/train.py`](src/lightning/train.py) / [`run_all_phases.py`](run_all_phases.py) flow against `runs/systematic/`. The legacy 33/36 results live in `runs/systematic/` and `runs/official/` and are frozen.
 
-**36 total experiments** organized in 4 phases across 2 datasets:
+## Hardware & OS Prerequisites
 
-| Phase | Description | # Experiments | Priority |
-|-------|-------------|--------------|----------|
-| **A** | CIFAR-10 × 3 degradation levels × 3 models | 9 | 🔴 Critical |
-| **B** | MNIST × 3 degradation levels × 3 models | 9 | 🔴 Critical |
-| **C** | Single-degradation isolation (CIFAR-10) | 12 | 🟡 Important |
-| **D** | Clean baselines (no degradation, both datasets) | 6 | 🟡 Important |
+| Requirement | Minimum | Recommended |
+|---|---|---|
+| GPU | 8 GB VRAM, CUDA 11.8+ | 24 GB (RTX 3090 / A100) |
+| CPU | 8 cores | 16+ cores |
+| RAM | 16 GB | 32 GB |
+| Disk | 100 GB free | 250 GB SSD |
+| OS | Windows 10/11, Ubuntu 20.04+, macOS 13+ | — |
+| Python | 3.10+ | 3.12 |
+| CUDA toolkit | 11.8 or 12.x | matching `torch` build |
 
-## Models
+## Step 0 — One-shot Environment Setup
 
-| Model | Type | Strategy | Paper Reference |
-|-------|------|----------|----------------|
-| **ResNet50** | CNN (baseline) | Differential LR fine-tuning (backbone=1e-4, head=1e-3) | TResNet (Ridnik et al., 2020) |
-| **DenseNet121** | CNN (feature reuse) | Differential LR fine-tuning (backbone=1e-4, head=1e-3) | DenseNet (Huang et al., 2017) |
-| **TransNeXt Micro** | Vision Transformer (aggregated attention) | Linear probe — frozen ImageNet backbone, head-only training | TransNeXt (Shi, 2024) |
+```bash
+git clone <repo-url>
+cd Object-Classification-in-Low-Resolution-THz-Imagery--
 
-## Datasets
+# Bootstraps venv, pins torch+CUDA, installs requirements,
+# downloads TransNeXt pretrained weights, runs FP16 smoke test.
+bash setup.sh        # planned — see "Implementation Status"
 
-| Dataset | Image Size | Classes | Train / Val | Notes |
-|---------|-----------|---------|-------------|-------|
-| **CIFAR-10** | 32×32 RGB | 10 (objects) | 10,000 / 5,000 | Primary dataset |
-| **MNIST** | 28×28 grayscale | 10 (digits) | 10,000 / 5,000 | Cross-domain validation (grayscale → 3ch repeat) |
+# Manual fallback (works today):
+python -m venv .venv
+.venv\Scripts\activate            # Windows PowerShell
+source .venv/bin/activate         # Linux / macOS
+pip install -r requirements.txt
+python scripts/verify_env.py      # planned — exits non-zero if CUDA missing
+```
 
-Both datasets use the same degradation pipeline, normalization (ImageNet stats), and training protocol for fair comparison.
+`scripts/verify_env.py` prints `torch.__version__`, `torch.version.cuda`, `torch.cuda.is_available()`, device name, free VRAM, cuDNN version, and runs a tiny FP16 matmul. Exit non-zero ⇒ stop.
 
-## Best Results So Far — Combined Degradation (low_res=16, CIFAR-10)
+## Step 1 — Optuna Pre-Tuning (~20 GPU-hours)
 
-All results below are on the **same degradation pipeline** (downsampling + blur + noise + salt & pepper + grayscale) with the same data split (10,000 train / 5,000 val), making them directly comparable:
+Tune hyperparameters on a representative mid-level (L3 Moderate) for each `(model, dataset)` pair, then freeze them for the entire 186-cell sweep. Search space is **anchored on paper-derived priors** (TransNeXt, DenseNet, TResNet papers in `papers/`) — Optuna refines around them, doesn't blindly explore.
+
+```bash
+python tune_all.py --n-trials 20         # 6 pairs × 20 trials
+```
+
+Output: `artifacts/best_hparams/{model}_{dataset}.json` per pair. Resume on crash is automatic via the `artifacts/optuna_thz.db` SQLite store.
+
+For a single-pair smoke test:
+
+```bash
+python src/tune_hyperparams.py --model resnet50 --dataset cifar10 --n-trials 5 --level 3
+```
+
+## Step 2 — Run the 186-cell Matrix
+
+```bash
+# Phase A — clean baselines (6 runs, ~1.5 h on RTX 3090)
+python run_all_phases.py --plan final --phase A
+
+# Phase B — combined degradation (30 runs, ~10 h)
+python run_all_phases.py --plan final --phase B
+
+# Phase C — single-axis isolation (150 runs, ~50 h)
+python run_all_phases.py --plan final --phase C
+
+# Full pipeline (idempotent — safe to Ctrl-C and resume)
+python run_all_phases.py --plan final --phase all --skip-existing --tune-first
+```
+
+Outputs land in `runs/final/<tag>/`. Each run writes:
+- `metrics.json` — `psnr_mean`, `psnr_std`, `ssim_mean`, `ssim_std`, `best_val_acc`, `best_epoch`, dataset config
+- `metrics.csv` — per-epoch loss/accuracy
+- `best.ckpt`, `last.ckpt` — Lightning checkpoints (gitignored, claudeignored, **never leave the local machine**)
+- `log.txt` — training log
+
+## Step 3 — Monitor
+
+| Surface | What it shows |
+|---|---|
+| `artifacts/Final_Exp.html` | 186-cell visual grid: side-by-side original/degraded thumbnails, status badges, PSNR/SSIM, click → learning-curve modal. Auto-refreshes every 30 s. |
+| [`Final_Exp.md`](Final_Exp.md) | Master tracker; Markdown table for every cell. Regenerated by `scripts/update_final_exp.py` on every `on_train_end`. |
+| `runs/final/<tag>/log.txt` | Live training output — `tail -f` it during a run. |
+
+## Degradation Pipeline & Levels
+
+Identical pipeline for both datasets (saturation applied **before** noise/S&P so additive noise stays color-correct):
 
 ```
- DenseNet121 ██████████████████████████████████████████  80.7%
-  ResNet50   ████████████████████████████████████████    78.8%
-TransNeXt LP ████████████████████████████████            64.2%  (frozen backbone)
-```
-
-| Model | Best Val Acc | Epochs | Method | Overfitting Prevention |
-|-------|-------------|--------|--------|----------------------|
-| **DenseNet121** | **80.7%** | 30 | Differential LR + cosine schedule | Weight decay, label smoothing 0.1, grad clipping |
-| ResNet50 | 78.8% | 30 | Differential LR + cosine schedule | Weight decay, label smoothing 0.1, grad clipping |
-| TransNeXt Micro | 64.2% | 30 | Linear probe (frozen backbone) | Weight decay, grad clipping |
-
-**Key findings**:
-- DenseNet121's dense connections preserve low-level features better under degradation
-- ResNet50 benefits greatly from differential LR and cosine scheduling (+24% vs baseline)
-- TransNeXt frozen backbone retains useful features but trails behind fine-tuned CNNs on combined degradation
-- Full fine-tuning of TransNeXt fails (~10%) due to overfitting — linear probe is essential
-
-## Degradation Pipeline
-
-Images pass through a multi-stage degradation pipeline simulating THz-like conditions:
-
-```
-Original (32×32 CIFAR-10 / 28×28 MNIST)
-    |
-    v
-[Grayscale conversion (p=0.3)]
-    |
-    v
-[Downsampling to low_res (16px or 8px)]
-    |
-    v
-[Upsampling back to 224x224]
-    |
-    v
-[Gaussian blur (kernel, sigma)]
-    |
-    v
-[Gaussian noise (std)]
-    |
-    v
-[Salt & Pepper noise]
-    |
-    v
-[ImageNet normalization]
-    |
-    v
+Original (32×32 CIFAR-10 / 28×28 MNIST → 3-channel)
+   ↓ Saturation lerp:  (1−s)·gray + s·img            ← deterministic
+   ↓ Downsample → bilinear upsample to 224×224
+   ↓ Gaussian blur (separable conv)
+   ↓ Additive Gaussian noise
+   ↓ Salt-and-pepper noise
+   ↓ ImageNet normalization
 Model input (224×224×3)
 ```
 
-### Systematic Degradation Levels
+5-level degradation table (single source of truth: [`src/data/degradation_levels.py`](src/data/degradation_levels.py)):
 
-| Level | Name | Resolution | Blur | Noise | Salt & Pepper | Grayscale p |
-|-------|------|-----------|------|-------|---------------|-------------|
-| 1 | Mild | 16px | k=3, σ=0.5 | std=0.04 | 2% | 0.3 |
-| 2 | Moderate | 16px | k=5, σ=1.0 | std=0.08 | 5% | 0.3 |
-| 3 | Severe | 8px | k=7, σ=1.5 | std=0.12 | 8% | 0.3 |
+| Level | Name | low_res | blur kernel | blur σ | noise std | S&P | saturation |
+|---|---|---|---|---|---|---|---|
+| L1 | Mild | 20 | 3 | 0.70 | 0.03 | 0.02 | 1.00 |
+| L2 | Light | 14 | 5 | 1.00 | 0.06 | 0.05 | 0.75 |
+| L3 | Moderate | 10 | 7 | 1.30 | 0.09 | 0.08 | 0.50 |
+| L4 | Severe | 7 | 9 | 1.65 | 0.13 | 0.11 | 0.25 |
+| L5 | Extreme | 4 | 11 | 2.00 | 0.18 | 0.15 | 0.00 |
 
-### Training Hyperparameters
+Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other axis pinned at L1 mild values.
+
+## Models
+
+| Model | Type | Strategy | Paper |
+|---|---|---|---|
+| **ResNet50** | residual CNN | differential LR fine-tuning (head 1e-3, backbone 1e-4) | TResNet (Ridnik et al., 2020) |
+| **DenseNet121** | densely-connected CNN | differential LR fine-tuning | DenseNet (Huang et al., 2017) |
+| **TransNeXt** (default size: `small`) | aggregated-attention ViT | linear probe — frozen ImageNet backbone, head-only | TransNeXt (Shi, 2024) |
+
+## The 186-cell Matrix
+
+| Phase | Description | Count |
+|---|---|---|
+| **A** Clean baselines | 3 models × 2 datasets × 1 (no degradation) | **6** |
+| **B** Combined degradation | 3 models × 2 datasets × 5 levels (all axes at L) | **30** |
+| **C** Single-axis isolation | 3 models × 2 datasets × 5 levels × 5 axes | **150** |
+| | | **186** |
+
+Tag scheme: `final_clean_{model}_{dataset}` / `final_B_L{level}_{model}_{dataset}` / `final_C_L{level}_{axis}_{model}_{dataset}`. At L1 every isolation cell collapses to the Phase B L1 row for the same `(model, dataset)`; `--skip-existing` deduplicates these at runtime.
+
+## Training Defaults — Convergence-First
 
 | Parameter | Value | Source |
-|-----------|-------|--------|
-| Input resolution | 224×224 | TransNeXt requirement |
-| Batch size | 32 | GPU memory constraint |
+|---|---|---|
 | Optimizer | AdamW (β₁=0.9, β₂=0.999) | TransNeXt paper |
-| Scheduler | Cosine LR decay | TransNeXt / EfficientNetV2 papers |
-| Epochs | 30 (full) / 5 (pilot) | Early stopping patience=5 |
-| Gradient clipping | max_norm=1.0 | TransNeXt paper |
-| Weight decay | 1e-4 | DenseNet paper |
+| Scheduler | Cosine LR decay | TransNeXt / EfficientNetV2 |
+| Head LR / Backbone LR (CNNs) | 1e-3 / 1e-4 | TResNet, DenseNet |
+| TransNeXt LP | head 1e-3, backbone frozen | TransNeXt paper §A.3 |
+| Weight decay | 1e-4 (CNNs) / 5e-2 (TransNeXt) | DenseNet / TransNeXt |
 | Label smoothing | 0.1 (CNNs) / 0.0 (TransNeXt LP) | TransNeXt paper |
+| Gradient clipping | max_norm = 1.0 | TransNeXt paper |
+| Batch size | 32 | GPU memory |
+| **Max epochs** | **60** | quality-over-speed |
+| **Early stopping** | **patience=10, min_delta=1e-4, monitor=val_acc, mode=max** | quality-over-speed |
+| Precision | `16-mixed` (auto fallback to `32-true` if no CUDA) | FP16 mixed precision |
+| Seed | `pl.seed_everything(42, workers=True)` | reproducibility lock |
 
-## Quick Start
-
-```bash
-# Setup
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate     # Linux/macOS
-pip install -r requirements.txt
-
-# Run systematic experiments (3 degradation levels x 3 models)
-python run_systematic.py --level all --mode pilot   # quick validation (5 epochs)
-python run_systematic.py --level 2 --mode full      # full training (30 epochs)
-python run_systematic.py --level 1,3 --mode full    # specific levels
-
-# Run with MNIST dataset
-python run_systematic.py --level all --mode full --dataset mnist
-
-# Run a single experiment
-python main.py --model resnet50 --pretrained --epochs 20 --degradation_type all
-
-# Generate dashboards
-python src/tools/generate_systematic_dashboard.py
-python src/tools/generate_experiment_plan_dashboard.py
-python src/tools/generate_dashboard.py
-python src/tools/generate_advanced_dashboard.py
-```
-
-## Dashboards
-
-Three interactive HTML dashboards in `artifacts/`:
-
-| Dashboard | File | Purpose |
-|-----------|------|---------|
-| **Experiment Plan** | `dashboard_experiment_plan.html` | Tracks all 36 planned experiments (4 phases). Scans only `runs/systematic/` for plan runs. Dark theme, white text. Comparative bar charts per degradation level, cross-level robustness chart, clickable learning curves. Filters by phase/model/dataset/status. |
-| **Systematic** | `dashboard_systematic.html` | Groups experiments by degradation config. Shows original vs degraded sample images. Filters out incomplete and low-accuracy (<30%) runs. Click any row for learning curves. |
-| **Basic** | `dashboard.html` | Overview with model comparison charts, degradation comparison, accuracy distribution histogram, and filterable results table with color-coded rows. |
-| **Advanced** | `dashboard_advanced.html` | Full-pipeline vs single-degradation separation. Top runs with interactive learning curves. 3x3 grid for single-degradation type isolation analysis. |
-
-Regenerate all after new experiments:
-```bash
-python src/tools/generate_experiment_plan_dashboard.py
-python src/tools/generate_systematic_dashboard.py
-python src/tools/refresh_dashboards.py
-```
-
-## Repository Structure
-
-```
-EXPERIMENT_PLAN.md      — full experiment plan (36 experiments, 4 phases)
-run_systematic.py       — systematic experiment launcher (3 levels x 3 models x 2 datasets)
-main.py                 — single experiment entry point
-requirements.txt        — Python dependencies
-src/
-  runner.py             — training loop (early stopping, custom degradation, cosine LR)
-  data/
-    degrade.py          — degradation pipeline (DegradeConfig)
-    datasets.py         — CIFAR-10 + MNIST dataset wrappers with degradation
-  models/
-    transnext_wrapper.py — TransNeXt model wrapper
-  tools/
-    generate_experiment_plan_dashboard.py  — experiment plan dashboard (36 experiments tracker)
-    generate_systematic_dashboard.py  — systematic dashboard generator
-    generate_dashboard.py             — basic dashboard generator
-    generate_advanced_dashboard.py    — advanced dashboard generator
-    refresh_dashboards.py             — refresh all dashboards
-    summarize_runs.py                 — aggregate run results to CSV
-    visualize_run.py                  — per-run learning curve plots
-runs/                   — experiment outputs (systematic/, official/, pilot/)
-artifacts/              — generated dashboards, figures, tables
-papers/                 — reference papers (TransNeXt, DenseNet, TResNet, EfficientNetV2, NASNet)
-scripts/archive/        — old experiment scripts (not active)
-docs/                   — detailed documentation
-```
-
-## Papers & References
-
-| Paper | Key Contribution to This Project |
-|-------|----------------------------------|
-| **TransNeXt** (Shi, 2024) | Model architecture; training hyperparameters (AdamW, cosine LR, grad clip 1.0, label smoothing 0.1) |
-| **DenseNet** (Huang et al., 2017) | Model architecture; weight decay 1e-4; feature reuse under degradation |
-| **TResNet** (Ridnik et al., 2020) | GPU-efficient architectures; CIFAR-10 transfer learning reference |
-| **EfficientNetV2** (Tan & Le, 2021) | Progressive training concept; transfer learning protocol |
-| **NASNet** (Zoph et al., 2018) | Architecture search on CIFAR-10; transferability to larger datasets |
-| **Deep Learning Models for Image Classification** (Sharma & Guleria) | Survey of model comparison methodology |
-
-## Tech Stack
-
-- Python 3.12+
-- PyTorch 2.x (CUDA supported), torchvision, timm, torchmetrics
-- **PyTorch Lightning** — training engine (LightningModule + LightningDataModule, `pl.seed_everything(42, workers=True)` lock)
-- **Weights & Biases** — experiment tracking (offline mode by default; CSVLogger as fallback)
-- **Optuna** (+ `optuna-integration[pytorch-lightning]`) — hyper-parameter search
-- Chart.js / Plotly.js — interactive dashboards
+Pilot mode (`--mode pilot`) keeps shorter numbers (5 epochs / patience 2) for smoke tests **only**. `run_all_phases.py --plan final --mode pilot` is rejected with an assertion to prevent contamination of final results.
 
 ## Reproducibility
 
-The pipeline is **fully deterministic**. Each validation image is degraded with a per-sample local RNG keyed on its dataset index (`seed = idx + SEED_OFFSET_VAL`), so image *N* receives byte-identical noise across every epoch, every model, and every process re-launch. Two reads of the same val batch satisfy MSE = 0; verified by [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py).
+Per-sample local RNG keyed on dataset index (`seed = idx + SEED_OFFSET_VAL`) gives byte-identical validation pixels across every model and run. Two reads of the same val batch satisfy MSE = 0; gated by [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py). PSNR/SSIM are recomputed deterministically on a fixed 256-sample subset and asserted byte-identical across re-runs.
+
+```bash
+pytest src/tests/test_degradation_determinism.py -v
+```
+
+## Weight Privacy
+
+Trained checkpoints (`*.ckpt`, `*.pt`, `*.pth`) and the Optuna SQLite store are **local-only**. They are excluded from Git via `.gitignore` and from AI assistant context via `.claudeignore`. Future Claude / Codex sessions analyze runs by reading `metrics.json` / `metrics.csv` / the dashboard HTML — never the binary artifacts. TransNeXt pretrained weights under `artifacts/weights/` are auto-downloaded on demand and also gitignored.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `verify_env.py` exits non-zero | CUDA / `torch` build mismatch | re-install matching `torch` per [pytorch.org/get-started](https://pytorch.org/get-started/locally/) |
+| OOM on TransNeXt-S | batch 32 too large for 8 GB VRAM | `--batch-size 16` or `--transnext_size micro` |
+| TransNeXt weight download blocked | corporate proxy / firewall | manual fallback URL printed in log; place file in `artifacts/weights/` |
+| Optuna trial pruned | MedianPruner — expected | no action — pruned trials still record |
+| `--plan final --mode pilot` rejected | guardrail prevents short-training contamination | drop `--mode pilot` or run a real pilot via `--plan legacy` |
+
+## Codebase Structure
+
+```
+Final_Exp.md                       — master tracker, 186 rows
+src/data/degradation_levels.py     — single-source 5-level table
+src/data/degrade.py                — DegradeConfig + degrade_config_for
+src/data/datasets.py               — THzLikeCIFAR10 / THzLikeMNIST
+src/lightning/                     — Lightning training engine
+src/models/                        — model wrappers (TransNeXt + size selector)
+src/tools/                         — dashboard generators
+src/tune_hyperparams.py            — Optuna single-pair sweep
+src/tests/                         — determinism + saturation invariants
+tune_all.py                        — Optuna driver across all 6 pairs (planned)
+run_all_phases.py                  — final & legacy phase runner
+runs/final/                        — 186-cell campaign outputs (gitignored)
+runs/systematic/                   — frozen legacy 33-run results (kept for reference)
+artifacts/best_hparams/            — Optuna outputs per (model, dataset)
+artifacts/Final_Exp.html           — interactive 186-cell dashboard (planned)
+artifacts/weights/                 — auto-downloaded pretrained weights (gitignored)
+papers/                            — TransNeXt, DenseNet, TResNet, EfficientNetV2, NASNet
+agents/                            — sub-agent specs (MASTER + 9 specialists)
+```
+
+## Deadlines
+
+| Date | Deliverable |
+|---|---|
+| 2026-05-31 | Poster & abstract |
+| 2026-06-21 | Final presentation |
+| 2026-07-26 | Final submission |
 
 ## Contributors
 
-- Itamar Bahat
+Itamar Bahat
 
 ## License
 
