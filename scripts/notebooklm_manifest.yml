@@ -1,0 +1,91 @@
+# NotebookLM Source Manifest — THz Project
+#
+# Single source of truth for which repository files mirror into the
+# `THz Project` notebook on NotebookLM. Driven by `scripts/notebooklm_sync.py`.
+#
+# Title convention:
+#   Each uploaded source is titled with its repo-relative POSIX path
+#   (e.g., `src/data/degrade.py`). The script uses the title as the
+#   round-trip key when diffing local vs. notebook state.
+
+notebook: "THz Project"
+notebook_id: "e244f8b6-30ab-4966-a74c-426ff88be39a"
+
+# Globs (repo-relative, POSIX). Matched against the working tree.
+include:
+  # Project rules + run tracking (root markdown)
+  - "CLAUDE.md"
+  - "README.md"
+  - "AGENTS.md"
+  - "TODO.md"
+  - "Final_Exp.md"
+
+  # Agent specifications
+  - "agents/*.md"
+
+  # Research papers (PDF)
+  - "papers/*.pdf"
+
+  # Degradation pipeline + datasets (single source of truth for levels)
+  - "src/data/*.py"
+
+  # Lightning training engine
+  - "src/lightning/*.py"
+
+  # Models (wrappers + upstream TransNeXt reference implementation)
+  - "src/models/**/*.py"
+
+  # Tools (dashboards, visualizations, plotting)
+  - "src/tools/*.py"
+
+  # Tests (determinism + invariants)
+  - "src/tests/*.py"
+
+# Hard exclusions. A file matching ANY deny glob is never uploaded,
+# even if it also matches an include glob. Weight-privacy invariant.
+deny:
+  # Trained checkpoints — must never leave the local machine
+  - "**/*.ckpt"
+  - "**/*.pt"
+  - "**/*.pth"
+  - "artifacts/weights/**"
+
+  # Run outputs (large, gitignored)
+  - "runs/**"
+
+  # Caches and virtualenvs
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - ".venv/**"
+  - "venv/**"
+
+  # Optuna SQLite store
+  - "artifacts/optuna_*.db"
+
+  # Dashboard thumbnail caches
+  - "artifacts/.thumb_cache/**"
+
+# Sources that already exist in the notebook from manual uploads.
+# `prune` will refuse to delete these even if they are not in `include`.
+# Captured 2026-05-03 from `notebooklm metadata --json`.
+preserve_titles:
+  - "Final Project Experiment Planning"
+  - "ענף • Final Project Experiment Planning"
+  - "Intro_to_Machine_Learning_Lecture_Notes (1).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (2).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (3).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (4).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (5).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (6).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (7).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (8).pdf"
+  - "Intro_to_Machine_Learning_Lecture_Notes (9).pdf"
+  - "PROJECT_INST.pdf"
+  - "Pre-2026-061.pdf"
+  - "pro-2026-061.pptx"
+  - "prog-2026-061.docx"
+  - "אוטומציית עדכוני ניסויים ודאשבורד"
+  - "נוהל פרוייקטים - הנחיות 2026.pdf"
+
+# CLI auth — overridden by `--storage` flag or `NOTEBOOKLM_AUTH_JSON` env var.
+storage_state: "C:\\Users\\ib94\\.notebooklm\\storage_state.json"

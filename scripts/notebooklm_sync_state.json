@@ -1,0 +1,352 @@
+{
+  "AGENTS.md": {
+    "mtime": 1777833604.0,
+    "source_id": "4a14c380-0827-48f9-b26f-76231f95ca73",
+    "uploaded_at": "2026-05-03T19:20:12Z"
+  },
+  "CLAUDE.md": {
+    "mtime": 1777754278.0,
+    "source_id": "2f30bc36-be11-454a-a385-a17e1a1eb2b2",
+    "uploaded_at": "2026-05-03T19:20:14Z"
+  },
+  "Final_Exp.md": {
+    "mtime": 1777739472.0,
+    "source_id": "0f07e10d-4ad2-4362-8550-a03ec362e7cb",
+    "uploaded_at": "2026-05-03T19:20:17Z"
+  },
+  "README.md": {
+    "mtime": 1777754146.0,
+    "source_id": "8d63e110-5def-49a4-a24f-5b1a4307c55e",
+    "uploaded_at": "2026-05-03T19:20:19Z"
+  },
+  "TODO.md": {
+    "mtime": 1777754194.0,
+    "source_id": "cc9da7bb-9424-40ce-b8ad-9d89ec962393",
+    "uploaded_at": "2026-05-03T19:20:22Z"
+  },
+  "agents/DATA_ARCHITECT.md": {
+    "mtime": 1777629192.0,
+    "source_id": "8935225b-25c4-49a1-a997-d4e0fd2eb692",
+    "uploaded_at": "2026-05-03T19:20:25Z"
+  },
+  "agents/DESIGNER.md": {
+    "mtime": 1775926022.0,
+    "source_id": "a58d1ba8-37e3-46c5-900f-9cfff28dd2e4",
+    "uploaded_at": "2026-05-03T19:20:27Z"
+  },
+  "agents/EXECUTOR.md": {
+    "mtime": 1775926004.0,
+    "source_id": "cd6845b4-9dd6-43b3-a958-a239f5fd4d21",
+    "uploaded_at": "2026-05-03T19:20:30Z"
+  },
+  "agents/LIBRARIAN.md": {
+    "mtime": 1775926046.0,
+    "source_id": "e5846684-2327-4a0c-8d9b-8bbb6c544ca3",
+    "uploaded_at": "2026-05-03T19:20:32Z"
+  },
+  "agents/MASTER.md": {
+    "mtime": 1777830600.0,
+    "source_id": "69886722-9488-4bcc-b504-4d96797de5e0",
+    "uploaded_at": "2026-05-03T19:20:34Z"
+  },
+  "agents/NOTEBOOKLM_SYNC.md": {
+    "mtime": 1777833402.0,
+    "source_id": "a93bf22e-3f73-4e91-b9d6-db4bb2b7685d",
+    "uploaded_at": "2026-05-03T19:20:37Z"
+  },
+  "agents/OPTIMIZER.md": {
+    "mtime": 1775926014.0,
+    "source_id": "b2877401-5d48-473e-8a30-8f3c57f59c0e",
+    "uploaded_at": "2026-05-03T19:20:40Z"
+  },
+  "agents/REPORTER.md": {
+    "mtime": 1775926030.0,
+    "source_id": "405d087e-5082-4218-a32e-aee5c742467c",
+    "uploaded_at": "2026-05-03T19:20:42Z"
+  },
+  "agents/SECURITY.md": {
+    "mtime": 1775926038.0,
+    "source_id": "ed17e9a4-3beb-4b82-80bd-567fc08adeca",
+    "uploaded_at": "2026-05-03T19:20:45Z"
+  },
+  "agents/SYNCHRONIZER.md": {
+    "mtime": 1777830594.0,
+    "source_id": "64ca0b1b-ca43-4deb-b319-ca67c29667c6",
+    "uploaded_at": "2026-05-03T19:20:48Z"
+  },
+  "agents/VALIDATOR.md": {
+    "mtime": 1777629204.0,
+    "source_id": "0d48228e-f1cf-49e8-8873-922e7f9fdcee",
+    "uploaded_at": "2026-05-03T19:20:50Z"
+  },
+  "papers/2104.00298v3.pdf": {
+    "mtime": 1764493970.0,
+    "source_id": "69f721e0-88c4-46f8-a256-e696adaf2088",
+    "uploaded_at": "2026-05-03T19:20:55Z"
+  },
+  "papers/Deep_Learning_Models_for_Image_Classification.pdf": {
+    "mtime": 1761647624.0,
+    "source_id": "5f11744a-3e4d-470a-83c5-9fec4bfb57a0",
+    "uploaded_at": "2026-05-03T19:21:01Z"
+  },
+  "papers/Densely Connected Convolutional Networks.pdf": {
+    "mtime": 1761647628.0,
+    "source_id": "5a7b3d74-ef80-42b9-bfcc-404109468a61",
+    "uploaded_at": "2026-05-03T19:21:07Z"
+  },
+  "papers/Learning Transferable Architectures for Scalable Image Recognition.pdf": {
+    "mtime": 1761647632.0,
+    "source_id": "d57e10d7-5c8e-4211-9b6d-e5cd49cdb726",
+    "uploaded_at": "2026-05-03T19:21:12Z"
+  },
+  "papers/TResNet.pdf": {
+    "mtime": 1764493960.0,
+    "source_id": "7fe9a13a-d6e0-4f27-a995-db0fbab8d524",
+    "uploaded_at": "2026-05-03T19:21:17Z"
+  },
+  "papers/TransNeXt.pdf": {
+    "mtime": 1764493974.0,
+    "source_id": "2aa11b87-3b22-4359-b5f2-319fdec0c175",
+    "uploaded_at": "2026-05-03T19:21:23Z"
+  },
+  "src/data/datasets.py": {
+    "mtime": 1777626456.0,
+    "source_id": "d7d30855-09b1-4132-aeea-4a8e9f4ce3fd",
+    "uploaded_at": "2026-05-03T19:21:25Z"
+  },
+  "src/data/degradation_levels.py": {
+    "mtime": 1777725556.0,
+    "source_id": "3cfaebbf-8158-4769-a5cc-b795c3915ba8",
+    "uploaded_at": "2026-05-03T19:21:28Z"
+  },
+  "src/data/degrade.py": {
+    "mtime": 1777725576.0,
+    "source_id": "c96b3df0-68d4-4dff-92bc-ed933b6821fa",
+    "uploaded_at": "2026-05-03T19:21:30Z"
+  },
+  "src/lightning/__init__.py": {
+    "mtime": 1777575170.0,
+    "source_id": "d8b164bf-1f18-46c8-9ead-0cd7351d4d3f",
+    "uploaded_at": "2026-05-03T19:21:33Z"
+  },
+  "src/lightning/callbacks.py": {
+    "mtime": 1777575240.0,
+    "source_id": "10eb7727-0444-43f5-8234-44d1e421ae07",
+    "uploaded_at": "2026-05-03T19:21:35Z"
+  },
+  "src/lightning/datamodule.py": {
+    "mtime": 1777575220.0,
+    "source_id": "b0c14bfe-9727-4de9-b575-b2f9cb8a8110",
+    "uploaded_at": "2026-05-03T19:21:38Z"
+  },
+  "src/lightning/module.py": {
+    "mtime": 1777575216.0,
+    "source_id": "5d68201f-b892-4479-9e8b-555fe22be9bd",
+    "uploaded_at": "2026-05-03T19:21:41Z"
+  },
+  "src/lightning/train.py": {
+    "mtime": 1777626476.0,
+    "source_id": "ab7924fe-32f8-4ee2-9ad0-70a116ae82c7",
+    "uploaded_at": "2026-05-03T19:21:44Z"
+  },
+  "src/models/transnext_official/attention_cuda.py": {
+    "mtime": 1773991520.0,
+    "source_id": "7a27afea-4510-4936-90f3-048a7092c549",
+    "uploaded_at": "2026-05-03T19:21:46Z"
+  },
+  "src/models/transnext_official/attention_native.py": {
+    "mtime": 1773991520.0,
+    "source_id": "2135b639-157a-4c7d-a5dd-783859528519",
+    "uploaded_at": "2026-05-03T19:21:49Z"
+  },
+  "src/models/transnext_official/configs/finetune/transnext_base_384_ft.py": {
+    "mtime": 1773991520.0,
+    "source_id": "621bf97c-43ac-4373-ac8b-75bd8828547d",
+    "uploaded_at": "2026-05-03T19:21:51Z"
+  },
+  "src/models/transnext_official/configs/finetune/transnext_small_384_ft.py": {
+    "mtime": 1773991520.0,
+    "source_id": "655b3118-8805-4bbd-a1ba-cd438aeab5f1",
+    "uploaded_at": "2026-05-03T19:21:54Z"
+  },
+  "src/models/transnext_official/configs/transnext_base.py": {
+    "mtime": 1773991520.0,
+    "source_id": "0a4b291d-f9e2-4fe4-8f14-426dade242fe",
+    "uploaded_at": "2026-05-03T19:21:57Z"
+  },
+  "src/models/transnext_official/configs/transnext_micro.py": {
+    "mtime": 1773991520.0,
+    "source_id": "2e7f2789-4a6b-45a5-b574-1879822fdb29",
+    "uploaded_at": "2026-05-03T19:21:59Z"
+  },
+  "src/models/transnext_official/configs/transnext_micro_AAAA_256.py": {
+    "mtime": 1773991520.0,
+    "source_id": "f448a9fe-bcc9-4a5a-8bdd-c00a27f2e524",
+    "uploaded_at": "2026-05-03T19:22:02Z"
+  },
+  "src/models/transnext_official/configs/transnext_small.py": {
+    "mtime": 1773991520.0,
+    "source_id": "810fc695-8cc3-48ab-b4ae-139370be6036",
+    "uploaded_at": "2026-05-03T19:22:04Z"
+  },
+  "src/models/transnext_official/configs/transnext_tiny.py": {
+    "mtime": 1773991520.0,
+    "source_id": "7105daed-82cd-4aa7-b6f1-9f743d6b7cfd",
+    "uploaded_at": "2026-05-03T19:22:07Z"
+  },
+  "src/models/transnext_official/datasets.py": {
+    "mtime": 1773991520.0,
+    "source_id": "40aa0d7d-9165-439c-a6a3-29b5f52b8159",
+    "uploaded_at": "2026-05-03T19:22:10Z"
+  },
+  "src/models/transnext_official/engine.py": {
+    "mtime": 1773991520.0,
+    "source_id": "c209789e-44ea-46e7-9181-3a71c8eca465",
+    "uploaded_at": "2026-05-03T19:22:12Z"
+  },
+  "src/models/transnext_official/hubconf.py": {
+    "mtime": 1773991520.0,
+    "source_id": "94f9de18-e9a2-4bf1-b575-f62e40e113bf",
+    "uploaded_at": "2026-05-03T19:22:15Z"
+  },
+  "src/models/transnext_official/losses.py": {
+    "mtime": 1773991520.0,
+    "source_id": "ed202433-279b-48a0-a995-9648f5607e2f",
+    "uploaded_at": "2026-05-03T19:22:17Z"
+  },
+  "src/models/transnext_official/main.py": {
+    "mtime": 1773991520.0,
+    "source_id": "53046a88-256c-4d2d-a34d-36ab09a71c15",
+    "uploaded_at": "2026-05-03T19:22:20Z"
+  },
+  "src/models/transnext_official/mcloader/__init__.py": {
+    "mtime": 1773991520.0,
+    "source_id": "a4845822-d41a-449b-8eee-1999624d28f1",
+    "uploaded_at": "2026-05-03T19:22:22Z"
+  },
+  "src/models/transnext_official/mcloader/classification.py": {
+    "mtime": 1773991520.0,
+    "source_id": "cd479581-4645-464c-99ec-2bbbe98bff1c",
+    "uploaded_at": "2026-05-03T19:22:25Z"
+  },
+  "src/models/transnext_official/mcloader/data_prefetcher.py": {
+    "mtime": 1773991520.0,
+    "source_id": "28422416-99d9-48ed-b8b8-be05e8834028",
+    "uploaded_at": "2026-05-03T19:22:27Z"
+  },
+  "src/models/transnext_official/mcloader/image_list.py": {
+    "mtime": 1773991520.0,
+    "source_id": "a09a1bd2-603c-47a7-8321-a13ed22e5d99",
+    "uploaded_at": "2026-05-03T19:22:30Z"
+  },
+  "src/models/transnext_official/mcloader/imagenet.py": {
+    "mtime": 1773991520.0,
+    "source_id": "f7c483db-21f7-4a2d-abe7-e1793cc8539b",
+    "uploaded_at": "2026-05-03T19:22:32Z"
+  },
+  "src/models/transnext_official/mcloader/mcloader.py": {
+    "mtime": 1773991520.0,
+    "source_id": "31bec5b0-6b12-4494-9c53-4920f2fe3157",
+    "uploaded_at": "2026-05-03T19:22:35Z"
+  },
+  "src/models/transnext_official/optimizer.py": {
+    "mtime": 1773991520.0,
+    "source_id": "68dd02f8-9046-4a47-b87a-d8aa6731b647",
+    "uploaded_at": "2026-05-03T19:22:38Z"
+  },
+  "src/models/transnext_official/run_with_submitit.py": {
+    "mtime": 1773991520.0,
+    "source_id": "66418d8f-7c4d-4c0c-a6bd-069e8ecb4b92",
+    "uploaded_at": "2026-05-03T19:22:40Z"
+  },
+  "src/models/transnext_official/samplers.py": {
+    "mtime": 1773991520.0,
+    "source_id": "22e0a2eb-eaa5-47cb-8d58-b3dc1adf6392",
+    "uploaded_at": "2026-05-03T19:22:43Z"
+  },
+  "src/models/transnext_official/transnext.py": {
+    "mtime": 1775556590.0,
+    "source_id": "602c168a-3e35-44dc-b708-931822b557f1",
+    "uploaded_at": "2026-05-03T19:22:46Z"
+  },
+  "src/models/transnext_official/utils.py": {
+    "mtime": 1773991520.0,
+    "source_id": "16296d25-55f4-4c82-8de3-cb5a8af57654",
+    "uploaded_at": "2026-05-03T19:22:48Z"
+  },
+  "src/models/transnext_wrapper.py": {
+    "mtime": 1775658400.0,
+    "source_id": "518b8809-5719-45ec-bd91-47269b4d7ba5",
+    "uploaded_at": "2026-05-03T19:22:51Z"
+  },
+  "src/tests/test_degradation_determinism.py": {
+    "mtime": 1777627766.0,
+    "source_id": "afb4c37d-7427-4def-bce3-6339d0340518",
+    "uploaded_at": "2026-05-03T19:22:53Z"
+  },
+  "src/tools/bootstrap_project.py": {
+    "mtime": 1773991520.0,
+    "source_id": "f3b3be00-bd38-4c2c-82df-daa2909de970",
+    "uploaded_at": "2026-05-03T19:22:56Z"
+  },
+  "src/tools/degradation_robustness.py": {
+    "mtime": 1775567142.0,
+    "source_id": "90a1ceed-e5a6-43ab-87ed-33bfaf5e0096",
+    "uploaded_at": "2026-05-03T19:22:58Z"
+  },
+  "src/tools/generate_advanced_dashboard.py": {
+    "mtime": 1775733970.0,
+    "source_id": "e818a26d-7205-4718-b1aa-5a801cbb95c1",
+    "uploaded_at": "2026-05-03T19:23:00Z"
+  },
+  "src/tools/generate_dashboard.py": {
+    "mtime": 1775639970.0,
+    "source_id": "6a276bcd-df9b-4819-96cf-78dbd3756450",
+    "uploaded_at": "2026-05-03T19:23:03Z"
+  },
+  "src/tools/generate_experiment_plan_dashboard.py": {
+    "mtime": 1775760936.0,
+    "source_id": "df5ac046-548b-4954-b056-1e53afdd4018",
+    "uploaded_at": "2026-05-03T19:23:06Z"
+  },
+  "src/tools/generate_sample_images.py": {
+    "mtime": 1775607272.0,
+    "source_id": "72d6fbe2-c18e-4ae0-9370-22cbe2cfde94",
+    "uploaded_at": "2026-05-03T19:23:08Z"
+  },
+  "src/tools/generate_systematic_dashboard.py": {
+    "mtime": 1775758880.0,
+    "source_id": "896dd05f-49cb-4fa1-ae90-3e6eda22fde6",
+    "uploaded_at": "2026-05-03T19:23:11Z"
+  },
+  "src/tools/plot_experiments.py": {
+    "mtime": 1773991520.0,
+    "source_id": "8ca42136-f4fb-46cc-83d0-3680c2ffb4ce",
+    "uploaded_at": "2026-05-03T19:23:14Z"
+  },
+  "src/tools/refresh_dashboards.py": {
+    "mtime": 1775733970.0,
+    "source_id": "21ee9a19-e07a-43cc-993f-07cb98ae058f",
+    "uploaded_at": "2026-05-03T19:23:16Z"
+  },
+  "src/tools/summarize_runs.py": {
+    "mtime": 1773991520.0,
+    "source_id": "ac385740-35ad-461c-87fd-5fffad80916d",
+    "uploaded_at": "2026-05-03T19:23:19Z"
+  },
+  "src/tools/top_runs_comparison.py": {
+    "mtime": 1775565780.0,
+    "source_id": "60622870-ba9d-4713-8968-e7cb50f776fe",
+    "uploaded_at": "2026-05-03T19:23:21Z"
+  },
+  "src/tools/visualize_degradation.py": {
+    "mtime": 1773991522.0,
+    "source_id": "c1850a07-7ecf-47aa-9843-75cb31fe2516",
+    "uploaded_at": "2026-05-03T19:23:24Z"
+  },
+  "src/tools/visualize_run.py": {
+    "mtime": 1775565412.0,
+    "source_id": "e1d0b009-7589-4df8-9460-a6f1cb1cf282",
+    "uploaded_at": "2026-05-03T19:23:27Z"
+  }
+}

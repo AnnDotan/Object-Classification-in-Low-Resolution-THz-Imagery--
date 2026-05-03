@@ -14,7 +14,8 @@ MASTER (orchestrator, no write access to code)
 ├── LIBRARIAN        — README / AGENTS / docs knowledge capture
 ├── DATA_ARCHITECT   — src/data/ and degradation pipeline integrity
 ├── VALIDATOR        — diagnostic experiments + reproducibility gating
-└── SYNCHRONIZER     — context integrity + source alignment
+├── SYNCHRONIZER     — context integrity + source alignment
+└── NOTEBOOKLM_SYNC  — NotebookLM source mirror + git lockstep
 ```
 
 ## Index
@@ -31,6 +32,7 @@ MASTER (orchestrator, no write access to code)
 | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) | Pipeline integrity | `src/data/` | Sprint 1: plumb saturation through DataConfig + PSNR/SSIM hook |
 | [VALIDATOR](agents/VALIDATOR.md) | Validation & diagnostics | `scripts/validation/`, `runs/validation/` | Sprint 1: extend determinism test for saturation + PSNR/SSIM |
 | [SYNCHRONIZER](agents/SYNCHRONIZER.md) | Context integrity | repo-wide read; `AGENTS.md`, `TODO.md` write | Pre-flight check before any `EnterPlanMode` |
+| [NOTEBOOKLM_SYNC](agents/NOTEBOOKLM_SYNC.md) | NotebookLM mirror | `scripts/notebooklm_*` write; `notebooklm` CLI | Mirror curated repo subset → `THz Project` notebook; git-commit in lockstep |
 
 ## Coordination Protocol
 
@@ -71,3 +73,4 @@ MASTER (orchestrator, no write access to code)
 | 2026-05-02 | MASTER | Final Research Plan approved — pivot from legacy 36-exp to 186-cell campaign | ✅ |
 | 2026-05-02 | DATA_ARCHITECT | Sprint 1 batch 1: `degradation_levels.py`, saturation axis, `degrade_config_for`, `Final_Exp.md` | ✅ |
 | 2026-05-02 | LIBRARIAN | Repo-wide MD cleanup: removed 8 legacy docs (EXPERIMENT_PLAN, EXPERIMENTS_SUMMARY, docs/{IMPLEMENTATION_NOTES,VISUALIZATION_GUIDE,DASHBOARD_README,RESULTS_SUMMARY,.agent}, artifacts/summaries/experiment_journal); rewrote README, TODO, AGENTS, CLAUDE for 186-cell campaign | ✅ |
+| 2026-05-03 | MASTER | Added NOTEBOOKLM_SYNC sub-agent (10 sub-agents total) — owns `scripts/notebooklm_sync.py` + `notebooklm_manifest.yml`; mirrors curated subset into `THz Project` notebook | ✅ |
