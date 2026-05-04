@@ -13,10 +13,12 @@ Default budget: 50 trials x 10 epochs each (per the approved plan).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
 from pathlib import Path
+from typing import Callable, Iterable, Optional
 
 # Disable HF symlink warning on Windows (must be set early)
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
@@ -24,9 +26,11 @@ os.environ.setdefault("WANDB_MODE", "offline")
 
 import optuna
 import pytorch_lightning as pl
+import torch
 from optuna.integration import PyTorchLightningPruningCallback
 from pytorch_lightning.callbacks import EarlyStopping
 
+from src.data.degradation_levels import level_params
 from src.lightning.datamodule import THzDataModule
 from src.lightning.module import THzClassifier
 
@@ -117,6 +121,219 @@ def build_objective(max_epochs: int, train_subset: int, val_subset: int):
         return float(val_acc) if val_acc is not None else 0.0
 
     return objective
+
+
+# ---------------------------------------------------------------------------
+# Final-campaign runner (US-005): paper-anchored Optuna sweep at Phase B L3
+# Moderate, persisted to artifacts/optuna_thz.db, one study per (model,dataset).
+# ---------------------------------------------------------------------------
+
+# Optuna trial param names. Stored in study DB; do not rename without resetting.
+_PARAM_NAMES = (
+    "head_lr",
+    "backbone_lr",
+    "weight_decay",
+    "label_smoothing",
+    "warmup_epochs",
+)
+
+
+def _suggest_from_priors(trial: optuna.Trial, priors: dict) -> dict:
+    """Map a priors dict to Optuna trial.suggest_* calls.
+
+    `warmup_epochs` is suggested as a float and rounded to int — Optuna's
+    integer suggesters don't support priors-driven log distributions cleanly,
+    and the search range is small (0..10) so float-then-round is fine.
+    """
+    hp = priors["hparams"]
+    out: dict = {}
+    for name in _PARAM_NAMES:
+        spec = hp[name]
+        dist = spec["distribution"]
+        if dist in ("uniform", "loguniform"):
+            val = trial.suggest_float(
+                name, float(spec["low"]), float(spec["high"]),
+                log=(dist == "loguniform"),
+            )
+        elif dist == "categorical":
+            val = trial.suggest_categorical(name, spec["choices"])
+        else:
+            raise ValueError(f"unsupported distribution {dist!r} for {name}")
+        out[name] = val
+    out["warmup_epochs"] = int(round(out["warmup_epochs"]))
+    return out
+
+
+def _l3_train_one_trial(
+    *, model: str, dataset: str, params: dict,
+    max_epochs: int, train_subset: int, val_subset: int,
+) -> float:
+    """Train one Optuna trial on Phase B L3 Moderate. Returns val_acc.
+
+    Phase B L3: every degradation axis at level 3 — low_res=10, blur 7/1.30,
+    noise 0.09, S&P 0.08, saturation 0.50 (per src/data/degradation_levels.py).
+    """
+    p = level_params(3, axis=None)
+    pl.seed_everything(42, workers=True)
+
+    classifier_kwargs = dict(
+        model_name=model,
+        num_classes=10,
+        pretrained=True,
+        lr=params["head_lr"],
+        backbone_lr=params["backbone_lr"],
+        weight_decay=params["weight_decay"],
+        label_smoothing=params["label_smoothing"],
+        warmup_epochs=params["warmup_epochs"],
+        scheduler_type="cosine",
+        max_grad_norm=1.0,
+        epochs=max_epochs,
+        freeze_backbone=False,  # full FT for all 3 models in the final campaign
+    )
+    classifier = THzClassifier(**classifier_kwargs)
+
+    dm = THzDataModule(
+        dataset=dataset,
+        out_size=224,
+        low_res=int(p["low_res"]),
+        batch_size=32,
+        train_subset=train_subset,
+        val_subset=val_subset,
+        degradation_type="all",
+        blur_kernel=int(p["blur_kernel"]),
+        blur_sigma=float(p["blur_sigma"]),
+        gaussian_noise_std=float(p["noise_std"]),
+        salt_pepper_amount=float(p["salt_pepper"]),
+        saturation=float(p["saturation"]),
+    )
+
+    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    precision = "16-mixed" if torch.cuda.is_available() else "32-true"
+    trainer = pl.Trainer(
+        max_epochs=max_epochs,
+        accelerator=accelerator,
+        devices=1,
+        precision=precision,
+        logger=False,
+        enable_progress_bar=False,
+        enable_model_summary=False,
+        gradient_clip_val=1.0,
+        gradient_clip_algorithm="norm",
+        callbacks=[
+            EarlyStopping(monitor="val_acc", mode="max", patience=3),
+        ],
+    )
+    trainer.fit(classifier, datamodule=dm)
+    val_acc = trainer.callback_metrics.get("val_acc", None)
+    return float(val_acc) if val_acc is not None else 0.0
+
+
+def _priors_file_hash(model: str, priors_dir: Optional[Path] = None) -> str:
+    """SHA-256 of the priors file used for this study, recorded in winner JSON.
+
+    Lets the campaign verify that hparams were actually selected from the
+    priors checked into git at the time of the study.
+    """
+    priors_dir = priors_dir or Path("artifacts/priors")
+    return hashlib.sha256(
+        (priors_dir / f"{model}.json").read_bytes()
+    ).hexdigest()
+
+
+def run_studies(
+    *,
+    models: Iterable[str],
+    datasets: Iterable[str],
+    n_trials: int,
+    storage: str,
+    out_dir: Path,
+    load_priors: Callable[[str], dict],
+    train_fn: Optional[Callable[..., float]] = None,
+    max_epochs: int = 5,
+    train_subset: int = 2000,
+    val_subset: int = 1000,
+    priors_dir: Optional[Path] = None,
+) -> int:
+    """Run one Optuna study per (model, dataset) pair. Returns 0 on success.
+
+    Resumable: each study's trials live in `storage` (SQLite) keyed by study_name,
+    so re-running with the same model/dataset/storage continues from where it
+    crashed. `train_fn` is injectable so tests can replace heavy training with
+    a stub.
+    """
+    train_fn = train_fn or _l3_train_one_trial
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    Path("artifacts").mkdir(parents=True, exist_ok=True)
+
+    failures: list[str] = []
+
+    for model in models:
+        priors = load_priors(model)
+        priors_hash = _priors_file_hash(model, priors_dir=priors_dir)
+
+        for dataset in datasets:
+            study_name = f"{model}_{dataset}_L3"
+            study = optuna.create_study(
+                direction="maximize",
+                study_name=study_name,
+                storage=storage,
+                load_if_exists=True,
+                sampler=optuna.samplers.TPESampler(seed=42),
+            )
+
+            def objective(
+                trial: optuna.Trial,
+                _model=model, _dataset=dataset, _priors=priors,
+            ) -> float:
+                params = _suggest_from_priors(trial, _priors)
+                return float(train_fn(
+                    model=_model, dataset=_dataset, params=params,
+                    max_epochs=max_epochs,
+                    train_subset=train_subset, val_subset=val_subset,
+                ))
+
+            try:
+                study.optimize(objective, n_trials=n_trials, gc_after_trial=True)
+            except Exception as e:
+                failures.append(f"{study_name}: {type(e).__name__}: {e}")
+                print(f"FAIL [{study_name}] {e}", file=sys.stderr)
+                continue
+
+            n_done = sum(1 for t in study.trials if t.state.is_finished())
+            try:
+                best_value = float(study.best_value)
+                best_params = dict(study.best_params)
+            except ValueError:
+                best_value = float("nan")
+                best_params = {}
+
+            winner = {
+                "model": model,
+                "dataset": dataset,
+                "study_name": study_name,
+                "best_value": best_value,
+                "best_params": best_params,
+                "n_trials_completed": n_done,
+                "priors_file_hash": priors_hash,
+                "phase": "B",
+                "level": 3,
+            }
+            target = out_dir / f"{model}_{dataset}.json"
+            target.write_text(json.dumps(winner, indent=2), encoding="utf-8")
+            print(
+                f"OK [{study_name}] best_val_acc={best_value:.4f} "
+                f"({n_done} trials) -> {target}"
+            )
+
+    if failures:
+        return 1
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Legacy single-pair main() preserved below for backwards compat.
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:

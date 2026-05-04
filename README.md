@@ -10,25 +10,26 @@ How robust does image classification remain when visual information is severely 
 
 ## Implementation Status
 
-This README describes the **target runbook**. The repo is mid-pivot from a legacy 36-experiment plan to the 186-cell final plan. Live vs. pending:
-
 | Component | Status |
 |---|---|
 | 5-level degradation table — [`src/data/degradation_levels.py`](src/data/degradation_levels.py) | ✅ live |
-| Saturation axis (deterministic lerp) — [`src/data/degrade.py`](src/data/degrade.py) | ✅ live |
+| Saturation axis plumbed through `DataConfig` → `DegradeConfig` | ✅ live (US-001) |
 | `degrade_config_for(level, axis)` helper | ✅ live |
-| `Final_Exp.md` master tracker (186 cells, all Pending) | ✅ live |
+| 186-cell matrix generator — [`src/experiments/matrix.py`](src/experiments/matrix.py) | ✅ live (US-007) |
 | PyTorch Lightning training loop — [`src/lightning/`](src/lightning/) | ✅ live |
-| Optuna pre-tuning — [`src/tune_hyperparams.py`](src/tune_hyperparams.py) | ✅ live (broad search; needs paper-anchored narrowing) |
-| `saturation` plumbed through `DataConfig` → `DegradeConfig` | 🟡 pending |
-| PSNR/SSIM logging in `setup()` (`metrics.json`) | 🟡 pending |
-| FP16 mixed precision in main Trainer | 🟡 pending (live in tune_hyperparams.py only) |
-| TransNeXt size selector (`--transnext_size {micro,small,base}`) + auto-download | 🟡 pending |
-| `tune_all.py`, `setup.sh`, `scripts/verify_env.py`, `scripts/update_final_exp.py` | 🟡 pending |
-| `src/tools/generate_final_dashboard.py` (`Final_Exp.html`) | 🟡 pending |
-| `runs/final/` tree + `--plan final` switch in `run_all_phases.py` | 🟡 pending |
+| Offline PSNR/SSIM script — [`src/tools/measure_image_quality.py`](src/tools/measure_image_quality.py) | ✅ live (US-002) |
+| Per-model paper-anchored priors — [`artifacts/priors/*.json`](artifacts/priors/) | ✅ live (US-003) |
+| `tune_all.py` priors loader + Optuna study runner | ✅ live (US-004 + US-005) |
+| TransNeXt `base` + full-FT mode + auto-download | ✅ live (US-006) |
+| `--cell-tag` matrix consumer in [`run_systematic.py`](run_systematic.py) | ✅ live (US-008) |
+| `--plan final` orchestration in [`run_all_phases.py`](run_all_phases.py) | ✅ live (US-009) |
+| Pre-rendered Original-vs-Degraded thumbs — [`src/tools/render_cell_thumbs.py`](src/tools/render_cell_thumbs.py) | ✅ live (US-010) |
+| Final_Exp.html dashboard — [`src/tools/build_final_dashboard.py`](src/tools/build_final_dashboard.py) | ✅ live (US-011) |
+| W&B `run_id` / `entity` / `project` in `metrics.json` | ✅ live (US-012) |
+| Weight-privacy hardening (`.gitignore`, `.claudeignore`, `scripts/check_ignores.sh`) | ✅ live (US-013) |
+| `scripts/update_final_exp.py` (regenerates `Final_Exp.md` row data after each run) | 🟡 pending follow-up |
 
-Until the pending pieces land, the working entry-point remains the legacy [`src/lightning/train.py`](src/lightning/train.py) / [`run_all_phases.py`](run_all_phases.py) flow against `runs/systematic/`. The legacy 33/36 results live in `runs/systematic/` and `runs/official/` and are frozen.
+Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 
 ## Hardware & OS Prerequisites
 
@@ -42,71 +43,148 @@ Until the pending pieces land, the working entry-point remains the legacy [`src/
 | Python | 3.10+ | 3.12 |
 | CUDA toolkit | 11.8 or 12.x | matching `torch` build |
 
-## Step 0 — One-shot Environment Setup
+## Step 0 — Environment Setup
 
+**Bash (Linux / macOS / git-bash):**
 ```bash
 git clone <repo-url>
 cd Object-Classification-in-Low-Resolution-THz-Imagery--
-
-# Bootstraps venv, pins torch+CUDA, installs requirements,
-# downloads TransNeXt pretrained weights, runs FP16 smoke test.
-bash setup.sh        # planned — see "Implementation Status"
-
-# Manual fallback (works today):
-python -m venv .venv
-.venv\Scripts\activate            # Windows PowerShell
-source .venv/bin/activate         # Linux / macOS
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-python scripts/verify_env.py      # planned — exits non-zero if CUDA missing
+python -m src.tests.test_degradation_determinism   # MSE=0 sanity check
 ```
 
-`scripts/verify_env.py` prints `torch.__version__`, `torch.version.cuda`, `torch.cuda.is_available()`, device name, free VRAM, cuDNN version, and runs a tiny FP16 matmul. Exit non-zero ⇒ stop.
-
-## Step 1 — Optuna Pre-Tuning (~20 GPU-hours)
-
-Tune hyperparameters on a representative mid-level (L3 Moderate) for each `(model, dataset)` pair, then freeze them for the entire 186-cell sweep. Search space is **anchored on paper-derived priors** (TransNeXt, DenseNet, TResNet papers in `papers/`) — Optuna refines around them, doesn't blindly explore.
-
-```bash
-python tune_all.py --n-trials 20         # 6 pairs × 20 trials
+**PowerShell (Windows):**
+```powershell
+git clone <repo-url>
+Set-Location Object-Classification-in-Low-Resolution-THz-Imagery--
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+.\venv\Scripts\python.exe -m src.tests.test_degradation_determinism
 ```
 
-Output: `artifacts/best_hparams/{model}_{dataset}.json` per pair. Resume on crash is automatic via the `artifacts/optuna_thz.db` SQLite store.
+If the determinism test prints `OK [cifar10] ...`, `OK [mnist] ...`, `OK [lightning] ...` you are ready. The first run will download CIFAR-10 / MNIST into `./data/` (≈ 200 MB combined).
 
-For a single-pair smoke test:
+## Step 1 — Dataset Setup
 
+CIFAR-10 and MNIST are downloaded automatically into `./data/` on first use by torchvision. To pre-warm the cache without starting training:
+
+**Bash:**
 ```bash
-python src/tune_hyperparams.py --model resnet50 --dataset cifar10 --n-trials 5 --level 3
+python -c "from torchvision import datasets; datasets.CIFAR10('./data', train=True, download=True); datasets.MNIST('./data', train=True, download=True)"
 ```
 
-## Step 2 — Run the 186-cell Matrix
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe -c "from torchvision import datasets; datasets.CIFAR10('./data', train=True, download=True); datasets.MNIST('./data', train=True, download=True)"
+```
 
+TransNeXt-Base ImageNet-1K weights auto-download to `artifacts/weights/transnext_base_224_1k.pth` on first training run. Override the source URL via the `THZ_TRANSNEXT_BASE_URL` env var (or `THZ_TRANSNEXT_<SIZE>_URL` for any size) if the default GitHub release URL is unreachable; if both fail the training script raises `FileNotFoundError` with a manual-download instruction.
+
+## Step 2 — Optuna Pre-Tuning (~20 GPU-hours)
+
+Tune hyperparameters on Phase B L3 Moderate for each `(model, dataset)` pair, then freeze them for the 186-cell sweep. Search space is **anchored on paper-derived priors** (`artifacts/priors/{resnet50,densenet121,transnext_base}.json`) — every range is held to ≤ 1 decade around the paper anchor.
+
+**Bash:**
 ```bash
-# Phase A — clean baselines (6 runs, ~1.5 h on RTX 3090)
+python tune_all.py --validate-only          # dry-run: validates priors files
+python tune_all.py --n-trials 20            # 6 pairs × 20 trials
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe tune_all.py --validate-only
+.\venv\Scripts\python.exe tune_all.py --n-trials 20
+```
+
+Output: `artifacts/best_hparams/{model}_{dataset}.json` per pair. Each winner JSON carries `priors_file_hash` (SHA-256 of the priors used) so you can audit which search bounds produced the result. Resume on crash is automatic via the `artifacts/optuna_thz.db` SQLite store.
+
+To tune just one pair:
+
+**Bash:**
+```bash
+python tune_all.py --n-trials 20 --model resnet50 --dataset cifar10
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe tune_all.py --n-trials 20 --model resnet50 --dataset cifar10
+```
+
+## Step 3 — Run the 186-cell Matrix
+
+**Bash:**
+```bash
+# Phase A — clean baselines (6 runs)
 python run_all_phases.py --plan final --phase A
 
-# Phase B — combined degradation (30 runs, ~10 h)
+# Phase B — combined degradation (30 runs)
 python run_all_phases.py --plan final --phase B
 
-# Phase C — single-axis isolation (150 runs, ~50 h)
+# Phase C — single-axis isolation (150 runs)
 python run_all_phases.py --plan final --phase C
 
-# Full pipeline (idempotent — safe to Ctrl-C and resume)
+# Full pipeline (idempotent — safe to Ctrl-C and resume; auto-tunes if any best_hparams missing)
 python run_all_phases.py --plan final --phase all --skip-existing --tune-first
 ```
 
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe run_all_phases.py --plan final --phase A
+.\venv\Scripts\python.exe run_all_phases.py --plan final --phase B
+.\venv\Scripts\python.exe run_all_phases.py --plan final --phase C
+.\venv\Scripts\python.exe run_all_phases.py --plan final --phase all --skip-existing --tune-first
+```
+
+To run a single cell ad-hoc:
+
+**Bash:**
+```bash
+python run_systematic.py --cell-tag final_B_L3_resnet50_cifar10
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe run_systematic.py --cell-tag final_B_L3_resnet50_cifar10
+```
+
 Outputs land in `runs/final/<tag>/`. Each run writes:
-- `metrics.json` — `psnr_mean`, `psnr_std`, `ssim_mean`, `ssim_std`, `best_val_acc`, `best_epoch`, dataset config
+- `metrics.json` — `best_val_acc`, `best_epoch`, `last_*_acc/loss`, `epochs_run`, plus `wandb_run_id` / `wandb_entity` / `wandb_project` (US-012, may be `null` offline), `hparams` + `hparams_source` (US-008), and `cell_tag` / `phase` / `level` / `axis` / `model` / `dataset`.
 - `metrics.csv` — per-epoch loss/accuracy
-- `best.ckpt`, `last.ckpt` — Lightning checkpoints (gitignored, claudeignored, **never leave the local machine**)
+- `best.pt`, `model_last.pt` — Lightning checkpoints (gitignored, claudeignored, **never leave the local machine**)
 - `log.txt` — training log
 
-## Step 3 — Monitor
+## Step 4 — Inspect Results
 
 | Surface | What it shows |
 |---|---|
-| `artifacts/Final_Exp.html` | 186-cell visual grid: side-by-side original/degraded thumbnails, status badges, PSNR/SSIM, click → learning-curve modal. Auto-refreshes every 30 s. |
-| [`Final_Exp.md`](Final_Exp.md) | Master tracker; Markdown table for every cell. Regenerated by `scripts/update_final_exp.py` on every `on_train_end`. |
-| `runs/final/<tag>/log.txt` | Live training output — `tail -f` it during a run. |
+| `artifacts/Final_Exp.html` | 186-cell visual grid: pre-rendered Original-vs-Degraded thumbs, status badges (Pending / Running / Complete / Failed), `val_acc`, embedded W&B iframe per cell. Static HTML — open directly via `file://`. |
+| [`Final_Exp.md`](Final_Exp.md) | Master tracker — Markdown table per cell + `metrics.json` schema reference. |
+| `runs/final/<tag>/log.txt` | Live training output. `Get-Content -Wait` (PowerShell) or `tail -f` (Bash). |
+| `artifacts/priors/*.json` | Paper-anchored Optuna search bounds (tracked in git). |
+| `artifacts/best_hparams/*.json` | Optuna winner per `(model, dataset)` — locally ignored (machine-specific). |
+
+Refresh / regenerate after a run:
+
+**Bash:**
+```bash
+python -m src.tools.render_cell_thumbs                # 186 PNG pairs (idempotent)
+python -m src.tools.build_final_dashboard             # rebuild Final_Exp.html
+python -m src.tools.measure_image_quality \
+    --cell-tag final_B_L3_resnet50_cifar10 \
+    --out runs/final/final_B_L3_resnet50_cifar10/image_quality.json
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe -m src.tools.render_cell_thumbs
+.\venv\Scripts\python.exe -m src.tools.build_final_dashboard
+.\venv\Scripts\python.exe -m src.tools.measure_image_quality `
+    --cell-tag final_B_L3_resnet50_cifar10 `
+    --out runs/final/final_B_L3_resnet50_cifar10/image_quality.json
+```
 
 ## Degradation Pipeline & Levels
 
@@ -141,7 +219,7 @@ Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other
 |---|---|---|---|
 | **ResNet50** | residual CNN | differential LR fine-tuning (head 1e-3, backbone 1e-4) | TResNet (Ridnik et al., 2020) |
 | **DenseNet121** | densely-connected CNN | differential LR fine-tuning | DenseNet (Huang et al., 2017) |
-| **TransNeXt** (default size: `small`) | aggregated-attention ViT | linear probe — frozen ImageNet backbone, head-only | TransNeXt (Shi, 2024) |
+| **TransNeXt-Base** (default size for the 186-cell campaign per US-006) | aggregated-attention ViT | full fine-tuning (no frozen backbone) — `--transnext_size base --transnext_mode ft` | TransNeXt (Shi, 2024) §A.3 |
 
 ## The 186-cell Matrix
 
@@ -181,19 +259,27 @@ Per-sample local RNG keyed on dataset index (`seed = idx + SEED_OFFSET_VAL`) giv
 pytest src/tests/test_degradation_determinism.py -v
 ```
 
-## Weight Privacy
+## Privacy Notes
 
-Trained checkpoints (`*.ckpt`, `*.pt`, `*.pth`) and the Optuna SQLite store are **local-only**. They are excluded from Git via `.gitignore` and from AI assistant context via `.claudeignore`. Future Claude / Codex sessions analyze runs by reading `metrics.json` / `metrics.csv` / the dashboard HTML — never the binary artifacts. TransNeXt pretrained weights under `artifacts/weights/` are auto-downloaded on demand and also gitignored.
+Binary weight artifacts never leave the local machine: trained checkpoints (`*.ckpt`, `*.pt`, `*.pth`), the Optuna SQLite store, dashboard thumbs, and pretrained TransNeXt weights under `artifacts/weights/` are excluded from Git via [`.gitignore`](.gitignore) and from AI assistant context via [`.claudeignore`](.claudeignore). The contract is gated by [`scripts/check_ignores.sh`](scripts/check_ignores.sh) and its Python sibling [`src/tests/test_ignores.py`](src/tests/test_ignores.py) — both confirm 13 excluded categories ignore correctly, the 4 paper-anchored priors files stay tracked, and zero binary weight files are in the git index. Future AI sessions analyze runs by reading `metrics.json` / `metrics.csv` / the dashboard HTML — never the binary artifacts.
+
+```bash
+bash scripts/check_ignores.sh                          # smoke test the contract
+python -m src.tests.test_ignores                       # cross-platform variant
+```
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `verify_env.py` exits non-zero | CUDA / `torch` build mismatch | re-install matching `torch` per [pytorch.org/get-started](https://pytorch.org/get-started/locally/) |
-| OOM on TransNeXt-S | batch 32 too large for 8 GB VRAM | `--batch-size 16` or `--transnext_size micro` |
-| TransNeXt weight download blocked | corporate proxy / firewall | manual fallback URL printed in log; place file in `artifacts/weights/` |
-| Optuna trial pruned | MedianPruner — expected | no action — pruned trials still record |
-| `--plan final --mode pilot` rejected | guardrail prevents short-training contamination | drop `--mode pilot` or run a real pilot via `--plan legacy` |
+| `import torch` fails | venv not activated | activate `venv/` (note: NOT `.venv/`); see Step 0 |
+| `FileNotFoundError: missing best_hparams: artifacts/best_hparams/<m>_<d>.json` | tuning never ran for this `(model, dataset)` | `python tune_all.py --n-trials 20 --model M --dataset D` (or `--tune-first` on `run_all_phases.py`) |
+| `FileNotFoundError: Pretrained TransNeXt weights missing: artifacts/weights/transnext_base_224_1k.pth` | auto-download URL unreachable | set `THZ_TRANSNEXT_BASE_URL` to a working mirror, or manually drop the file at the printed path |
+| OOM on TransNeXt-Base | batch 32 too large for 8 GB VRAM | `--batch-size 16` or fall back to `--transnext_size small` |
+| `--plan final --mode pilot` rejected with `AssertionError` | guardrail prevents short-training contamination | drop `--mode pilot`, or run pilot via `--plan legacy` |
+| Optuna trial pruned | normal pruner behavior | no action — trial state still recorded in `artifacts/optuna_thz.db` |
+| Determinism test fails (MSE > 0) | data pipeline mutation broke seed-per-index contract | revert recent changes to `src/data/datasets.py` or `src/data/degrade.py` |
+| `git check-ignore` returns wrong category | `.gitignore` regression | run `python -m src.tests.test_ignores` to see the failing rule |
 
 ## Codebase Structure
 

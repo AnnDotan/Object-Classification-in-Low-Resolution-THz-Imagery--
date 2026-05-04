@@ -47,7 +47,12 @@ class LegacyMetricsCSVCallback(pl.Callback):
 
 
 class LegacyJSONMetricsCallback(pl.Callback):
-    """Write a metrics.json summary at end of training (best/last val acc, epochs)."""
+    """Write a metrics.json summary at end of training (best/last val acc, epochs).
+
+    Also captures W&B (run_id, entity, project) when a WandbLogger is wired
+    into the Trainer (US-012). Fields are written as null when W&B is offline
+    or absent — never omitted, so the dashboard's tag-based lookup is stable.
+    """
 
     def __init__(self, run_dir: Path):
         self.run_dir = Path(run_dir)
@@ -75,7 +80,29 @@ class LegacyJSONMetricsCallback(pl.Callback):
             self._best_val_acc = va
             self._best_epoch = epoch
 
+    @staticmethod
+    def _extract_wandb_ids(trainer: pl.Trainer) -> tuple:
+        """Find the (run_id, entity, project) for any WandbLogger on the Trainer.
+
+        Returns (None, None, None) if W&B is absent. We never raise — even if
+        the WandbLogger errored, the campaign metrics.json must still be written.
+        """
+        loggers = trainer.loggers or []
+        for logger in loggers:
+            if logger.__class__.__name__ != "WandbLogger":
+                continue
+            try:
+                exp = logger.experiment
+                run_id = getattr(exp, "id", None)
+                entity = getattr(exp, "entity", None)
+                project = getattr(exp, "project", None)
+                return run_id, entity, project
+            except Exception:
+                return None, None, None
+        return None, None, None
+
     def on_train_end(self, trainer: pl.Trainer, _pl_module) -> None:
+        wandb_run_id, wandb_entity, wandb_project = self._extract_wandb_ids(trainer)
         payload = {
             "best_val_acc": self._best_val_acc,
             "best_epoch": self._best_epoch,
@@ -84,6 +111,10 @@ class LegacyJSONMetricsCallback(pl.Callback):
             "last_val_loss": self._last_val_loss,
             "last_train_loss": self._last_train_loss,
             "epochs_run": self._epochs_run,
+            # US-012: always written, even when null (dashboard relies on this).
+            "wandb_run_id": wandb_run_id,
+            "wandb_entity": wandb_entity,
+            "wandb_project": wandb_project,
         }
         with open(self.json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)

@@ -249,15 +249,212 @@ def run_single(exp: dict, exp_num: int, total: int, engine: str = "lightning"):
         return {"tag": tag, "phase": phase, "status": f"FAILED: {e}", "time": f"{dt:.1f}s"}
 
 
+# ============================================================
+# 186-CELL FINAL PLAN orchestration (US-009)
+# ============================================================
+
+# Phases that exist in the 186-cell matrix (build_final_matrix). Distinct
+# from the legacy A/B/C/D phases in this file (which mean different things).
+FINAL_PHASES = ("A", "B", "C")
+
+
+def _has_completed_metrics(metrics_path: Path) -> bool:
+    """A cell counts as 'done' if metrics.json exists and contains a finite
+    best_val_acc (the LegacyJSONMetricsCallback writes -1.0 if no epoch ran).
+    Acceptance criterion uses 'final_val_acc' but our schema uses
+    'best_val_acc' / 'last_val_acc'; we accept either to be forgiving."""
+    if not metrics_path.exists():
+        return False
+    try:
+        m = json.loads(metrics_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    for key in ("final_val_acc", "best_val_acc", "last_val_acc"):
+        v = m.get(key)
+        if isinstance(v, (int, float)) and v >= 0.0:
+            return True
+    return False
+
+
+def _required_hparams_present(matrix) -> tuple[bool, list[str]]:
+    """Return (all_present, missing_paths) for the (model, dataset) pairs
+    needed by the matrix."""
+    needed = {(c.model, c.dataset) for c in matrix}
+    missing = []
+    for model, dataset in sorted(needed):
+        path = Path("artifacts/best_hparams") / f"{model}_{dataset}.json"
+        if not path.exists():
+            missing.append(str(path))
+    return (not missing, missing)
+
+
+def _refresh_final_exp_md() -> None:
+    """Best-effort call to scripts/update_final_exp.py after each cell.
+    Missing script -> warn-and-continue (acceptance: 'no crash-stop')."""
+    script = Path("scripts/update_final_exp.py")
+    if not script.exists():
+        # Don't spam every iteration — print once.
+        if not getattr(_refresh_final_exp_md, "_warned", False):
+            print(f"[WARN] {script} not found; Final_Exp.md will not auto-refresh.",
+                  file=sys.stderr)
+            _refresh_final_exp_md._warned = True
+        return
+    try:
+        import subprocess
+        subprocess.run(
+            [sys.executable, str(script)],
+            check=False, capture_output=True, timeout=30,
+        )
+    except Exception as e:
+        print(f"[WARN] Final_Exp.md refresh failed: {e}", file=sys.stderr)
+
+
+def run_final_plan(
+    *,
+    phase: str = "all",
+    mode: str = "full",
+    skip_existing: bool = True,
+    tune_first: bool = False,
+    engine: str = "lightning",
+    run_cell_fn=None,           # injectable for testing
+    tune_all_fn=None,           # injectable for testing
+    refresh_fn=None,            # injectable for testing
+) -> int:
+    """Iterate the 186-cell matrix, dispatching each cell via run_cell.
+
+    Returns 0 if every cell completed (or was skipped), 1 if any cell failed.
+    """
+    assert mode != "pilot", (
+        "--plan final --mode pilot is rejected per CLAUDE.md "
+        "(quality-over-speed is non-negotiable for the campaign)."
+    )
+
+    # Lazy imports so unit tests can swap in mocks without dragging in Lightning
+    if run_cell_fn is None:
+        from run_systematic import run_cell as run_cell_fn
+    if refresh_fn is None:
+        refresh_fn = _refresh_final_exp_md
+    from src.experiments.matrix import build_final_matrix
+
+    matrix = build_final_matrix()
+    if phase != "all":
+        if phase not in FINAL_PHASES:
+            raise ValueError(f"unknown phase {phase!r}; expected one of {FINAL_PHASES} or 'all'")
+        matrix = [c for c in matrix if c.phase == phase]
+
+    if tune_first:
+        all_present, missing = _required_hparams_present(matrix)
+        if not all_present:
+            print(f"[tune-first] missing {len(missing)} best_hparams files; "
+                  f"running tune_all.py first.", file=sys.stderr)
+            if tune_all_fn is None:
+                import subprocess
+                rc = subprocess.run(
+                    [sys.executable, "tune_all.py", "--n-trials", "20"],
+                    check=False,
+                ).returncode
+            else:
+                rc = tune_all_fn()
+            if rc != 0:
+                print(f"[tune-first] tune_all.py failed (rc={rc}); aborting.",
+                      file=sys.stderr)
+                return rc
+
+    print("=" * 72)
+    print(f"  186-CELL FINAL PLAN — phase={phase}, mode={mode}, "
+          f"skip_existing={skip_existing}, n={len(matrix)}")
+    print("=" * 72)
+
+    results: list[dict] = []
+    failed = 0
+    skipped = 0
+    for i, spec in enumerate(matrix, start=1):
+        run_dir = Path("runs") / "final" / spec.tag
+        if skip_existing and _has_completed_metrics(run_dir / "metrics.json"):
+            print(f"  [SKIP {i}/{len(matrix)}] {spec.tag} — metrics.json already complete")
+            results.append({"tag": spec.tag, "phase": spec.phase, "status": "SKIPPED"})
+            skipped += 1
+            continue
+
+        print(f"\n  [{i}/{len(matrix)}] dispatch {spec.tag} (phase {spec.phase}) ...")
+        t0 = time.time()
+        try:
+            run_cell_fn(spec.tag, mode=mode, engine=engine)
+            dt = time.time() - t0
+            results.append({
+                "tag": spec.tag, "phase": spec.phase,
+                "status": "OK", "time": f"{dt:.1f}s",
+            })
+            print(f"    [OK] {spec.tag} ({dt:.1f}s)")
+        except Exception as e:
+            dt = time.time() - t0
+            failed += 1
+            print(f"    [FAIL] {spec.tag}: {type(e).__name__}: {e}", file=sys.stderr)
+            results.append({
+                "tag": spec.tag, "phase": spec.phase,
+                "status": f"FAILED: {type(e).__name__}: {e}",
+                "time": f"{dt:.1f}s",
+            })
+            # Continue to next cell — no crash-stop.
+
+        # Refresh Final_Exp.md after every cell (success OR fail), best-effort.
+        try:
+            refresh_fn()
+        except Exception as e:
+            print(f"[WARN] Final_Exp.md refresh raised: {e}", file=sys.stderr)
+
+    completed = sum(1 for r in results if r["status"] == "OK")
+    print("\n" + "=" * 72)
+    print(f"  FINAL PLAN SUMMARY: {completed} OK, {failed} failed, "
+          f"{skipped} skipped (of {len(matrix)} matrix cells)")
+    print("=" * 72)
+
+    out = Path("artifacts/final_plan_results.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    print(f"  -> {out}")
+
+    return 0 if failed == 0 else 1
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run all experiment plan phases")
-    parser.add_argument("--phase", default="A,B,C,D",
-                        help="Phases to run (comma-separated): A,B,C,D")
+    parser.add_argument("--plan", default="legacy", choices=["legacy", "final"],
+                        help="legacy: 36-run plan in this file; final: 186-cell campaign "
+                             "from src/experiments/matrix.py.")
+    parser.add_argument("--phase", default=None,
+                        help="legacy plan: comma list from {A,B,C,D}; "
+                             "final plan: one of A | B | C | all")
+    parser.add_argument("--mode", default="full", choices=["pilot", "full"],
+                        help="final plan: 'full' is required (pilot is rejected). "
+                             "ignored by legacy plan.")
     parser.add_argument("--skip-existing", action="store_true",
                         help="Skip experiments that already have results")
+    parser.add_argument("--tune-first", action="store_true",
+                        help="final plan: run tune_all.py first if any best_hparams "
+                             "is missing.")
     parser.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
                         help="Training engine: lightning (default) or legacy hand-rolled trainer")
     args = parser.parse_args()
+
+    if args.plan == "final":
+        # Reject --plan final --mode pilot with assertion (per CLAUDE.md).
+        assert args.mode != "pilot", (
+            "--plan final --mode pilot is rejected. "
+            "Use --plan legacy for ad-hoc pilot smoke tests."
+        )
+        rc = run_final_plan(
+            phase=(args.phase or "all"),
+            mode=args.mode,
+            skip_existing=args.skip_existing,
+            tune_first=args.tune_first,
+            engine=args.engine,
+        )
+        sys.exit(rc)
+
+    # Legacy 36-run plan — original behavior preserved verbatim.
+    if args.phase is None:
+        args.phase = "A,B,C,D"
 
     phases = [p.strip().upper() for p in args.phase.split(",")]
 

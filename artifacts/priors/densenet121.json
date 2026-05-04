@@ -1,0 +1,41 @@
+{
+  "model": "densenet121",
+  "notes": "Differential-LR fine-tuning, AdamW + cosine. Anchors come from the original DenseNet paper plus the project's CNN convention in CLAUDE.md.",
+  "hparams": {
+    "head_lr": {
+      "distribution": "loguniform",
+      "low": 1e-4,
+      "high": 1e-2,
+      "citation": "papers/Densely Connected Convolutional Networks.pdf §4 — initial LR 0.1 (SGD); CLAUDE.md adapts to AdamW head LR 1e-3",
+      "note": "Anchor 1e-3 (CLAUDE.md CNN row). ±1 decade range."
+    },
+    "backbone_lr": {
+      "distribution": "loguniform",
+      "low": 1e-5,
+      "high": 1e-3,
+      "citation": "papers/Densely Connected Convolutional Networks.pdf §4 — fine-tuning LRs an order of magnitude below head",
+      "note": "Anchor 1e-4 (CLAUDE.md). Differential-LR: ~10x smaller than head."
+    },
+    "weight_decay": {
+      "distribution": "loguniform",
+      "low": 1e-5,
+      "high": 1e-3,
+      "citation": "papers/Densely Connected Convolutional Networks.pdf §4 — weight decay 1e-4",
+      "note": "Anchor 1e-4 (CLAUDE.md CNN row)."
+    },
+    "label_smoothing": {
+      "distribution": "uniform",
+      "low": 0.0,
+      "high": 0.2,
+      "citation": "papers/TResNet.pdf §3.3 — label smoothing 0.1 (DenseNet paper predates label smoothing)",
+      "note": "Anchor 0.1 (CLAUDE.md CNN row). Cited TResNet because original DenseNet paper does not use LS."
+    },
+    "warmup_epochs": {
+      "distribution": "uniform",
+      "low": 0,
+      "high": 5,
+      "citation": "papers/Densely Connected Convolutional Networks.pdf §4 — short warmup typical for cosine fine-tuning",
+      "note": "Float; tune_all.py rounds to int. Anchor 0."
+    }
+  }
+}

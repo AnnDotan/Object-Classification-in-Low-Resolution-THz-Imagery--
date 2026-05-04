@@ -28,7 +28,8 @@ raw_data/
 *.npy
 *.npz
 
-# Model checkpoints & weights
+# ─── Model checkpoints & weights (US-013) ───────────────────────────
+# Block binary weight artifacts everywhere.
 *.pth
 *.pt
 *.ckpt
@@ -43,21 +44,38 @@ checkpoints/
 weights/
 torch_hub/
 .cache/
+runs/final/**/*.ckpt
+runs/systematic/**/*.ckpt
 
-# Experiment outputs
+# ─── Training outputs ───────────────────────────────────────────────
 runs/
-artifacts/
 logs/
 results/
 outputs/
 *.log
-
-# W&B and Optuna (Lightning era)
 wandb/
-artifacts/optuna_thz.db
-*.optuna_journal.log
 lightning_logs/
-*.ckpt
 
-# Papers (local references)
+# ─── artifacts/ — explicit per-subpath excludes ─────────────────────
+# We do NOT blanket-exclude artifacts/ because gitignore semantics
+# prevent re-including children of an outright-excluded directory.
+# Listing subpaths explicitly leaves artifacts/priors/ (paper-anchored
+# Optuna search bounds; US-003) implicitly tracked.
+artifacts/weights/
+artifacts/optuna_thz.db
+artifacts/dashboard_thumbs/
+artifacts/best_hparams/
+artifacts/Final_Exp.html
+artifacts/figures/
+artifacts/summaries/
+artifacts/tables/
+artifacts/dashboard_*.html
+artifacts/all_phases_results.json
+artifacts/systematic_results.json
+artifacts/final_plan_results.json
+artifacts/experiment_log.txt
+artifacts/sample_inputs.png
+*.optuna_journal.log
+
+# Papers (local references, large PDFs)
 papers/

@@ -1,0 +1,41 @@
+{
+  "model": "transnext_base",
+  "notes": "Full fine-tuning (not LP) per US-006. TransNeXt §A.3 specifies AdamW + cosine, weight decay 5e-2, label smoothing 0.0 for LP. For full FT we keep WD anchor 5e-2 and let the search relax LS in [0, 0.1]. Backbone LR is much smaller than head LR because the backbone is pretrained.",
+  "hparams": {
+    "head_lr": {
+      "distribution": "loguniform",
+      "low": 1e-4,
+      "high": 1e-2,
+      "citation": "papers/TransNeXt.pdf §A.3 — head LR 1e-3 (LP), inherited as FT head anchor",
+      "note": "Anchor 1e-3 (CLAUDE.md TransNeXt row). ±1 decade range."
+    },
+    "backbone_lr": {
+      "distribution": "loguniform",
+      "low": 5e-6,
+      "high": 5e-4,
+      "citation": "papers/TransNeXt.pdf §A.3 — full FT typically uses backbone LR 1e-5 to 1e-4 for ImageNet-pretrained ViTs",
+      "note": "Anchor 5e-5 (project default for full FT). LP anchor was 0 (frozen) — full FT requires non-zero backbone LR. ±1 decade range."
+    },
+    "weight_decay": {
+      "distribution": "loguniform",
+      "low": 5e-3,
+      "high": 5e-1,
+      "citation": "papers/TransNeXt.pdf §A.3 — weight decay 5e-2",
+      "note": "Anchor 5e-2 (CLAUDE.md TransNeXt row). ViTs are sensitive to WD; ±1 decade."
+    },
+    "label_smoothing": {
+      "distribution": "uniform",
+      "low": 0.0,
+      "high": 0.1,
+      "citation": "papers/TransNeXt.pdf §A.3 — label smoothing 0.0 for linear probe; FT can tolerate small LS",
+      "note": "Anchor 0.0 (CLAUDE.md TransNeXt LP row); FT search allows up to 0.1."
+    },
+    "warmup_epochs": {
+      "distribution": "uniform",
+      "low": 0,
+      "high": 10,
+      "citation": "papers/TransNeXt.pdf §A.3 — cosine schedule with linear warmup standard for ViTs",
+      "note": "Float; tune_all.py rounds to int. Anchor 5 (typical ViT warmup); wider than CNNs because ViTs benefit more from warmup during full FT."
+    }
+  }
+}

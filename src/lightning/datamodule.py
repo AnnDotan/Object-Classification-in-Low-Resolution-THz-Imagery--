@@ -36,6 +36,7 @@ class THzDataModule(pl.LightningDataModule):
         gaussian_noise_std: Optional[float] = None,
         salt_pepper_amount: Optional[float] = None,
         p_grayscale: Optional[float] = None,
+        saturation: Optional[float] = None,
         root: str = "./data",
         num_workers: int = 0,
     ):
@@ -52,7 +53,7 @@ class THzDataModule(pl.LightningDataModule):
             degradation_type=self.hparams.degradation_type,
         )
         for k in ("blur_kernel", "blur_sigma", "gaussian_noise_std",
-                  "salt_pepper_amount", "p_grayscale"):
+                  "salt_pepper_amount", "p_grayscale", "saturation"):
             v = getattr(self.hparams, k)
             if v is not None:
                 kw[k] = v

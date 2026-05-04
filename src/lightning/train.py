@@ -106,9 +106,11 @@ def run_experiment(
     gaussian_noise_std: Optional[float] = None,
     salt_pepper_amount: Optional[float] = None,
     p_grayscale: Optional[float] = None,
+    saturation: Optional[float] = None,
     early_stopping_patience: int = 0,
     dataset: str = "cifar10",
     pos_bias_interp: str = "bilinear",
+    run_name_override: Optional[str] = None,
 ):
     if model_name.startswith("transnext_") and out_size != 224:
         print(f"[INFO] Overriding out_size from {out_size} to 224 for TransNeXt")
@@ -116,13 +118,16 @@ def run_experiment(
 
     pl.seed_everything(42, workers=True)
 
-    tag_prefix = f"{tag}_" if tag else ""
-    weights_tag = "pt" if pretrained else "scratch"
-    lr_str = _format_lr_for_name(lr)
-    run_name = (
-        f"{tag_prefix}{model_name}_{weights_tag}_out{out_size}_"
-        f"lowres{low_res}_lr{lr_str}"
-    )
+    if run_name_override:
+        run_name = run_name_override
+    else:
+        tag_prefix = f"{tag}_" if tag else ""
+        weights_tag = "pt" if pretrained else "scratch"
+        lr_str = _format_lr_for_name(lr)
+        run_name = (
+            f"{tag_prefix}{model_name}_{weights_tag}_out{out_size}_"
+            f"lowres{low_res}_lr{lr_str}"
+        )
 
     base_group_dir = Path("runs") / group
     base_group_dir.mkdir(parents=True, exist_ok=True)
@@ -161,6 +166,7 @@ def run_experiment(
         "gaussian_noise_std": gaussian_noise_std,
         "salt_pepper_amount": salt_pepper_amount,
         "p_grayscale": p_grayscale,
+        "saturation": saturation,
         "early_stopping_patience": early_stopping_patience,
         "dataset": dataset,
         "pos_bias_interp": pos_bias_interp,
@@ -187,6 +193,7 @@ def run_experiment(
         gaussian_noise_std=gaussian_noise_std,
         salt_pepper_amount=salt_pepper_amount,
         p_grayscale=p_grayscale,
+        saturation=saturation,
     )
 
     model = THzClassifier(

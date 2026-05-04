@@ -150,6 +150,151 @@ COMMON = {
 }
 
 
+# ============================================================
+# 186-CELL CAMPAIGN: single-cell dispatch (US-008)
+# ============================================================
+
+# Mode -> training settings for the final campaign. `pilot` is for ad-hoc
+# smoke tests only; run_all_phases.py rejects it for --plan final.
+FINAL_PILOT = {
+    "epochs": 5,
+    "train_subset": 2000,
+    "val_subset": 1000,
+    "early_stopping_patience": 2,
+}
+FINAL_FULL = {
+    "epochs": 60,                    # CLAUDE.md: max_epochs 60
+    "train_subset": 10000,
+    "val_subset": 5000,
+    "early_stopping_patience": 10,   # CLAUDE.md: patience 10, min_delta 1e-4
+}
+
+
+def _load_best_hparams(model: str, dataset: str) -> dict:
+    """Load Optuna winner JSON for a (model, dataset) pair."""
+    path = Path("artifacts/best_hparams") / f"{model}_{dataset}.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"missing best_hparams: {path}\n"
+            f"  Run `python tune_all.py --n-trials 20 --model {model} --dataset {dataset}` "
+            f"first, or `python tune_all.py --n-trials 20` for all 6 pairs."
+        )
+    blob = json.loads(path.read_text(encoding="utf-8"))
+    if "best_params" not in blob:
+        raise ValueError(
+            f"{path}: missing 'best_params' key — file may be from an interrupted study"
+        )
+    return blob
+
+
+def _cell_config(spec, hparams: dict, mode: str) -> dict:
+    """Build run_experiment kwargs from a CellSpec + best_hparams.
+
+    The DegradeConfig fields override the legacy CLI flag names because
+    that's what THzDataModule consumes. `saturation` is included now that
+    train.py forwards it to THzDataModule (US-008 prerequisite).
+    """
+    settings = FINAL_PILOT if mode == "pilot" else FINAL_FULL
+    deg = spec.degrade_config
+    bp = hparams["best_params"]
+
+    return {
+        # Model + training
+        "model_name": spec.model,
+        "pretrained": True,
+        "out_size": 224,
+        "batch_size": 32,
+        "freeze_backbone": False,        # all 3 models full FT in final campaign
+        "scheduler_type": "cosine",
+        "max_grad_norm": 1.0,
+        "lr": float(bp["head_lr"]),
+        "backbone_lr": float(bp["backbone_lr"]),
+        "weight_decay": float(bp["weight_decay"]),
+        "label_smoothing": float(bp["label_smoothing"]),
+        "warmup_epochs": int(round(float(bp["warmup_epochs"]))),
+
+        # Degradation (from CellSpec.degrade_config)
+        "low_res": deg.low_res,
+        "blur_kernel": deg.blur_kernel,
+        "blur_sigma": deg.blur_sigma,
+        "gaussian_noise_std": deg.gaussian_noise_std,
+        "salt_pepper_amount": deg.salt_pepper_amount,
+        "saturation": deg.saturation,
+        "degradation_type": deg.degradation_type,
+
+        # Bookkeeping
+        "tag": spec.tag,
+        "dataset": spec.dataset,
+        "group": "final",
+        "run_name_override": spec.tag,    # forces runs/final/<tag>/
+
+        # Phase-aware training schedule
+        "epochs": settings["epochs"],
+        "train_subset": settings["train_subset"],
+        "val_subset": settings["val_subset"],
+        "early_stopping_patience": settings["early_stopping_patience"],
+    }
+
+
+def _merge_metadata_into_metrics_json(
+    run_dir: Path, spec, hparams: dict,
+) -> None:
+    """Extend metrics.json with hparams + cell metadata for round-trip reproducibility.
+
+    Acceptance: "All hparam values logged to metrics.json under a `hparams` key."
+    """
+    metrics_path = Path(run_dir) / "metrics.json"
+    if not metrics_path.exists():
+        return  # training crashed before LegacyJSONMetricsCallback fired
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    metrics["hparams"] = hparams.get("best_params", {})
+    metrics["hparams_source"] = {
+        "study_name": hparams.get("study_name"),
+        "best_value": hparams.get("best_value"),
+        "n_trials_completed": hparams.get("n_trials_completed"),
+        "priors_file_hash": hparams.get("priors_file_hash"),
+    }
+    metrics["cell_tag"] = spec.tag
+    metrics["phase"] = spec.phase
+    metrics["level"] = spec.level
+    metrics["axis"] = spec.axis
+    metrics["model"] = spec.model
+    metrics["dataset"] = spec.dataset
+    metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+
+
+def run_cell(
+    cell_tag: str,
+    mode: str = "full",
+    engine: str = "lightning",
+    *,
+    run_experiment_fn=None,         # injectable for testing
+):
+    """Dispatch a single cell from the 186-cell matrix.
+
+    Resolves the tag against build_final_matrix(), loads the (model, dataset)
+    Optuna winner, calls run_experiment with run_name_override=tag so output
+    lands at runs/final/<tag>/, then merges hparams + cell metadata into
+    metrics.json for downstream dashboards.
+    """
+    from src.experiments.matrix import cells_by_tag
+
+    by_tag = cells_by_tag()
+    if cell_tag not in by_tag:
+        raise ValueError(
+            f"unknown cell tag: {cell_tag!r}. "
+            f"Expected one of the 186 tags from build_final_matrix()."
+        )
+    spec = by_tag[cell_tag]
+    hparams = _load_best_hparams(spec.model, spec.dataset)
+    config = _cell_config(spec, hparams, mode)
+
+    run_experiment = run_experiment_fn or _resolve_run_experiment(engine)
+    run_dir = run_experiment(**config)
+    _merge_metadata_into_metrics_json(Path(run_dir), spec, hparams)
+    return Path(run_dir)
+
+
 def run_systematic(levels: list[int], mode: str = "pilot", dataset: str = "cifar10",
                    engine: str = "lightning"):
     """Run all 3 models for each specified degradation level."""
@@ -268,7 +413,41 @@ if __name__ == "__main__":
                    help="Dataset to use: cifar10 or mnist")
     p.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
                    help="Training engine: lightning (default) or legacy hand-rolled trainer")
+    p.add_argument(
+        "--transnext_size",
+        default="small",
+        choices=["micro", "tiny", "small", "base"],
+        help="TransNeXt size variant. Default 'small' (CLAUDE.md baseline); "
+             "use 'base' for the final 186-cell campaign per US-006.",
+    )
+    p.add_argument(
+        "--transnext_mode",
+        default="ft",
+        choices=["lp", "ft"],
+        help="TransNeXt training mode: 'lp' (linear probe, frozen backbone) "
+             "or 'ft' (full fine-tuning). Default 'ft' for the final campaign.",
+    )
+    p.add_argument(
+        "--cell-tag",
+        default=None,
+        help="Run a single cell from the 186-cell matrix (US-008). Tag form: "
+             "final_clean_{m}_{d} | final_B_L{l}_{m}_{d} | final_C_L{l}_{ax}_{m}_{d}. "
+             "Loads hparams from artifacts/best_hparams/{m}_{d}.json. When set, "
+             "the legacy --level loop is bypassed.",
+    )
     args = p.parse_args()
+
+    # Re-target the TransNeXt entry of MODEL_CONFIGS based on CLI flags.
+    for _cfg in MODEL_CONFIGS:
+        if _cfg["model_name"].startswith("transnext_"):
+            _cfg["model_name"] = f"transnext_{args.transnext_size}"
+            _cfg["freeze_backbone"] = (args.transnext_mode == "lp")
+            break
+
+    # 186-cell single-cell dispatch (US-008): --cell-tag bypasses the legacy loop.
+    if args.cell_tag:
+        run_cell(args.cell_tag, mode=args.mode, engine=args.engine)
+        sys.exit(0)
 
     if args.level == "all":
         levels = [1, 2, 3]

@@ -13,7 +13,7 @@ datasets/
 *.npy
 *.npz
 
-# Model weights
+# ─── Model weights — never inspect via Read or Bash cat (US-013) ──────
 *.pth
 *.pt
 *.ckpt
@@ -27,17 +27,35 @@ checkpoints/
 weights/
 torch_hub/
 .cache/
+runs/final/**/*.ckpt
+runs/systematic/**/*.ckpt
 
-# Experiment outputs (read on demand via tools)
+# ─── Experiment outputs (read on demand via tools) ─────────────────────
 runs/
-artifacts/
 logs/
 outputs/
-
-# W&B and Optuna (Lightning era)
 wandb/
 lightning_logs/
 *.optuna_journal.log
+
+# ─── artifacts/ — explicit per-subpath excludes (mirrors .gitignore) ──
+# artifacts/priors/ stays visible to the assistant on purpose: those
+# files document the paper-anchored Optuna search bounds (US-003) and
+# are tracked in git.
+artifacts/weights/
+artifacts/optuna_thz.db
+artifacts/dashboard_thumbs/
+artifacts/best_hparams/
+artifacts/Final_Exp.html
+artifacts/figures/
+artifacts/summaries/
+artifacts/tables/
+artifacts/dashboard_*.html
+artifacts/all_phases_results.json
+artifacts/systematic_results.json
+artifacts/final_plan_results.json
+artifacts/experiment_log.txt
+artifacts/sample_inputs.png
 
 # Old scripts
 scripts/archive/

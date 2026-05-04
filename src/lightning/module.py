@@ -88,12 +88,18 @@ class THzClassifier(pl.LightningModule):
         TRANSNEXT_NAMES = {"transnext_micro", "transnext_tiny", "transnext_small", "transnext_base"}
         if self.hparams.model_name in TRANSNEXT_NAMES:
             transnext_ckpt = None
-            if self.hparams.pretrained and self.hparams.model_name == "transnext_micro":
+            if self.hparams.pretrained:
                 from pathlib import Path
+                from src.models.transnext_weights import find_or_download_weights
                 project_root = Path(__file__).resolve().parents[2]
-                candidate = project_root / "artifacts" / "weights" / "transnext_micro_224_1k.pth"
-                if candidate.exists():
-                    transnext_ckpt = str(candidate)
+                weights_dir = project_root / "artifacts" / "weights"
+                # find_or_download_weights raises FileNotFoundError with a clear
+                # remediation message if neither local file nor download work.
+                transnext_ckpt = str(
+                    find_or_download_weights(
+                        self.hparams.model_name, weights_dir=weights_dir
+                    )
+                )
             model = create_transnext_model(
                 model_name=self.hparams.model_name,
                 num_classes=self.hparams.num_classes,

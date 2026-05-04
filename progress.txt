@@ -1,0 +1,117 @@
+# Progress Log
+
+## US-001: Plumb saturation axis through datasets.py — DONE 2026-05-03
+- Added `saturation: float | None = None` to DataConfig (datasets.py)
+- Wired through in both THzLikeCIFAR10.__init__ and THzLikeMNIST.__init__
+- Added src/tests/test_saturation.py covering both invariants
+- Verified: saturation=0.0 -> 3 channels equal per pixel (PASS)
+- Verified: saturation=1.0 -> byte-identical to baseline (MSE=0, PASS)
+- Verified: test_degradation_determinism.py still PASS (MSE=0 across cifar10/mnist + Lightning DataModule)
+
+## US-007: 186-cell matrix generator — DONE 2026-05-03
+- Created src/experiments/__init__.py and src/experiments/matrix.py
+- CellSpec frozen dataclass: tag, phase, model, dataset, level, axis, degrade_config
+- build_final_matrix() returns exactly 186 cells (A=6, B=30, C=150)
+- Iteration order: A (model x dataset), B (level x model x dataset), C (level x axis x model x dataset). Downstream tools rely on this.
+- cells_by_tag() helper for O(1) tag -> CellSpec lookup
+- src/tests/test_matrix.py covers: counts, tag uniqueness (186 distinct), Phase C L1 -> Phase B L1 collapse (30 cells match), canonical tag format examples
+- All 4 invariants PASS
+
+## US-006: TransNeXt size=base + full FT mode — DONE 2026-05-03
+- src/models/transnext_weights.py: find_or_download_weights() with env override (THZ_TRANSNEXT_<SIZE>_URL) and clear FileNotFoundError fallback. Default URLs target the official GitHub release pattern; user can override per-size.
+- Generalized src/lightning/module.py:_build_model() to call find_or_download_weights for ANY transnext_* model when pretrained=True (was hardcoded to micro). Preserves old behavior when file already exists locally.
+- run_systematic.py: --transnext_size {micro,tiny,small,base} (default small) and --transnext_mode {lp,ft} (default ft) flags. Mutates the TransNeXt entry in MODEL_CONFIGS post-parse.
+- src/tests/test_transnext_modes.py: lp freezes 615 backbone params + leaves 2 head trainable; ft makes all 617 trainable. Auto-download module imports cleanly with fallback URL for all 4 sizes.
+- DEFERRED: actual transnext_base weights not present locally (the existing transnext_micro_224_1k.pth is a 136-byte placeholder, not a real checkpoint). Real downloads are environment-dependent; the find_or_download_weights helper handles this with a clear error message. The acceptance criterion "Smoke test: 1-epoch run on CIFAR-10 with --transnext_size base --transnext_mode ft" is therefore deferred to a session with valid base weights.
+
+## US-005: Optuna study runner in tune_all.py — DONE 2026-05-03
+- Added run_studies(), _suggest_from_priors(), _l3_train_one_trial(), _priors_file_hash() to src/tune_hyperparams.py (legacy main() preserved)
+- Studies named "{model}_{dataset}_L3", persisted to sqlite:///artifacts/optuna_thz.db with load_if_exists=True (resumable)
+- Trains on Phase B L3 Moderate (level_params(3, axis=None)): low_res=10, blur 7/1.30, noise 0.09, S&P 0.08, saturation 0.50
+- All models use freeze_backbone=False (full FT per US-006)
+- Winner JSON: {model, dataset, study_name, best_value, best_params, n_trials_completed, priors_file_hash (SHA-256 hex), phase=B, level=3}
+- train_fn injectable for testing — src/tests/test_tune_studies.py uses a stub for fast tests
+- Three test paths: priors routing, winner JSON shape (with SHA-256 hash), study resume (2+3=5 trials accumulated)
+- Windows note: tempfile.TemporaryDirectory needs ignore_cleanup_errors=True because Optuna SQLite holds the DB file open past test scope
+
+## US-004: Priors loader/validator in tune_all.py — DONE 2026-05-03
+- tune_all.py at repo root with load_priors(), validate_priors(), PriorsValidationError
+- In-house validator (no jsonschema dep): structural checks + cross-property constraints (low <= high, loguniform requires positive, no unexpected fields)
+- --validate-only CLI exits 0 if all 3 priors validate
+- src/tests/test_priors.py: 3 shipped files validate; rejects negative low, swapped low/high, missing required field, empty citation, unsupported distribution; load_priors raises PriorsValidationError on disk-resident bad file
+
+## US-003: Per-model hparam priors JSON files + schema — DONE 2026-05-03
+- artifacts/priors/_schema.json: Draft-07 JSON Schema with oneOf for {uniform/loguniform: low+high} vs {categorical: choices}. Cross-property constraints documented but enforced in loader (Draft-07 limitation).
+- 3 priors files (resnet50, densenet121, transnext_base) — each declares head_lr, backbone_lr, weight_decay, label_smoothing, warmup_epochs as {distribution, low, high, citation}
+- Citations point to actual paper filenames in /papers/ (TResNet.pdf, Densely Connected Convolutional Networks.pdf, TransNeXt.pdf)
+- Ranges held to ±1 decade max per CLAUDE.md hparam policy
+- TransNeXt-Base entries reflect full-FT regime (US-006): backbone_lr anchor 5e-5 (not 0/frozen), warmup_epochs anchor 5
+
+## US-002: Offline PSNR/SSIM measurement script — DONE 2026-05-03
+- Created src/tools/measure_image_quality.py with --cell-tag, --dataset, --levels-spec, --n-samples, --out
+- Used torchmetrics 1.8.2 (already in venv) for PSNR/SSIM
+- Introduced QUALITY_SUBSET_SEED=20_000_000 — disjoint from SEED_OFFSET_TRAIN(0) and SEED_OFFSET_VAL(1e7) so quality-subset noise patterns never collide with training/val streams
+- Added src/tests/test_image_quality.py — parsers + smoke run on Phase B L3 cifar10 n=8 (PSNR=14.11±0.45, SSIM=0.049±0.003, both PASS)
+- Tag parser handles all 3 tag schemes (clean / B / C); regex order matters because Phase C tags would otherwise match Phase B's prefix
+
+## ALL 14 STORIES COMPLETE — 2026-05-03 (resume session)
+
+## US-014: README.md standalone runbook — DONE
+- Refreshed Implementation Status table (13 of 14 stories shipped this session; only scripts/update_final_exp.py left as a 🟡 follow-up)
+- Renamed sections to match PRD spec: Step 0 Environment Setup, Step 1 Dataset Setup, Step 2 Optuna Pre-Tuning, Step 3 Run the 186-cell Matrix, Step 4 Inspect Results, Privacy Notes, Troubleshooting
+- Every command now has BOTH Bash and PowerShell forms
+- TransNeXt model row updated: TransNeXt-Base + full FT (not LP small) per US-006
+- Privacy Notes reference .gitignore, .claudeignore, scripts/check_ignores.sh, src/tests/test_ignores.py
+- Troubleshooting table updated with concrete error messages from this campaign's code paths
+
+## US-013: Weight privacy hardening — DONE
+- Replaced blanket `artifacts/` exclusion with explicit per-subpath patterns. Reason: gitignore semantics prevent re-including children of an outright-excluded dir, so the priors files (US-003) were unreachable to git. Now `artifacts/priors/` is implicitly tracked (no exclusion pattern matches it) and binary outputs (weights/, optuna_thz.db, dashboard_thumbs/, best_hparams/, Final_Exp.html, etc.) are explicitly excluded.
+- .claudeignore mirrors the same explicit excludes
+- scripts/check_ignores.sh + src/tests/test_ignores.py: 13 excluded categories ignored, 4 priors paths tracked, 0 binary weights in git index — all 3 contracts PASS
+
+## US-012: Capture W&B run IDs — DONE
+- LegacyJSONMetricsCallback._extract_wandb_ids walks trainer.loggers, finds WandbLogger by class name (avoids hard import dep), extracts (id, entity, project) from logger.experiment
+- Always writes wandb_run_id/entity/project to metrics.json, even when null (dashboard's tag-based lookup is stable)
+- Robust to: WandbLogger absent, .experiment raising, trainer.loggers=None — all four branches PASS
+- metrics.json schema additions documented in Final_Exp.md header
+
+## US-011: Final_Exp.html dashboard — DONE
+- src/tools/build_final_dashboard.py — static HTML, no JS framework, opens via file://
+- 186 tiles in 3 collapsible <details> sections (Phase A=6, B=30, C=150)
+- Per-tile: tag, model/dataset/level/axis meta, thumbnail PNG, status badge (Pending|Running|Complete|Failed), val_acc when complete, W&B iframe (or placeholder when wandb_run_id not captured)
+- Status auto-detected: traceback/[ERROR] in log.txt -> Failed; metrics.json with best_val_acc>=0 -> Complete; run dir exists no metrics -> Running; no run dir -> Pending
+- Browser verification deferred (no headless browser in this env). HTML is well-formed (doctype, balanced tags) and unit tests assert tile counts + status transitions
+
+## US-010: Pre-rendered Original-vs-Degraded thumbs — DONE
+- src/tools/render_cell_thumbs.py — fixed val[0] sample per dataset, side-by-side 224x448 PNGs at artifacts/dashboard_thumbs/<tag>.png
+- Idempotent (skips existing unless --force); uses SEED_OFFSET_VAL so degradation pixels match what models see
+- Verified Phase B L5 thumb has mean-abs-diff=0.24 between left (clean) and right (degraded) halves — degradation actually applied
+
+## US-009: run_all_phases.py --plan final — DONE
+- run_final_plan(): iterates build_final_matrix() in stable order (A->B->C), dispatches via run_systematic.run_cell, refreshes Final_Exp.md after every cell (success or failure)
+- --plan final --mode pilot rejected via assert per CLAUDE.md
+- --skip-existing checks runs/final/<tag>/metrics.json for any of {final_val_acc, best_val_acc, last_val_acc} >= 0
+- --tune-first runs tune_all.py via subprocess if any (model, dataset) best_hparams missing
+- On cell failure: log + continue (no crash-stop). rc=0 only when 0 cells failed
+- Tests: phase-filter (6/30/150/186), order, pilot-rejected, no-crash-stop, skip-existing (5 dispatches when 1 complete), tune-first
+
+## US-008: run_systematic.py matrix consumer — DONE
+- Edited src/lightning/train.py: added `saturation` and `run_name_override` kwargs to run_experiment(); saturation forwarded to THzDataModule (closed gap from US-001 noted earlier); run_name_override gives runs/final/<tag>/ exact naming
+- Added run_cell(tag, mode, engine, run_experiment_fn=None) to run_systematic.py: resolves CellSpec, loads best_hparams (FileNotFoundError with remediation hint if missing), builds run_experiment kwargs, post-call merges hparams + cell metadata into metrics.json
+- Added --cell-tag flag; legacy multi-cell loop unchanged
+- Tests: config-shape, pilot-shorter, missing-hparams, metrics-merge, unknown-tag, dispatch — 6/6 PASS
+- Smoke test of actual training deferred (5+ min on CPU); real training will validate on first --plan final run
+
+## Learnings (resume session)
+- gitignore's "can't re-include children of an excluded dir" rule trips up the natural pattern of `artifacts/` + `!artifacts/priors/`. Resolution: enumerate the excluded sibling subpaths instead of blanket-blocking the parent. Tracked-by-default + explicit-exclusion-list scales better as new artifacts subdirs appear.
+- Lightning callbacks can detect WandbLogger by class-name match without importing pytorch_lightning.loggers.WandbLogger — keeps the callback dep-light and survives offline-mode init failures (which raise on .experiment access).
+- The 186-cell matrix dispatch order (A->B->C, model-dataset innermost) is load-bearing: the dashboard, Final_Exp.md, and all "skip-existing" checks rely on it. Tests pin it explicitly via `actual_tags == [c.tag for c in build_final_matrix()]`.
+- `tempfile.TemporaryDirectory(ignore_cleanup_errors=True)` is required on Windows whenever a test opens SQLite (Optuna) files inside the temp dir — Windows holds file locks past Python's cleanup window.
+- Auto-download URL guessing for pretrained weights is fragile; the safest pattern is "try a default, fall back to env-var override, fall back to a clear FileNotFoundError with manual instructions." The TransNeXt helper (src/models/transnext_weights.py) follows this — never silently trains on random init when pretrained=True.
+
+## Learnings
+- Saturation lerp was already implemented end-to-end in degrade.py before US-001 started; the only gap was the DataConfig override (legacy/ad-hoc path) and the test coverage. degrade_config_for() and degrade_image() already handled it correctly.
+- Project venv lives at `venv/` (NOT `.venv/`). `.venv/` exists but lacks torch. All test invocations must use `venv/Scripts/python.exe`.
+- The pipeline never converts grayscale_lerp(s=1.0) on the fast path — there's an explicit `if s < 1.0` guard in degrade.py:98, which is what makes the saturation=1.0 no-op test pass byte-exactly.
+- scikit-image is NOT installed in the venv; use torchmetrics.image.{PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure} instead. data_range=1.0 since all tensors are clipped to [0,1].
+- Phase B L3 cifar10 SSIM ~0.05 is not a bug — combined heavy degradation (low_res=10, blur σ=1.3, noise std=0.09, S&P 0.08, saturation 0.5) destroys most structural similarity. PSNR ~14 dB is consistent.

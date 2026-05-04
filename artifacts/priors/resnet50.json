@@ -1,0 +1,41 @@
+{
+  "model": "resnet50",
+  "notes": "Differential-LR fine-tuning: head LR ~10x backbone LR, AdamW + cosine. Paper anchors are ResNet/TResNet conventions; ranges held to ±1 decade max per CLAUDE.md hparam policy.",
+  "hparams": {
+    "head_lr": {
+      "distribution": "loguniform",
+      "low": 1e-4,
+      "high": 1e-2,
+      "citation": "papers/TResNet.pdf §3.3 — head LR 1e-3 with AdamW",
+      "note": "Anchor 1e-3 (CLAUDE.md hparam table). ±1 decade range."
+    },
+    "backbone_lr": {
+      "distribution": "loguniform",
+      "low": 1e-5,
+      "high": 1e-3,
+      "citation": "papers/TResNet.pdf §3.3 — backbone LR 1e-4 for fine-tuning",
+      "note": "Anchor 1e-4 (CLAUDE.md). Differential-LR: ~10x smaller than head."
+    },
+    "weight_decay": {
+      "distribution": "loguniform",
+      "low": 1e-5,
+      "high": 1e-3,
+      "citation": "papers/TResNet.pdf §3.3 — weight decay 1e-4",
+      "note": "Anchor 1e-4 (CLAUDE.md CNN row)."
+    },
+    "label_smoothing": {
+      "distribution": "uniform",
+      "low": 0.0,
+      "high": 0.2,
+      "citation": "papers/TResNet.pdf §3.3 — label smoothing 0.1",
+      "note": "Anchor 0.1 (CLAUDE.md CNN row)."
+    },
+    "warmup_epochs": {
+      "distribution": "uniform",
+      "low": 0,
+      "high": 5,
+      "citation": "papers/TResNet.pdf §3.3 — warmup commonly 0-5 epochs for cosine schedules",
+      "note": "Float; tune_all.py rounds to int. Anchor 0 (CLAUDE.md does not specify warmup for CNNs)."
+    }
+  }
+}

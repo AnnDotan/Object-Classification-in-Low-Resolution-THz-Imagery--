@@ -28,6 +28,7 @@ class DataConfig:
     gaussian_noise_std: float | None = None
     salt_pepper_amount: float | None = None
     p_grayscale: float | None = None
+    saturation: float | None = None
 
 
 class THzLikeCIFAR10(Dataset):
@@ -60,6 +61,8 @@ class THzLikeCIFAR10(Dataset):
             deg_kwargs["salt_pepper_amount"] = cfg.salt_pepper_amount
         if cfg.p_grayscale is not None:
             deg_kwargs["p_grayscale"] = cfg.p_grayscale
+        if cfg.saturation is not None:
+            deg_kwargs["saturation"] = cfg.saturation
         self.deg_cfg = DegradeConfig(**deg_kwargs)
 
         self.norm = transforms.Normalize(
@@ -111,6 +114,8 @@ class THzLikeMNIST(Dataset):
             deg_kwargs["salt_pepper_amount"] = cfg.salt_pepper_amount
         if cfg.p_grayscale is not None:
             deg_kwargs["p_grayscale"] = cfg.p_grayscale
+        if cfg.saturation is not None:
+            deg_kwargs["saturation"] = cfg.saturation
         self.deg_cfg = DegradeConfig(**deg_kwargs)
 
         self.norm = transforms.Normalize(
