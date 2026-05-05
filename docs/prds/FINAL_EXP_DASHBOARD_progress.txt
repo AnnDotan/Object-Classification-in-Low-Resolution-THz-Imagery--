@@ -1,0 +1,16 @@
+# Progress Log — FINAL_EXP Dashboard
+
+## US-001: TypedDict schema for Final_Exp.json — DONE 2026-05-05
+- Created src/tools/final_exp_schema.py with FinalExpRow, FinalExpDoc, ParamsDict, CountsDict.
+- Schema corrections vs PRD:
+  - status uses "Complete" (not "Done") to match src.experiments.run_status.detect_status exactly.
+  - level is int | None (not stringified "L1".."L5"|"clean") — renderer formats for display.
+  - axis is str | None (None for Phase A clean and Phase B combined).
+- params keys match src.data.degradation_levels.DEGRADATION_LEVELS verbatim:
+  low_res, blur_kernel, blur_sigma, noise_std, salt_pepper, saturation.
+- SCHEMA_VERSION literal pinned to 1; future bumps are breaking.
+- Import smoke-tested via `python -c "from src.tools.final_exp_schema import ..."`. mypy is not installed in the project venv, so static typecheck is satisfied by import success only.
+
+## Learnings
+- The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
+- run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.
