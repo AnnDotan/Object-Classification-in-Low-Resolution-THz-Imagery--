@@ -115,3 +115,359 @@
 - The pipeline never converts grayscale_lerp(s=1.0) on the fast path — there's an explicit `if s < 1.0` guard in degrade.py:98, which is what makes the saturation=1.0 no-op test pass byte-exactly.
 - scikit-image is NOT installed in the venv; use torchmetrics.image.{PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure} instead. data_range=1.0 since all tensors are clipped to [0,1].
 - Phase B L3 cifar10 SSIM ~0.05 is not a bug — combined heavy degradation (low_res=10, blur σ=1.3, noise std=0.09, S&P 0.08, saturation 0.5) destroys most structural similarity. PSNR ~14 dB is consistent.
+
+# ============================================================
+# PHASE A EXECUTION CAMPAIGN — Story IDs reset (2026-05-05)
+# ============================================================
+# New PRD scopes Phase A clean baselines for ResNet50 + DenseNet121
+# on MNIST then CIFAR-10 (4 active cells). TransNeXt deferred.
+# See PRD.md (current) for story definitions; prior infrastructure
+# PRD US-001..US-014 above is delivered (commit 3dcf969).
+
+## Phase A — In Progress (re-launched 2026-05-05 ~15:30 IDT after rule refinement)
+- US-007: Execute final_clean_resnet50_mnist     [DONE green continue val_acc=0.9900 gap=0.98pp 25ep]
+- US-008: Execute final_clean_densenet121_mnist  [DONE green continue (manual_override) val_acc=0.9928 gap=0.70pp 36ep]
+- US-009: Execute final_clean_resnet50_cifar10   [running -> log: logs/phase_a_run_v3.log]
+- US-010: Execute final_clean_densenet121_cifar10 [queued]
+
+## US-007 first attempt + recovery (2026-05-05)
+- Cell 1 (resnet50_mnist) trained successfully: 25 epochs, best val_acc=0.9900 at epoch 15,
+  early-stopping fired at epoch 25 (patience 10 elapsed without val_acc improving).
+- BUT: scripts/run_phase_a.py crashed in _evaluate_cell with KeyError: 'lr'. The trainer
+  succeeded; my evaluator was the bug. Two issues found:
+
+  Issue 1 (BLOCKING — fixed): `_read_metrics_csv` strictly required an `lr` column.
+  LegacyMetricsCSVCallback in the current Lightning engine emits 5 columns
+  (epoch,train_loss,train_acc,val_loss,val_acc) — no `lr`. Older runs/official/ examples
+  I checked when designing US-003 had 6 columns.
+  Fix: `lr` and `train_loss` made optional via _opt_float helper that returns NaN on
+  missing/empty/non-numeric. Required fields stay strict (epoch, train_acc, val_loss, val_acc).
+  Added 2 regression tests:
+    - test_csv_without_lr_column_works (exact reproduction of the runtime crash)
+    - test_csv_with_nan_train_metrics_in_epoch_1 (Lightning warmup display artifact)
+  All 11 continuation tests now PASS.
+
+  Issue 2 (NON-BLOCKING): RunVisualizer (src/tools/visualize_run.py) needs pandas;
+  pandas wasn't in the venv. Doesn't kill training but means <tag>_curve.png thumbs
+  weren't rendered — dashboard's <details> panels show "no learning curves yet".
+  Fix: pip install pandas. Now pandas 3.0.2 in venv.
+
+- Recovery (no GPU re-spend): manually called _evaluate_cell on cell 1's existing
+  artifacts; verdict: GREEN, decision=continue, gap=0.98pp. Wrote gate_verdict.json
+  and refreshed Final_Exp.md + Final_Exp_PhaseA.html.
+
+- Added --skip-existing to scripts/run_phase_a.py: skips any cell whose
+  gate_verdict.json already exists. Used for resume-after-crash and re-launches
+  without GPU re-spend on already-completed cells. Cell 1 will now be skipped on
+  the relaunch; runner starts from cell 2 (densenet121_mnist).
+
+## US-016: Autonomous dashboard trigger + SYNCHRONIZER phase-boundary push — DONE 2026-05-05
+- New shared module scripts/refresh_trackers.py:
+  - refresh_final_exp_md(), refresh_final_exp_html(), refresh_all() returning
+    {md_ok, html_ok, errors} for inspection. Failures isolated — neither tracker
+    skipped if the other fails. Used by both run_all_phases.py and
+    scripts/run_phase_a.py going forward.
+- New scripts/sync_trackers_git.py:
+  - commit_and_push_phase_boundary(phase, n_cells, run_fn=None) — fail-soft
+    git pipeline: add (explicit 3-path pathspec) -> diff --cached --quiet ->
+    commit (deterministic message) -> push (no --force, no --no-verify).
+  - FORBIDDEN_FLAGS = {--force, -f, --no-verify, -i} with assertion guard inside
+    _run; tests verify no forbidden flag ever reaches subprocess.
+  - TRACKER_PATHS = (Final_Exp.md, artifacts/Final_Exp.html, progress.txt) —
+    explicit, never expanded with -A or '.'. Forbidden path substrings
+    (.ckpt/.pt/.pth/artifacts/weights/runs/final/optuna_thz.db) tested to never
+    appear in the pathspec, independent of .gitignore.
+  - No-op semantics: nothing staged after `git add` -> skip commit + push,
+    return staged=True/committed=False/pushed=False/errors=[].
+  - run_fn injection point for tests (no real subprocess calls in unit tests).
+- run_all_phases.py integration:
+  - Replaced legacy MD-only _refresh_final_exp_md with _refresh_trackers_default
+    (uses scripts/refresh_trackers.py — runs BOTH trackers).
+  - Added phase_attempted/phase_total counters; commit_and_push_phase_boundary
+    fires when a phase reaches its expected count. Skipped cells (--skip-existing)
+    still increment the counter so a fully-skipped phase still triggers sync.
+  - SIGINT handler installed: Ctrl-C flushes a tracker refresh, then re-raises
+    KeyboardInterrupt for clean exit.
+  - phase_boundary_fn is fail-soft at TWO layers: (a) the function itself never
+    raises, (b) run_all_phases catches anyway in case future implementations differ.
+  - run_final_plan() gained injectable phase_boundary_fn parameter for testing.
+- agents/SYNCHRONIZER.md gained a "Phase Boundary Sync" section documenting
+  pathspec, forbidden flags, commit format, fail-soft contract, no-op semantics,
+  and test coverage references.
+- Tests:
+  - test_refresh_trackers.py (new): 4/4 PASS — both invoked, isolation, no-raise, end-to-end.
+  - test_sync_trackers_git.py (new): 9/9 PASS — happy, forbidden flags, pathspec
+    safety, no-op, push/commit/add fail-soft, unknown phase, msg format.
+  - test_run_all_phases_dashboard.py (new): 6/6 PASS — single boundary per phase,
+    refresh per-cell with no per-cell push, skipped cells count, failures don't skip,
+    sync raising doesn't halt, all-phases fires 3 boundaries in A->B->C order.
+- Live smoke test (--phase A --skip-existing with mocked SYNCHRONIZER push):
+  4 Phase A complete cells SKIP, 2 TransNeXt cells fail (no weights, expected per
+  PRD non-goals), HTML regenerated after every cell, sync fired exactly once with
+  ('A', 6). Real git push deliberately mocked to avoid an unwanted commit on a
+  branch (PHASE-A) with no upstream configured.
+- Regression sweep across 14 test suites: 84/84 PASS (test_dashboard 6,
+  test_phase_a_dashboard 2, test_run_phase_a 12, test_run_phase_a_hook 4,
+  test_phase_a_continuation 11, test_phase_a_gate 5, test_phase_a_clean 4,
+  test_phase_a_hparams_fallback 5, test_run_cell 6, test_matrix 4,
+  test_refresh_trackers 4, test_sync_trackers_git 9,
+  test_run_all_phases_dashboard 6, test_final_plan 6).
+
+## US-015: Gold Standard dashboard (Final_Exp.html unified table view) — DONE 2026-05-05
+- Decision recap (operator picks): Q1=A (replace 186-tile view; single canonical
+  Final_Exp.html), Q2=B (fold Phase A operator dashboard into the unified view).
+- Full rewrite of src/tools/build_final_dashboard.py:
+  - DELETED: legacy tile-grid (_section_html, _tile_html, all tile CSS), --phase a
+    flag, _DEFAULT_PHASE_A_OUT, build_phase_a_dashboard, all Phase-A-specific
+    helpers and the W&B iframe path. No orphaned code.
+  - Switched the matrix iterator from all_cells() (CellMeta) to build_final_matrix()
+    so each cell carries DegradeConfig (CellSpec).
+  - NEW: Gold Standard table layout — 3 <div class="phase-section" id="phase-{a|b|c}">
+    sections, each holding a <table class="matrix"> with 7 columns:
+        ID | Model | Level | Parameters | PSNR/SSIM | Accuracy | Visuals
+    plus a <tr class="detail-row"> per cell expanding via <details> to show
+    learning curves, hyperparams, and (Phase A only) gate verdict.
+  - Parameters formatter handles Phase A (clean), Phase B (combined params),
+    Phase C (axis@Lk; others=L1).
+  - Accuracy column shows Phase A green/yellow/red band badge + numeric val_acc;
+    Phase B/C show numeric only (no paper baseline registered there).
+  - PSNR/SSIM column reads image_quality.json (US-002 from prior PRD).
+  - Verdict panel surfaces manual_override card when present (cell 2 contract).
+- scripts/run_phase_a.py: refresh_phase_a_dashboard_hook now calls
+  build_final_dashboard.main([]) without --phase a (the flag is gone).
+- Tests:
+  - test_dashboard.py: 6/6 PASS — full rewrite for the new schema.
+  - test_phase_a_dashboard.py: 2/2 PASS — refocused on hook integration; verifies
+    no Final_Exp_PhaseA.html sibling is created anymore.
+- Regression sweep across 10 test suites: 59/59 PASS (test_dashboard 6,
+  test_phase_a_dashboard 2, test_run_phase_a 12, test_run_phase_a_hook 4,
+  test_phase_a_continuation 11, test_phase_a_gate 5, test_phase_a_clean 4,
+  test_phase_a_hparams_fallback 5, test_run_cell 6, test_matrix 4).
+- Visual verification: rendered Final_Exp.html shows manual_override card on
+  the densenet121_mnist row, green band badges on all 4 Phase A cells,
+  Phase B/C parameter strings populated correctly.
+
+## Conditional val_loss trend rule + cell 2 manual_override (2026-05-05)
+- Cell 2 (densenet121_mnist) trained successfully but the strict val_loss trend
+  rule halted the runner: best val_acc=0.9928 (green, -0.22pp), gap=0.70pp,
+  yet 2/5 last transitions non-increasing (plateau noise, val_loss drift ~0.005).
+- Operator decision: refine the rule to halt only when the trend signal is
+  combined with another concerning metric.
+
+  New rule (val_loss trend triggers halt iff):
+    gap > TREND_HALT_GAP_THRESHOLD (5pp)  OR  band != "green"
+
+  Implementation:
+    - src/experiments/phase_a_gate.py:
+        - Added TREND_HALT_GAP_THRESHOLD = 0.05.
+        - evaluate_continuation no longer adds "val_loss_trend:..." to halt
+          reasons; trend status is reported as a signal only.
+        - Hard halts (errors, missing csv, too_few_epochs, gap>=15pp) unchanged.
+    - scripts/run_phase_a.py _evaluate_cell:
+        - Imports TREND_HALT_GAP_THRESHOLD.
+        - Added 5th branch in decision precedence: trend bad + (gap>5pp OR band!=green) -> halt.
+        - When trend bad + green band + small gap: adds "val_loss_trend_warning:..."
+          to reasons (audit trail) but keeps decision=continue.
+
+- Test updates:
+    - test_phase_a_continuation: renamed _check_val_loss_trend_bad ->
+      _check_val_loss_trend_alone_does_not_halt. Stacked test now expects 2 hard
+      reasons (errors + overfit_gap), not 3 (no trend halt).
+    - test_run_phase_a: 3 NEW conditional-rule tests:
+        trend-green-small-gap (cell-2 scenario -> continue)
+        trend-green-high-gap (gap>5pp halts even when band green)
+        trend-yellow (yellow band halts regardless of gap)
+    - All test counts: 11 continuation + 12 runner -> 23 total, all PASS.
+
+- Cell 2 manual_override:
+    - Patched runs/final/final_clean_densenet121_mnist/gate_verdict.json:
+        decision -> continue
+        reasons -> [val_loss_trend_warning:...]
+        manual_override -> {date, operator, reason, previous_decision: halt,
+                            previous_reasons: [val_loss_trend:2/5_non_increasing<3_required]}
+    - Refreshed Final_Exp.md (186 rows) and Final_Exp_PhaseA.html (now shows
+      2 complete, 0 halted, 2 pending).
+
+- Re-launch: scripts/run_phase_a.py --mode full --skip-existing
+    Cells 1, 2 SKIP (verdicts present); runner starts at cell 3 (resnet50_cifar10).
+    Background ID: b8ybiq6r2, log: logs/phase_a_run_v3.log.
+
+## Environment fix (2026-05-05): swapped CPU torch -> CUDA torch
+- venv/ had torch 2.10.0+cpu (CPU-only build). The pipeline silently falls back to
+  CPU when torch.cuda.is_available() == False, which would have made a 60-epoch
+  full Phase A take tens of hours. Fixed before kicking off US-007:
+    pip uninstall -y torch torchvision
+    pip install torch==2.10.0 torchvision==0.25.0 --index-url https://download.pytorch.org/whl/cu126
+- Result: torch 2.10.0+cu126, CUDA 12.6, RTX 4050 Laptop (6140 MiB) detected.
+- Regression check: test_degradation_determinism still PASS (intra=0, inter=0,
+  Lightning DataModule MSE=0) — torch swap did not break determinism.
+- TODO follow-up: the runner emits a Tensor Cores hint
+  ("torch.set_float32_matmul_precision('medium'|'high')") on first GPU use.
+  DEBUGGER.md's CUDA optimization checklist already calls this out — wire it
+  into src/lightning/train.py once Phase A completes (do NOT mid-flight, would
+  invalidate the determinism contract for runs in progress).
+
+## US-001: Phase A clean data path — DONE 2026-05-05
+- Discovery: the clean bypass already exists. degrade_image (src/data/degrade.py:84-93)
+  early-returns for degradation_type='none' (upsample + clamp only). degrade_config_for(level=None)
+  in src/data/degrade.py:151-162 emits exactly that config, and build_final_matrix() (src/experiments/matrix.py:71)
+  feeds it to every Phase A CellSpec. So Phase A clean was wired end-to-end before this story
+  started — no DataConfig flag needed. Per CLAUDE.md "minimal changes, no rewrites of working
+  code", US-001 was reduced to a contract test.
+- Added src/tests/test_phase_a_clean.py — 4 invariants, all PASS:
+  (1) Phase A clean output == bilinear resize + clamp(0,1), MSE=0.
+  (2) Different RNG seeds yield identical clean output (the 'none' path consumes no RNG).
+  (3) Input already at out_size passes through unchanged.
+  (4) All 6 Phase A CellSpecs from build_final_matrix() carry degradation_type='none'.
+- Determinism gate (test_degradation_determinism) still PASS (intra=0, inter=0, train/val disjoint).
+- Decision logged in Final_Exp.md: PRD US-001 acceptance criteria narrowed from "add clean
+  flag to DataConfig" to "test the existing clean path" — operator can grep for the rationale here.
+
+## US-001b (companion): run_cell hparams fallback for Phase A — DONE 2026-05-05
+- Operator chose option B (fallback in run_cell, not synthetic best_hparams JSONs).
+- Added PHASE_A_FROZEN_HPARAMS dict to run_systematic.py — CLAUDE.md frozen values for
+  resnet50 / densenet121 / transnext_{micro,small,base}: head_lr=1e-3, backbone_lr=1e-4 (CNNs),
+  weight_decay=1e-4 (CNNs) / 5e-2 (TransNeXt), label_smoothing=0.1 (CNNs) / 0.0 (TransNeXt),
+  warmup_epochs=3 ResNet / 2 DenseNet / 5 TransNeXt.
+- Added _load_hparams_for_cell(spec) — resolution order:
+  1. artifacts/best_hparams/{model}_{dataset}.json if present (Optuna winner).
+  2. spec.phase == 'A' AND model in dict → synthetic blob with frozen defaults + source='claude_md_frozen'.
+  3. Otherwise → re-raise FileNotFoundError (Phase B/C still mandate Optuna).
+- run_cell() now calls _load_hparams_for_cell instead of _load_best_hparams directly. The
+  legacy _load_best_hparams remains as the strict Phase-B/C loader and the test contract
+  for it (test_run_cell._check_missing_hparams_raises) still PASS.
+- Added src/tests/test_phase_a_hparams_fallback.py — 5 invariants, all PASS:
+  (1) ResNet50/CIFAR-10 Phase A → frozen defaults when JSON absent.
+  (2) DenseNet121/MNIST Phase A → frozen defaults when JSON absent.
+  (3) Phase B (resnet50_cifar10 L3) still raises FileNotFoundError — no silent fallback.
+  (4) Phase C (densenet121_cifar10 L4 noise) still raises FileNotFoundError.
+  (5) When a real Optuna JSON exists, it takes precedence over the frozen fallback.
+- Existing test_run_cell.py: 6/6 PASS (no regressions).
+
+## US-002: Phase A alignment-gate thresholds module — DONE 2026-05-05
+- Created src/experiments/phase_a_gate.py with:
+  - PAPER_BASELINES dict[(model,dataset), float]: resnet50/cifar10=0.93,
+    densenet121/cifar10=0.95, both/mnist=0.995.
+  - GREEN_TOLERANCE=0.03, YELLOW_TOLERANCE=0.07.
+  - evaluate_gate(model, dataset, val_acc) -> "green" | "yellow" | "red".
+    Boundaries closed on the high side: paper-3pp -> green, paper-7pp -> yellow.
+  - gate_explanation(model, dataset, val_acc) — one-liner for gate_verdict.json
+    + dashboard collapsible details.
+  - KeyError on unknown (model, dataset) — TransNeXt pairs intentionally absent
+    (deferred per PRD non-goals).
+- Added src/tests/test_phase_a_gate.py — 5 invariants, all PASS:
+  (1) All 4 active pairs return green/yellow/red at paper / paper-5pp / paper-10pp.
+  (2) Closed-boundary semantics: exactly at -3pp is green, 1e-6 below is yellow;
+      exactly at -7pp is yellow, 1e-6 below is red.
+  (3) val_acc above paper is still green (no special "blue" band).
+  (4) Unknown (model,dataset) — including all TransNeXt sizes — raises KeyError.
+  (5) gate_explanation contains band, paper number, and delta in pp.
+- Windows codepage gotcha: cp1255 console can't encode '≥' (>=); replaced
+  with ASCII ">=" in test prints. Add to general lessons: avoid math symbols
+  in test print() output for cross-platform compat.
+
+## US-003: Auto-continue evaluator — DONE 2026-05-05
+- Extended src/experiments/phase_a_gate.py with evaluate_continuation()
+  (kept in same module for single-import surface in scripts/run_phase_a.py).
+- Constants: OVERFIT_GAP_THRESHOLD=0.15, MIN_EPOCHS=5, TREND_WINDOW=5,
+  TREND_NON_INCREASING_REQUIRED=3, ERROR_MARKERS=("Traceback","[ERROR]",
+  "CUDA error","out of memory").
+- Halt reasons (stack into a single halt decision):
+  errors_in_log:<line>, metrics_csv_missing, too_few_epochs:N<5,
+  overfit_gap:G>=0.15, val_loss_trend:M/N_non_increasing<3_required.
+- Stdlib csv only — no pandas dependency added.
+- Graceful: epochs_run<5 still attempts to fill best_epoch/gap before halting;
+  missing error_log_path is treated as "no errors observed", not as a halt.
+- Added src/tests/test_phase_a_continuation.py — 9 invariants, all PASS:
+  happy, too-few, missing-csv, overfit, trend-bad, error-marker (Traceback),
+  oom-marker (CUDA OOM), stacked (3+ reasons at once), no-log.
+- US-002 gate tests still PASS (re-ran after extending the module).
+
+## US-004: scripts/run_phase_a.py sequential runner — DONE 2026-05-05
+- New scripts/run_phase_a.py with:
+  - PHASE_A_CELL_ORDER = [resnet50_mnist, densenet121_mnist, resnet50_cifar10,
+    densenet121_cifar10] (MNIST-first per PRD).
+  - run_phase_a(tags, mode, engine, runs_root, run_cell_fn, post_cell_hook) —
+    injectable run_cell_fn for tests, post_cell_hook reserved for US-005/US-006.
+  - _evaluate_cell() composes US-002 gate + US-003 continuation into one verdict.
+  - _write_verdict() persists runs/final/<tag>/gate_verdict.json (idempotent;
+    written even on training crash so DEBUGGER agent has a fingerprint).
+  - Decision precedence: run_cell exception > continuation halt > red band > continue.
+  - Yellow band continues with logged delta; green continues silently.
+- CLI: --mode {pilot,full}, --engine, --only <model>_<dataset>, --dry-run.
+  Verified: dry-run prints plan and exits 0 without dispatch; --only resolves to
+  one tag; unknown --only target raises SystemExit with available choices.
+- Hook failures (post_cell_hook raising) are logged as WARN but never abort the
+  next cell — per PRD US-005 ("tracker-write failure must NOT abort the next cell").
+- src/tests/test_run_phase_a.py — 9 invariants, all PASS:
+  only-resolves, only-rejects-unknown, all-green dispatch, red halts remaining,
+  overfit overrides green, run_cell-raises captured, yellow continues,
+  verdict-shape (all required keys present), post-hook fires-and-tolerates-failure.
+- Reused Windows codepage lesson: replaced -> arrows and box-drawing chars in both
+  the script and tests with ASCII equivalents to keep cp1255 stdout safe.
+
+## US-005: Per-run hook to refresh Final_Exp.md — DONE 2026-05-05
+- Discovery: existing DashboardRefreshCallback in src/lightning/callbacks.py:195-204
+  refreshes the LEGACY experiment-plan dashboard, not Final_Exp.md (despite the
+  comment in update_final_exp.py:253 claiming otherwise). So Phase A cells did NOT
+  auto-refresh the master tracker through Lightning callbacks. US-005 closes that gap.
+- scripts/run_phase_a.py:
+  - _load_update_final_exp() — importlib loader for scripts/update_final_exp.py
+    (no scripts/__init__.py exists; same pattern as the test loader for run_phase_a.py).
+  - refresh_final_exp_hook(verdict) — module-level function callable as post_cell_hook;
+    invokes update_final_exp.main([]) (default args: --runs-root runs/final --out Final_Exp.md);
+    raises RuntimeError on rc != 0 so the runner logs a visible WARN.
+  - main() now passes refresh_final_exp_hook as the default post_cell_hook in CLI mode.
+- src/tests/test_run_phase_a_hook.py — 4 invariants, all PASS:
+  hook-calls-once, hook-reraises-on-nonzero (preserves runner WARN visibility),
+  end-to-end (real hook + staged runs/final/ tree writes Final_Exp.md with Complete),
+  hook-failure-tolerated (production hook + forced raise doesn't halt next cell).
+- Existing test_run_phase_a.py still 9/9 PASS — runner internals unchanged.
+- TransNeXt rows remain Pending in the regenerated Final_Exp.md (verified end-to-end:
+  only the staged Phase A cell flips to Complete; other 185 stay Pending).
+
+## US-006: Phase A static HTML dashboard — DONE 2026-05-05
+- Extended src/tools/build_final_dashboard.py (per CLAUDE.md "minimal changes,
+  no rewrites" — preferred over a sibling script):
+  - --phase {all,a} flag (default 'all' = existing 186-tile dashboard, untouched).
+  - --phase a renders artifacts/Final_Exp_PhaseA.html: a TABLE (not a tile grid)
+    with 4 rows + collapsible <details> per row.
+  - Columns: tag, model, dataset, status, best_val_acc, train_acc @ best, gap,
+    epochs, band (color-coded), decision (color-coded).
+  - <details> panel: 3-column grid of (1) learning curves PNG from
+    artifacts/dashboard_thumbs/<tag>_curve.png (placeholder when absent),
+    (2) <pre> JSON dump of metrics.json["hparams"] + hparams_source,
+    (3) gate_verdict.json explanation + reasons list (placeholder when absent).
+  - _train_acc_at_best_epoch reads metrics.csv to find the train_acc at the
+    best_epoch (more accurate than last_train_acc which is end-of-training).
+  - Gap color: green if <10pp, yellow if 10-15pp, red if >=15pp.
+  - All inline CSS, no JS framework, no external CDN — opens via file://.
+- scripts/run_phase_a.py:
+  - refresh_phase_a_dashboard_hook(verdict): calls build_final_dashboard.main(['--phase','a']).
+  - refresh_all_trackers_hook(verdict): combined hook — runs Final_Exp.md
+    refresh first, then Final_Exp_PhaseA.html. Failures isolated: second
+    step always runs even if first raises; original exception re-raised at
+    the end so the runner logs a visible WARN.
+  - main() now uses refresh_all_trackers_hook (was refresh_final_exp_hook).
+- src/tests/test_phase_a_dashboard.py — 6 invariants, all PASS:
+  render-4-rows (counts: 4 rows, 1 complete, 1 halted, 2 pending),
+  classes (green/red bands + continue/halt decisions get correct CSS classes),
+  hparams (head_lr/backbone_lr/etc visible inside <details> <pre>),
+  pending (empty runs/final/ -> 4 rows with all placeholder messages),
+  combined-hook (both Final_Exp.md and Final_Exp_PhaseA.html written),
+  hook-isolation (MD failure does NOT skip HTML; original error re-raised).
+- Existing tests preserved: test_run_phase_a (9/9), test_run_phase_a_hook (4/4),
+  test_dashboard (3/3) — no regressions.
+- CLI verified: `python -m src.tools.build_final_dashboard --phase a` works.
+
+## Phase A infrastructure: DONE — operator can now run cells
+- All 6 infrastructure stories shipped (US-001..US-006). Phase A is ready to
+  execute end-to-end:
+    python scripts/run_phase_a.py [--mode pilot|full] [--only <model>_<dataset>]
+  After each cell:
+    - gate_verdict.json written to runs/final/<tag>/.
+    - Final_Exp.md regenerated.
+    - Final_Exp_PhaseA.html regenerated.
+    - Halt on red band / continuation halt / training crash; otherwise auto-continue.
+- US-007..010 are the actual training executions on the local CUDA GPU.
+- Total tests added in this PRD round: 5 new files, 33 invariants, all PASS.
