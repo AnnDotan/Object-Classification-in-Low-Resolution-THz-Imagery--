@@ -34,6 +34,12 @@ The plan called for adding `artifacts/Final_Exp.json` to TRACKER_PATHS in script
 
 Until that lands, run `python -m src.tools.build_final_exp_json` manually (or rely on refresh_trackers.refresh_final_exp_html → build_final_dashboard.main, which now invokes the aggregator).
 
+## US-003: Aggregator regression tests — DONE 2026-05-06
+- New test src/tests/test_build_final_exp_json.py, 7 checks: row counts + phase split, Phase C L1 collapse invariant, metrics.json round-trip (Pending -> Complete), Weight Privacy (no .ckpt/.pt/.pth/weights opens), atomic write (no leftover .tmp), doc-level fields (schema_version, generated_at), tag-sort determinism.
+- All 7 checks pass on first run.
+- Privacy test gotcha: patching `builtins.open` alone misses pathlib's reads — pathlib uses `io.open`, which is the same callable but a different module attribute. Patching only builtins leaves io.open pointing at the original. Patch BOTH `builtins.open` and `io.open` together.
+- Pre-existing failure noted (NOT a regression from this PRD's work): src/tests/test_dashboard.py can't import in environments without torch — src/tools/build_final_dashboard.py imports `from src.experiments.matrix import build_final_matrix` at module top-level, and matrix imports DegradeConfig -> torch. The fix is the US-004 rewrite, which will switch to torch-free `iter_cells()` for parity with the aggregator.
+
 ## Learnings
 - The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
 - run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.
