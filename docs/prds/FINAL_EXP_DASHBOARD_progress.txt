@@ -11,6 +11,30 @@
 - SCHEMA_VERSION literal pinned to 1; future bumps are breaking.
 - Import smoke-tested via `python -c "from src.tools.final_exp_schema import ..."`. mypy is not installed in the project venv, so static typecheck is satisfied by import success only.
 
+## US-002: Aggregator build_final_exp_json.py + integration — DONE 2026-05-05
+- New module: src/tools/build_final_exp_json.py (build_doc, write_doc_atomic, build_final_exp_json, main).
+- Iterates src.experiments.cells.iter_cells() (torch-free) — NOT build_final_matrix() — because matrix.py imports DegradeConfig → torch, and the aggregator must run in environments without torch (e.g. CI / dashboard refresh / dev laptop without GPU).
+- Phase A clean params use a no-op sentinel (low_res=224, blur_kernel=1, blur_sigma=0, etc.) — values exist only to satisfy ParamsDict; renderer suppresses display when level is None.
+- Atomic write via tempfile.NamedTemporaryFile(delete=False) + os.replace; rows sorted by tag for byte-stable output across runs with identical state.
+- Integrated into src/tools/build_final_dashboard.main as a lazy import + try/except — aggregator failure logs to stderr but does not block HTML render. The single integration line is throwaway: US-004 rewrites build_final_dashboard.py.
+- Smoke run produced 186 rows: pending=180, running=2, complete=4, failed=0. Phase C L1 collapse invariant verified (every C-L1 row's params dict == Phase B L1 row's params).
+
+### Deferred patch (operator-applied) — sync_trackers_git.py pathspec
+The plan called for adding `artifacts/Final_Exp.json` to TRACKER_PATHS in scripts/sync_trackers_git.py so the JSON auto-syncs at phase boundaries. Both that file and src/tests/test_sync_trackers_git.py are currently untracked (project-level US-016 work-in-progress at the time of this session). To keep the dashboard PRD's commit history clean, the pathspec patch is NOT bundled with US-002. When US-016 lands, apply this 1-line addition:
+
+  scripts/sync_trackers_git.py — TRACKER_PATHS:
+      "Final_Exp.md",
+      "artifacts/Final_Exp.html",
+  +   "artifacts/Final_Exp.json",
+      "progress.txt",
+
+  src/tests/test_sync_trackers_git.py — `_check_pathspec_explicit_and_safe()`:
+      docstring: "explicit 3-path pathspec" -> "explicit pathspec (TRACKER_PATHS)"
+      print:      "explicit 3-path pathspec; ..." -> f"explicit {len(expected)}-path pathspec; ..."
+
+Until that lands, run `python -m src.tools.build_final_exp_json` manually (or rely on refresh_trackers.refresh_final_exp_html → build_final_dashboard.main, which now invokes the aggregator).
+
 ## Learnings
 - The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
 - run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.
+- Torch-free path matters: src.experiments.cells.iter_cells() is the canonical enumerator for analysis tools (dashboards, tracker updaters, CI lint). matrix.build_final_matrix() additionally builds DegradeConfig per cell, which pulls in torch and breaks any tool that doesn't need pixel-level config. Use cells.iter_cells() unless you specifically need DegradeConfig.
