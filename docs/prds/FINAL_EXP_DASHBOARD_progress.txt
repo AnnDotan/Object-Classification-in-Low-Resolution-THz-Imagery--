@@ -124,6 +124,18 @@ Operator-reported issue: dashboard at artifacts/Final_Exp.html could not fetch .
 ### Final_Exp.md regenerated
 - Ran `python scripts/update_final_exp.py` — `Last updated: 2026-05-06` (1-line change vs HEAD; the rest of the table was already current).
 
+## NotebookLM source sync — manifest updated, upload deferred to operator
+
+- Project's NotebookLM sync (scripts/notebooklm_sync.py + scripts/notebooklm_manifest.yml) is already in place; it mirrors curated repo files into the "THz Project" notebook with an explicit deny-list for weight files.
+- Updated scripts/notebooklm_manifest.yml include globs to pick up the new dashboard PRD: added `docs/prds/*.md`. All other dashboard files (src/tools/build_final_dashboard.py, src/tools/build_final_exp_json.py, src/tools/final_exp_schema.py, src/tests/test_build_final_exp_json.py, Final_Exp.md, README.md) were already covered by existing globs.
+- Dry-run sync attempted via `python scripts/notebooklm_sync.py status` reports `[notebook-not-found] cannot select 'e244f8b6-30ab-4966-a74c-426ff88be39a':`. The storage_state.json file exists at the path the manifest configures, but the auth session is no longer valid for this notebook (expired or for a different account).
+- Operator action required to complete the sync — interactive (browser-based) OAuth that cannot be driven from this session:
+    1. `notebooklm login`        # opens browser; refreshes storage_state.json
+    2. `notebooklm list`          # verifies the THz Project notebook ID is reachable
+    3. `python scripts/notebooklm_sync.py status`  # dry-run; should now show the manifest's 104 mapped files
+    4. `python scripts/notebooklm_sync.py full --apply`  # uploads new + replaces stale + prunes (respects manifest.preserve_titles for hand-uploaded sources)
+- Weight-privacy invariant verified intact: the manifest deny-list still excludes `**/*.{ckpt,pt,pth}`, `artifacts/weights/**`, `runs/**`, `artifacts/optuna_*.db`, and thumbnail caches. The new dashboard added no new categories of restricted files.
+
 ## Learnings
 - The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
 - run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.

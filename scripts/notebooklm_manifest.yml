@@ -41,6 +41,9 @@ include:
   # Tests (determinism + invariants)
   - "src/tests/*.py"
 
+  # PRDs and design docs (dashboard PRD lives under docs/prds/)
+  - "docs/prds/*.md"
+
 # Hard exclusions. A file matching ANY deny glob is never uploaded,
 # even if it also matches an include glob. Weight-privacy invariant.
 deny:
