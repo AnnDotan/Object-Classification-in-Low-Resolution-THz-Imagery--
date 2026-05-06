@@ -81,6 +81,49 @@ Bundled milestone (per operator request: "viewable dashboard" before logic/filte
 - Banner appears when Final_Exp.json is absent.
 - localStorage persistence: refresh page, last tab restored.
 
+## Path fix + US-010 + US-013 + US-014a — DONE 2026-05-06
+
+Operator-reported issue: dashboard at artifacts/Final_Exp.html could not fetch ./Final_Exp.json. Root cause was NOT a path bug — Chrome / Edge / Firefox all block fetch() of local files when the parent HTML is opened via file:// (a long-standing CORS-on-file:// security feature). The relative path `./Final_Exp.json` was correct.
+
+### Fix: inline-data bootstrap (file:// compatibility)
+- build_dashboard now calls build_doc() at render time and embeds the FinalExpDoc as a `<script type="application/json" id="initial-data">` tag in the HTML.
+- JS init reads the inline data first (instant render, no network) and only THEN attempts fetch('./Final_Exp.json') for live polling.
+- On file://, the inline embed is authoritative and the failing fetch is silently ignored (no banner spam — the data is already accurate as of HTML render time).
+- On HTTP, the initial fetch supersedes the inline embed and polling kicks in for live updates.
+- Defense-in-depth: `</` substrings in the JSON are escaped to `<\/` so a stray `</script>` token in user data could never break out of the inline tag.
+
+### US-010: Multi-select chip filters
+- Four chip groups in the .filters row: model (3 chips: resnet50/densenet121/transnext_base), dataset (2: cifar10/mnist), status (4: Pending/Running/Complete/Failed), axis (5: resolution/blur/noise/saturation/salt_pepper).
+- Empty selection ≡ "All" for that facet (no filtering on that axis).
+- Active chip = filled --accent background, inactive = surface2 dim.
+- Filters AND-combine: a row is visible iff (data-phase === activePhase) AND every active facet matches.
+- Axis chip group hidden on Phase A and Phase B tabs (only meaningful for Phase C single-axis isolation rows); shown automatically when Phase C tab is active.
+- Per-tab persistence: `localStorage` key `final_exp.filters.<phase>` stores `{model,dataset,status,axis}` lists. Switching tabs restores the per-tab filter state.
+- "Clear all" button resets filters for the active tab only.
+- Visible-count badge ("N visible") renders above the table on every filter change.
+- Phase chip group deliberately omitted: Phase is already the primary tab nav, and a Phase chip on top of the Phase tab would let the user pick "Phase B" from inside the Phase A tab — confusing. Operator brief listed Phase as a chip; documented divergence.
+
+### US-013: 30s polling with visibilitychange pause
+- `setInterval(loadJsonOnce, 30_000)` fires after init; cache-bust via `?t=<epoch_ms>` query param.
+- Reconcile by `tag` is currently a full re-render (renderRows), since 186 rows is small enough that DOM mutate-vs-rebuild perf is moot. Future stories can switch to in-place reconcile if needed for diff-flash precision.
+- `document.addEventListener('visibilitychange', ...)` pauses the timer when the tab is hidden and resumes on return; a one-shot `loadJsonOnce` fires immediately on resume so the catch-up happens without a 30s wait.
+- No-op skip: if the new doc's `generated_at` matches the last-ingested `generated_at` AND row count is identical, the ingest early-exits.
+
+### US-014a: Last-refreshed relative timestamp (US-014b flash deferred)
+- Header now shows two timestamps: `Generated: <doc.generated_at>` (absolute, from the doc) and `Last polled: <relative, e.g. 5s ago>` (updated every 1 s by an independent `setInterval`).
+- Color cues: green2 (--ts-fresh) when polled within 2 minutes; orange (--ts-stale) when older. Red (--ts-error) reserved for fatal poll failures.
+- The diff-flash animation (US-014b) on rows transitioning to Complete/Failed is deferred — the current full re-render approach loses the per-row identity needed to detect transitions; pairs with the in-place reconcile work above.
+
+### Tests
+- test_dashboard.py extended to 9 checks (was 6): scaffold + headers + JS contract + inline-data embed + chip filter groups + timestamp UI + back-compat + no-legacy-leak.
+- test_build_final_exp_json.py unchanged; 7/7 still pass.
+
+### Runner integration confirmed (no code change)
+- Operator asked for run_all_phases.py to refresh after each cell. Already wired: `run_all_phases.py` line ~460 calls `refresh_fn()` (defaulting to `_refresh_trackers_default()`) after every cell, success or failure. That helper imports `scripts/refresh_trackers.py` (operator's WIP), which calls `build_final_dashboard.main([])` — which now calls the aggregator and embeds inline data. End-to-end: a cell finishing already triggers a fresh dashboard regenerate.
+
+### Final_Exp.md regenerated
+- Ran `python scripts/update_final_exp.py` — `Last updated: 2026-05-06` (1-line change vs HEAD; the rest of the table was already current).
+
 ## Learnings
 - The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
 - run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.

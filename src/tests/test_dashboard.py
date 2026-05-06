@@ -91,7 +91,7 @@ def _check_column_headers_in_order() -> None:
 
 
 def _check_inline_js_contract() -> None:
-    """The inline JS must reference ./Final_Exp.json and expose level-badge logic."""
+    """The inline JS must wire up bootstrap, fetch fallback, level-badge logic, polling, chips."""
     with tempfile.TemporaryDirectory() as td:
         out = Path(td) / "Final_Exp.html"
         runs_root = Path(td) / "runs" / "final"
@@ -102,9 +102,75 @@ def _check_inline_js_contract() -> None:
     assert "levelBadgeHtml" in body, "JS must define the level-badge renderer (US-007)"
     assert "applyActivePhase" in body, "JS must expose tab-switch logic (US-006)"
     assert "renderRows" in body, "JS must expose row rendering (US-005)"
-    # localStorage key for active phase persistence
+    assert "readInlineDoc" in body, "JS must bootstrap from inline JSON (file:// compat)"
+    assert "startPolling" in body and "stopPolling" in body, "JS must implement polling (US-013)"
+    assert "POLL_INTERVAL_MS" in body, "polling interval constant missing"
+    assert "visibilitychange" in body, "polling must pause on tab hidden (US-013)"
+    assert "rowMatchesFilters" in body, "JS must implement chip filter logic (US-010)"
+    # localStorage keys
     assert "final_exp.active_phase" in body, "missing localStorage key for active phase"
-    print("OK [js] -- Final_Exp.json fetch + tab/badge/row helpers + localStorage key.")
+    assert "final_exp.filters." in body, "missing localStorage key prefix for chip filters"
+    print("OK [js] -- inline bootstrap + fetch fallback + tab/badge/row + chips + polling.")
+
+
+def _check_inline_initial_data_embedded() -> None:
+    """Static HTML must embed the FinalExpDoc as <script type=application/json>."""
+    import json as _json
+    import re as _re
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    m = _re.search(
+        r'<script type="application/json" id="initial-data">(.+?)</script>',
+        body, _re.S,
+    )
+    assert m, "missing inline-data <script type=application/json>"
+    # Reverse the </ -> <\/ defensive escape before parsing.
+    raw = m.group(1).replace("<\\/", "</")
+    doc = _json.loads(raw)
+    assert doc["schema_version"] == 1
+    assert doc["counts"]["total"] == 186
+    assert len(doc["rows"]) == 186
+    print(f"OK [inline-data] -- 186 rows embedded inline ({len(raw):,} bytes JSON).")
+
+
+def _check_chip_filter_groups_present() -> None:
+    """Filter row must render chip groups for model / dataset / status / axis (US-010)."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    for facet in ("model", "dataset", "status", "axis"):
+        assert f'data-chip-group="{facet}"' in body, f"missing chip group {facet}"
+    expected_values = (
+        "resnet50", "densenet121", "transnext_base",
+        "cifar10", "mnist",
+        "Pending", "Running", "Complete", "Failed",
+        "resolution", "blur", "noise", "saturation", "salt_pepper",
+    )
+    for v in expected_values:
+        assert f'data-value="{v}"' in body, f"missing chip value {v}"
+    assert 'id="clear-filters"' in body, "missing clear-all button"
+    assert 'id="visible-count"' in body, "missing visible-count counter"
+    print(f"OK [chips] -- 4 chip groups, {len(expected_values)} values, clear-all + count.")
+
+
+def _check_polling_and_timestamp_ui() -> None:
+    """Header must surface generated + last-polled timestamps (US-014a)."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert 'id="ts-generated"' in body
+    assert 'id="ts-polled"' in body
+    print("OK [timestamps] -- ts-generated + ts-polled IDs present.")
 
 
 def _check_no_legacy_markup_leaks() -> None:
@@ -145,6 +211,9 @@ def main() -> int:
     _check_static_scaffold()
     _check_column_headers_in_order()
     _check_inline_js_contract()
+    _check_inline_initial_data_embedded()
+    _check_chip_filter_groups_present()
+    _check_polling_and_timestamp_ui()
     _check_no_legacy_markup_leaks()
     _check_thumbs_dir_back_compat()
     print("\nAll dashboard scaffold checks passed.")

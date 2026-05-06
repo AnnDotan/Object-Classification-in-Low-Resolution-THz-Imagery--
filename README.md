@@ -24,10 +24,13 @@ How robust does image classification remain when visual information is severely 
 | `--cell-tag` matrix consumer in [`run_systematic.py`](run_systematic.py) | ✅ live (US-008) |
 | `--plan final` orchestration in [`run_all_phases.py`](run_all_phases.py) | ✅ live (US-009) |
 | Pre-rendered Original-vs-Degraded thumbs — [`src/tools/render_cell_thumbs.py`](src/tools/render_cell_thumbs.py) | ✅ live (US-010) |
-| Final_Exp.html dashboard — [`src/tools/build_final_dashboard.py`](src/tools/build_final_dashboard.py) | ✅ live (US-011) |
+| Final_Exp.html dashboard — [`src/tools/build_final_dashboard.py`](src/tools/build_final_dashboard.py) | ✅ live (US-011, rewritten as the FINAL_EXP Dashboard — pilot-styled tabs / chip filters / 30 s polling — see [`docs/prds/FINAL_EXP_DASHBOARD.md`](docs/prds/FINAL_EXP_DASHBOARD.md)) |
+| `artifacts/Final_Exp.json` aggregate + `src/tools/build_final_exp_json.py` | ✅ live (FINAL_EXP US-001..US-003) |
 | W&B `run_id` / `entity` / `project` in `metrics.json` | ✅ live (US-012) |
 | Weight-privacy hardening (`.gitignore`, `.claudeignore`, `scripts/check_ignores.sh`) | ✅ live (US-013) |
-| `scripts/update_final_exp.py` (regenerates `Final_Exp.md` row data after each run) | 🟡 pending follow-up |
+| `scripts/update_final_exp.py` (regenerates `Final_Exp.md` row data after each run) | ✅ live |
+| `scripts/fetch_transnext_weights.py` (pre-fetch checkpoint into `artifacts/weights/`) | ✅ live |
+| Click-to-toggle learning-curve panels in `Final_Exp.html` (`render_curve_thumbs.py`) | 🗑 deprecated — superseded by the chip-filtered FINAL_EXP Dashboard; thumbs still rendered for ad-hoc inspection. |
 
 Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 
@@ -81,7 +84,21 @@ python -c "from torchvision import datasets; datasets.CIFAR10('./data', train=Tr
 .\venv\Scripts\python.exe -c "from torchvision import datasets; datasets.CIFAR10('./data', train=True, download=True); datasets.MNIST('./data', train=True, download=True)"
 ```
 
-TransNeXt-Base ImageNet-1K weights auto-download to `artifacts/weights/transnext_base_224_1k.pth` on first training run. Override the source URL via the `THZ_TRANSNEXT_BASE_URL` env var (or `THZ_TRANSNEXT_<SIZE>_URL` for any size) if the default GitHub release URL is unreachable; if both fail the training script raises `FileNotFoundError` with a manual-download instruction.
+TransNeXt-Base ImageNet-1K weights auto-download to `artifacts/weights/transnext_base_224_1k.pth` on first training run. To pre-fetch them upfront (recommended — surfaces network problems before Phase A starts and avoids latency on the first epoch):
+
+**Bash:**
+```bash
+python scripts/fetch_transnext_weights.py                  # base only (campaign default)
+python scripts/fetch_transnext_weights.py --all            # every size
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\python.exe scripts\fetch_transnext_weights.py
+.\venv\Scripts\python.exe scripts\fetch_transnext_weights.py --all
+```
+
+Files smaller than 1 MiB (Git-LFS pointers, partial downloads, accidental placeholders) are detected and re-downloaded automatically. Override the source URL via the `THZ_TRANSNEXT_BASE_URL` env var (or `THZ_TRANSNEXT_<SIZE>_URL` for any size) if the default GitHub release URL is unreachable; if both fail the training script raises `FileNotFoundError` with a manual-download instruction.
 
 ## Step 2 — Optuna Pre-Tuning (~20 GPU-hours)
 
@@ -160,7 +177,8 @@ Outputs land in `runs/final/<tag>/`. Each run writes:
 
 | Surface | What it shows |
 |---|---|
-| `artifacts/Final_Exp.html` | 186-cell visual grid: pre-rendered Original-vs-Degraded thumbs, status badges (Pending / Running / Complete / Failed), `val_acc`, embedded W&B iframe per cell. Static HTML — open directly via `file://`. |
+| `artifacts/Final_Exp.html` | FINAL_EXP Dashboard — pilot-styled, tabbed by Phase A/B/C, with multi-select chip filters (model / dataset / status / axis), graded `L1`–`L5` level badges with parameter tooltips, status pills, `val_acc` / epochs / runtime per row, and 30 s JSON polling for live updates. Initial data is embedded inline so the dashboard works directly via `file://`; polling activates when served over HTTP. |
+| `artifacts/Final_Exp.json` | Aggregate of all 186 cells in a stable schema (`src/tools/final_exp_schema.py`) — the data contract the dashboard polls and the source of truth for downstream tools. |
 | [`Final_Exp.md`](Final_Exp.md) | Master tracker — Markdown table per cell + `metrics.json` schema reference. |
 | `runs/final/<tag>/log.txt` | Live training output. `Get-Content -Wait` (PowerShell) or `tail -f` (Bash). |
 | `artifacts/priors/*.json` | Paper-anchored Optuna search bounds (tracked in git). |
@@ -170,7 +188,9 @@ Refresh / regenerate after a run:
 
 **Bash:**
 ```bash
-python -m src.tools.render_cell_thumbs                # 186 PNG pairs (idempotent)
+python scripts/update_final_exp.py                    # regenerate Final_Exp.md row data
+python -m src.tools.render_cell_thumbs                # 186 Original|Degraded PNG pairs (idempotent)
+python -m src.tools.render_curve_thumbs               # per-cell val_acc / val_loss curves (skips cells with no metrics.csv)
 python -m src.tools.build_final_dashboard             # rebuild Final_Exp.html
 python -m src.tools.measure_image_quality \
     --cell-tag final_B_L3_resnet50_cifar10 \
@@ -179,12 +199,16 @@ python -m src.tools.measure_image_quality \
 
 **PowerShell:**
 ```powershell
+.\venv\Scripts\python.exe scripts\update_final_exp.py
 .\venv\Scripts\python.exe -m src.tools.render_cell_thumbs
+.\venv\Scripts\python.exe -m src.tools.render_curve_thumbs
 .\venv\Scripts\python.exe -m src.tools.build_final_dashboard
 .\venv\Scripts\python.exe -m src.tools.measure_image_quality `
     --cell-tag final_B_L3_resnet50_cifar10 `
     --out runs/final/final_B_L3_resnet50_cifar10/image_quality.json
 ```
+
+`scripts/update_final_exp.py --check` exits non-zero if `Final_Exp.md` is out of date — useful for CI / pre-commit hooks.
 
 ## Degradation Pipeline & Levels
 

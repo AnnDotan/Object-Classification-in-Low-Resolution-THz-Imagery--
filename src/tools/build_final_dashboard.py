@@ -313,7 +313,68 @@ body {
     letter-spacing: 0.2px;
 }
 
-/* Banner for fetch failures */
+/* Filter chip row (US-010) */
+.filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+.chip-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.chip-group .chip-label {
+    font-size: 0.72em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 78px;
+}
+.chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 0.78em;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.12s;
+    font-family: 'Consolas', 'Monaco', ui-monospace, monospace;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.active {
+    background: var(--accent);
+    color: #0b0d10;
+    border-color: var(--accent);
+    font-weight: 600;
+}
+.filters .filter-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    align-items: center;
+}
+.filters .clear-all {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78em;
+    cursor: pointer;
+}
+.filters .clear-all:hover { color: var(--text); border-color: var(--accent); }
+.filters .visible-count {
+    color: var(--text-dim);
+    font-size: 0.78em;
+    margin-left: auto;
+}
+
+/* Banner for fetch / data failures */
 .banner {
     margin-bottom: 18px;
     padding: 12px 16px;
@@ -325,23 +386,36 @@ body {
     display: none;
 }
 .banner.visible { display: block; }
+.banner.warn { border-color: var(--orange); color: var(--orange); }
 """
 
-# Inline JS: fetches Final_Exp.json on load and populates the table + stats.
-# US-005 (load + render), US-006 (tab switching), US-007 (level badge).
-# Filters / sort / polling / presets land in US-008..US-014.
+# Inline JS: bootstraps from <script id="initial-data"> JSON (works on file://
+# where fetch() of local files is CORS-blocked), then polls ./Final_Exp.json
+# every 30 s for live updates (works when served via HTTP).
+# US-005 (load + render), US-006 (tabs), US-007 (level badge),
+# US-010 (chip filters), US-013 (polling), US-014a (last-refreshed timestamp).
 _JS = r"""
 (function () {
     'use strict';
 
     const JSON_PATH = './Final_Exp.json';
     const LS_ACTIVE_PHASE = 'final_exp.active_phase';
+    const LS_FILTERS_PREFIX = 'final_exp.filters.';
     const PHASES = ['A', 'B', 'C'];
+    const POLL_INTERVAL_MS = 30000;
+    const STALE_THRESHOLD_MS = 120000; // visibility-paused > 2 min -> orange
 
     const state = {
         rows: [],
         countsByPhase: { A: {}, B: {}, C: {} },
         activePhase: 'A',
+        filters: { A: {}, B: {}, C: {} },
+        lastGeneratedAt: null,
+        lastPolledMs: null,
+        pollTimer: null,
+        relTimer: null,
+        fetchEverSucceeded: false,
+        bootstrapFromInline: false,
     };
 
     // -- Helpers -----------------------------------------------------------
@@ -476,6 +550,39 @@ _JS = r"""
         setStat('stat-all', all);
     }
 
+    function rowMatchesFilters(tr, filters) {
+        const f = filters || {};
+        // Empty array (or undefined) means "All" for that facet.
+        function pass(facet, value) {
+            const sel = f[facet];
+            if (!sel || sel.length === 0) return true;
+            return sel.indexOf(value) !== -1;
+        }
+        if (!pass('model', tr.dataset.model)) return false;
+        if (!pass('dataset', tr.dataset.dataset)) return false;
+        if (!pass('status', tr.dataset.status)) return false;
+        // Axis filter only constrains Phase C rows; Phase A/B rows pass through.
+        if (tr.dataset.phase === 'C') {
+            const sel = f.axis || [];
+            if (sel.length > 0 && sel.indexOf(tr.dataset.axis) === -1) return false;
+        }
+        return true;
+    }
+
+    function applyVisibility() {
+        const phase = state.activePhase;
+        const f = state.filters[phase] || {};
+        let visible = 0;
+        document.querySelectorAll('tr.exp-row').forEach(function (tr) {
+            const onPhase = (tr.dataset.phase === phase);
+            const matched = onPhase && rowMatchesFilters(tr, f);
+            tr.style.display = matched ? '' : 'none';
+            if (matched) visible += 1;
+        });
+        const vc = document.getElementById('visible-count');
+        if (vc) vc.textContent = visible + ' visible';
+    }
+
     function applyActivePhase(phase) {
         if (PHASES.indexOf(phase) === -1) phase = 'A';
         state.activePhase = phase;
@@ -485,10 +592,13 @@ _JS = r"""
         document.querySelectorAll('.tab-btn').forEach(function (b) {
             b.classList.toggle('active', b.dataset.phase === phase);
         });
-        // Row visibility — display none/'' (parity with pilot's mechanism)
-        document.querySelectorAll('tr.exp-row').forEach(function (tr) {
-            tr.style.display = (tr.dataset.phase === phase) ? '' : 'none';
-        });
+        // Axis chip group is only meaningful on Phase C — hide on A/B.
+        const axisGroup = document.querySelector('[data-chip-group="axis"]');
+        if (axisGroup) axisGroup.style.display = (phase === 'C') ? '' : 'none';
+
+        // Restore this phase's chip selections in the UI.
+        renderChipSelections();
+        applyVisibility();
         renderStatsBar(phase);
     }
 
@@ -513,36 +623,165 @@ _JS = r"""
         if (b) b.classList.remove('visible');
     }
 
-    // -- Data load ---------------------------------------------------------
+    // -- Chip filters (US-010) --------------------------------------------
+
+    function loadFilters(phase) {
+        try {
+            const raw = localStorage.getItem(LS_FILTERS_PREFIX + phase);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') return parsed;
+            }
+        } catch (e) { /* ignore */ }
+        return {};
+    }
+
+    function saveFilters(phase) {
+        try {
+            localStorage.setItem(
+                LS_FILTERS_PREFIX + phase,
+                JSON.stringify(state.filters[phase] || {})
+            );
+        } catch (e) { /* ignore */ }
+    }
+
+    function toggleChip(facet, value) {
+        const phase = state.activePhase;
+        if (!state.filters[phase]) state.filters[phase] = {};
+        const sel = state.filters[phase][facet] || [];
+        const idx = sel.indexOf(value);
+        if (idx === -1) sel.push(value);
+        else sel.splice(idx, 1);
+        state.filters[phase][facet] = sel;
+        saveFilters(phase);
+        renderChipSelections();
+        applyVisibility();
+    }
+
+    function renderChipSelections() {
+        const phase = state.activePhase;
+        const f = state.filters[phase] || {};
+        document.querySelectorAll('.chip').forEach(function (chip) {
+            const facet = chip.dataset.facet;
+            const value = chip.dataset.value;
+            const sel = f[facet] || [];
+            chip.classList.toggle('active', sel.indexOf(value) !== -1);
+        });
+    }
+
+    function clearAllFilters() {
+        const phase = state.activePhase;
+        state.filters[phase] = {};
+        saveFilters(phase);
+        renderChipSelections();
+        applyVisibility();
+    }
+
+    // -- Last-polled timestamp (US-014a) ----------------------------------
+
+    function fmtRel(deltaMs) {
+        const s = Math.floor(deltaMs / 1000);
+        if (s < 5)    return 'just now';
+        if (s < 60)   return s + 's ago';
+        if (s < 3600) return Math.floor(s / 60) + 'm ago';
+        return Math.floor(s / 3600) + 'h ago';
+    }
+
+    function updateRelTs() {
+        const el = document.getElementById('ts-polled');
+        if (!el) return;
+        if (state.lastPolledMs === null) {
+            el.textContent = '—';
+            el.className = '';
+            return;
+        }
+        const delta = Date.now() - state.lastPolledMs;
+        el.textContent = fmtRel(delta);
+        el.className = (delta > STALE_THRESHOLD_MS) ? 'ts-stale' : 'ts-fresh';
+    }
+
+    // -- Data load + polling (US-013) -------------------------------------
 
     function ingest(doc) {
         if (!doc || !Array.isArray(doc.rows)) {
             showBanner('Final_Exp.json missing or malformed.');
             return;
         }
+        // Skip no-op poll cycles.
+        if (state.lastGeneratedAt && doc.generated_at === state.lastGeneratedAt
+            && state.rows.length === doc.rows.length) {
+            return;
+        }
         hideBanner();
+        state.lastGeneratedAt = doc.generated_at || null;
         state.rows = doc.rows;
         state.countsByPhase = recomputeCountsByPhase(doc.rows);
         renderRows(doc.rows);
         renderTabCounts();
         applyActivePhase(state.activePhase);
 
-        // Header generated_at
         const gen = document.getElementById('ts-generated');
         if (gen && doc.generated_at) gen.textContent = doc.generated_at;
     }
 
-    function loadJson() {
-        return fetch(JSON_PATH, { cache: 'no-store' })
+    function readInlineDoc() {
+        const tag = document.getElementById('initial-data');
+        if (!tag) return null;
+        try { return JSON.parse(tag.textContent); }
+        catch (e) { return null; }
+    }
+
+    function loadJsonOnce() {
+        return fetch(JSON_PATH + '?t=' + Date.now(), { cache: 'no-store' })
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
-            .then(ingest)
+            .then(function (doc) {
+                state.fetchEverSucceeded = true;
+                state.lastPolledMs = Date.now();
+                ingest(doc);
+                updateRelTs();
+            })
             .catch(function (err) {
-                showBanner('Could not load ' + JSON_PATH +
-                           ' — run scripts/refresh_trackers.py. (' + err.message + ')');
+                // On file:// the browser blocks fetch of local files; if we
+                // bootstrapped from inline data and never had a successful
+                // fetch, stay silent (no banner spam). On HTTP, show a
+                // soft warning.
+                if (state.bootstrapFromInline && !state.fetchEverSucceeded) {
+                    return; // silent on file:// — inline data is authoritative
+                }
+                const b = document.getElementById('banner');
+                if (b) {
+                    b.textContent = 'Polling failed: ' + err.message +
+                        ' — showing last successful snapshot.';
+                    b.classList.add('visible');
+                    b.classList.add('warn');
+                }
             });
+    }
+
+    function startPolling() {
+        if (state.pollTimer !== null) return;
+        state.pollTimer = setInterval(loadJsonOnce, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+        if (state.pollTimer !== null) {
+            clearInterval(state.pollTimer);
+            state.pollTimer = null;
+        }
+    }
+
+    function bindVisibility() {
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                startPolling();
+                loadJsonOnce(); // catch up immediately on return
+            }
+        });
     }
 
     // -- Boot --------------------------------------------------------------
@@ -555,15 +794,46 @@ _JS = r"""
         });
     }
 
+    function bindChips() {
+        document.querySelectorAll('.chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                toggleChip(chip.dataset.facet, chip.dataset.value);
+            });
+        });
+        const clr = document.getElementById('clear-filters');
+        if (clr) clr.addEventListener('click', clearAllFilters);
+    }
+
     function init() {
+        // Restore active phase + per-phase filters from localStorage.
         let saved = 'A';
         try {
             const v = localStorage.getItem(LS_ACTIVE_PHASE);
             if (v && PHASES.indexOf(v) !== -1) saved = v;
         } catch (e) { /* ignore */ }
         state.activePhase = saved;
+        PHASES.forEach(function (p) { state.filters[p] = loadFilters(p); });
+
         bindTabs();
-        loadJson();
+        bindChips();
+        bindVisibility();
+
+        // Bootstrap from inline data (works on file://).
+        const inline = readInlineDoc();
+        if (inline) {
+            state.bootstrapFromInline = true;
+            state.lastPolledMs = Date.now();
+            ingest(inline);
+            updateRelTs();
+        }
+
+        // Start the relative-timestamp ticker (1 s).
+        state.relTimer = setInterval(updateRelTs, 1000);
+
+        // Attempt a fresh fetch (works under HTTP; silently no-ops on file://
+        // unless inline bootstrap failed).
+        loadJsonOnce();
+        startPolling();
     }
 
     if (document.readyState === 'loading') {
@@ -575,8 +845,40 @@ _JS = r"""
 """
 
 
-def _html_template(json_sibling: str) -> str:
-    """Static HTML scaffold. All rows + counts are populated client-side from JSON_PATH."""
+def _chip_html(facet: str, label: str, values: tuple[str, ...]) -> str:
+    chips = "".join(
+        f'<span class="chip" data-facet="{facet}" data-value="{v}">{v}</span>'
+        for v in values
+    )
+    return (
+        f'<div class="chip-group" data-chip-group="{facet}">'
+        f'  <span class="chip-label">{label}</span>'
+        f'  {chips}'
+        f'</div>'
+    )
+
+
+def _html_template(initial_doc_json: str) -> str:
+    """Static HTML scaffold with embedded initial data.
+
+    The browser bootstraps from the inline `<script id="initial-data">` JSON
+    (works on file:// where fetch of local files is CORS-blocked) and then
+    polls `./Final_Exp.json` every 30 s for live updates (works when served
+    via HTTP).
+    """
+    from src.experiments.cells import MODELS, DATASETS  # local — already torch-free
+    from src.data.degradation_levels import AXES
+
+    chip_model   = _chip_html("model",   "MODEL",   MODELS)
+    chip_dataset = _chip_html("dataset", "DATASET", DATASETS)
+    chip_status  = _chip_html("status",  "STATUS",  ("Pending", "Running", "Complete", "Failed"))
+    chip_axis    = _chip_html("axis",    "AXIS",    AXES)
+
+    # JSON is embedded inside <script type="application/json"> so browsers
+    # do not parse it; the bootstrap escapes "</" sequences just in case
+    # (defense-in-depth — the schema cannot legally contain those).
+    safe_json = initial_doc_json.replace("</", "<\\/")
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -590,7 +892,7 @@ def _html_template(json_sibling: str) -> str:
   <h1>🔬 Final Experiment Dashboard</h1>
   <div class="subtitle">186-cell Research Phase &middot; 3 architectures &middot; 2 datasets &middot; 5-level degradation curve</div>
   <div class="timestamps">
-    Generated: <span id="ts-generated">—</span>
+    Generated: <span id="ts-generated">—</span> &middot; Last polled: <span id="ts-polled">—</span>
   </div>
 </div>
 
@@ -611,7 +913,14 @@ def _html_template(json_sibling: str) -> str:
 </div>
 
 <div class="filters">
-  <span class="filters-placeholder">Filters land in US-008+ (model / dataset / status / level / axis / search / presets).</span>
+  {chip_model}
+  {chip_dataset}
+  {chip_status}
+  {chip_axis}
+  <div class="filter-actions">
+    <button type="button" class="clear-all" id="clear-filters">Clear all</button>
+    <span class="visible-count" id="visible-count">— visible</span>
+  </div>
 </div>
 
 <div id="banner" class="banner" role="alert"></div>
@@ -635,6 +944,7 @@ def _html_template(json_sibling: str) -> str:
   </table>
 </div>
 
+<script type="application/json" id="initial-data">{safe_json}</script>
 <script>{_JS}</script>
 </body>
 </html>
@@ -649,6 +959,12 @@ def build_dashboard(
 ) -> dict:
     """Render the FINAL_EXP Dashboard HTML to `out_path`.
 
+    Embeds the current FinalExpDoc as inline JSON so the dashboard works
+    without an HTTP server (browsers block fetch() of local files when
+    the page is opened via file://). The same JSON is also written as a
+    sibling file by `main()` for HTTP-served scenarios where polling
+    needs a fresh source.
+
     Returns a small summary dict (stable shape across stories so existing
     callers — `scripts/refresh_trackers.refresh_final_exp_html` and
     `src/tests/test_dashboard.py` — keep working).
@@ -656,7 +972,15 @@ def build_dashboard(
     del thumbs_dir  # unused — pilot-styled dashboard does not embed thumbnails
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    body = _html_template(json_sibling=_JSON_SIBLING_NAME)
+
+    # Build the doc directly (torch-free) so the inline embed reflects the
+    # current run state, even if the sibling JSON write hasn't happened yet.
+    import json as _json
+    from src.tools.build_final_exp_json import build_doc  # lazy import
+    doc = build_doc(runs_root=Path(runs_root))
+    initial_doc_json = _json.dumps(doc, ensure_ascii=False)
+
+    body = _html_template(initial_doc_json=initial_doc_json)
     out_path.write_text(body, encoding="utf-8")
     return {
         "rows": EXPECTED_TOTAL,
@@ -664,6 +988,8 @@ def build_dashboard(
         "phase_b": EXPECTED_COUNTS["B"],
         "phase_c": EXPECTED_COUNTS["C"],
         "out": str(out_path),
+        "embedded_rows": len(doc["rows"]),
+        "generated_at": doc["generated_at"],
     }
 
 
