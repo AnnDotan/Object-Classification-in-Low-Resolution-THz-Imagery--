@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import csv
 import json
+import math
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -118,6 +121,88 @@ class LegacyJSONMetricsCallback(pl.Callback):
         }
         with open(self.json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
+
+
+class HistoryJSONCallback(pl.Callback):
+    """Per-epoch learning curve writer for the dashboard's lazy Plotly drawer (US-018).
+
+    Schema (`runs/final/<tag>/history.json`):
+        {
+          "schema_version": 1,
+          "tag":     "<tag>",
+          "history": [
+            {"epoch": 1, "train_loss": ..., "val_loss": ..., "train_acc": ..., "val_acc": ...},
+            ...
+          ]
+        }
+
+    Writes atomically (tmp + os.replace) on every `on_validation_epoch_end`
+    so a SIGINT'd run still leaves a usable curve. NaN values are coerced
+    to None so `JSON.parse` succeeds in the browser (raw NaN is invalid JSON).
+
+    Privacy: never reads checkpoints; all values come from
+    `trainer.callback_metrics`. The schema deliberately excludes
+    paths, model state, or anything not directly plotted.
+    """
+
+    def __init__(self, run_dir: Path, tag: str):
+        self.run_dir = Path(run_dir)
+        self.tag = tag
+        self.json_path = self.run_dir / "history.json"
+        self._history: list[dict] = []
+
+    @staticmethod
+    def _safe(v) -> Optional[float]:
+        """Coerce torch tensors / NaN to JSON-friendly numbers or None."""
+        if v is None:
+            return None
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+
+    def _write_atomic(self) -> None:
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": 1,
+            "tag": self.tag,
+            "history": list(self._history),
+        }
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=str(self.run_dir),
+            prefix=self.json_path.name + ".",
+            suffix=".tmp",
+            delete=False,
+        ) as tf:
+            tmp = Path(tf.name)
+            json.dump(payload, tf, indent=2, ensure_ascii=False)
+            tf.write("\n")
+        os.replace(tmp, self.json_path)
+
+    def on_validation_epoch_end(self, trainer: pl.Trainer, _pl_module) -> None:
+        if trainer.sanity_checking:
+            return
+        m = trainer.callback_metrics
+        epoch = trainer.current_epoch + 1
+        self._history.append({
+            "epoch": epoch,
+            "train_loss": self._safe(m.get("train_loss")),
+            "val_loss":   self._safe(m.get("val_loss")),
+            "train_acc":  self._safe(m.get("train_acc")),
+            "val_acc":    self._safe(m.get("val_acc")),
+        })
+        # Atomic write per epoch — on SIGINT we still leave a valid file.
+        try:
+            self._write_atomic()
+        except OSError:
+            # Disk full or similar; one missed atomic write must not
+            # crash training. Next epoch will retry.
+            pass
 
 
 class LegacyCheckpointCallback(pl.Callback):

@@ -112,6 +112,27 @@ body {
 .header .timestamps .ts-fresh { color: var(--green2); }
 .header .timestamps .ts-stale { color: var(--orange); }
 .header .timestamps .ts-error { color: var(--red); }
+/* US-019: manual "Refresh now" button — visually distinct from the
+   ambient text in the timestamp pill so the operator can spot it. */
+.header .timestamps .manual-refresh-btn {
+    margin-left: 12px;
+    padding: 2px 10px;
+    font-size: 0.78em;
+    font-family: inherit;
+    color: var(--accent2);
+    background: var(--surface3);
+    border: 1px solid var(--border-hi);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.header .timestamps .manual-refresh-btn:hover {
+    background: var(--surface2);
+    color: var(--accent);
+}
+.header .timestamps .manual-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: progress;
+}
 
 /* Stats bar */
 .stats-bar {
@@ -139,6 +160,7 @@ body {
 .stat-value.running  { color: var(--blue); }
 .stat-value.complete { color: var(--green2); }
 .stat-value.failed   { color: var(--red); }
+.stat-value.deferred { color: var(--purple); }
 .stat-label {
     font-size: 0.74em;
     color: var(--text-dim);
@@ -265,6 +287,27 @@ body {
 .exp-table .acc-cell.acc-mid { color: var(--orange); }
 .exp-table .acc-cell.acc-low { color: var(--red); }
 
+/* Visual Core thumbnail (US-017) — Original|Degraded side-by-side preview. */
+.visual-core-thumb {
+    display: block;
+    width: 96px;
+    height: 48px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface3);
+}
+.visual-core-missing {
+    display: inline-block;
+    width: 96px;
+    color: var(--text-dim);
+    font-size: 0.78em;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 14px 0;
+}
+
 /* Status pill */
 .status-pill {
     display: inline-block;
@@ -280,6 +323,89 @@ body {
 .status-pill.running  { color: var(--blue);   border-color: var(--blue); }
 .status-pill.complete { color: var(--green2); border-color: var(--green2); }
 .status-pill.failed   { color: var(--red);    border-color: var(--red); }
+/* US-018 history indicator — small chart icon shown on rows that have a
+   `runs/final/<tag>/history.json` available for the lazy Plotly drawer. */
+.history-indicator {
+    display: inline-block;
+    width: 18px;
+    text-align: center;
+    color: var(--accent2);
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.92em;
+}
+.history-indicator.absent {
+    color: var(--text-dim);
+    cursor: default;
+}
+.exp-row { cursor: pointer; }
+
+/* US-018 — right-side drawer for the lazy-loaded learning curves. */
+.curves-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(640px, 92vw);
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border-hi);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45);
+    transform: translateX(100%);
+    transition: transform 0.18s ease;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+}
+.curves-drawer.open { transform: translateX(0); }
+.curves-drawer .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.curves-drawer .drawer-title {
+    font-family: 'Consolas', 'Monaco', ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--accent);
+    word-break: break-all;
+}
+.curves-drawer .drawer-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-dim);
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 0 6px;
+}
+.curves-drawer .drawer-close:hover { color: var(--accent); }
+.curves-drawer .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+}
+.curves-drawer .drawer-body .placeholder {
+    color: var(--text-dim);
+    font-size: 0.88em;
+    padding: 20px 0;
+    text-align: center;
+}
+.curves-drawer .plot-container {
+    width: 100%;
+    height: 280px;
+    margin-bottom: 14px;
+}
+
+/* US-014 quarantine — TransNeXt rows pending hardware. Muted purple +
+   dashed border distinguishes "deliberately deferred" from "active". */
+.status-pill.deferred {
+    color: var(--purple);
+    border-color: var(--purple);
+    border-style: dashed;
+    background: rgba(179, 157, 219, 0.08);
+}
+.exp-row.deferred { opacity: 0.62; }
+.exp-row.deferred:hover { opacity: 0.92; }
 
 /* Level badge — US-007 */
 .level-badge {
@@ -402,8 +528,12 @@ _JS = r"""
     const LS_ACTIVE_PHASE = 'final_exp.active_phase';
     const LS_FILTERS_PREFIX = 'final_exp.filters.';
     const PHASES = ['A', 'B', 'C'];
-    const POLL_INTERVAL_MS = 30000;
-    const STALE_THRESHOLD_MS = 120000; // visibility-paused > 2 min -> orange
+    // US-019: 10-minute polling cadence. The aggregator pushes per-cell
+    // updates after every Trainer.fit (incremental --cell mode), so the
+    // dashboard does NOT need a tight polling loop — once every 10 min is
+    // sufficient and avoids burning CPU on an idle tab.
+    const POLL_INTERVAL_MS = 600000;
+    const STALE_THRESHOLD_MS = 1800000; // visibility-paused > 30 min -> orange
 
     const state = {
         rows: [],
@@ -464,8 +594,36 @@ _JS = r"""
                '" title="' + tip + '">' + label + caption + '</span>';
     }
 
-    function statusPillHtml(status) {
+    function visualCoreHtml(row) {
+        // US-017: lazy-loaded side-by-side Original|Degraded preview.
+        // Renders a tooltip placeholder when the PNG is not yet on disk.
+        if (!row.visual_core) {
+            return '<span class="visual-core-missing" title="Visual Core PNG not yet rendered — run scripts/refresh_trackers.py">—</span>';
+        }
+        const alt = 'Original | Degraded preview for ' + row.tag;
+        return '<img class="visual-core-thumb" loading="lazy" decoding="async" ' +
+               'src="' + row.visual_core + '" alt="' + alt + '" title="' + alt + '">';
+    }
+
+    function historyIndicatorHtml(row) {
+        // US-018: show 📈 on rows with a learning curve, ▫ otherwise. Click
+        // is bound at the <tr> level (any cell click opens the drawer).
+        if (row.has_history) {
+            return '<span class="history-indicator" title="Click row to see learning curves">📈</span>';
+        }
+        return '<span class="history-indicator absent" title="No learning curves yet — cell is ' +
+               row.status + '">▫</span>';
+    }
+
+    function statusPillHtml(status, row) {
         const cls = status.toLowerCase();
+        if (row && row.quarantined) {
+            const reason = row.quarantine_reason || 'Quarantined';
+            const tip = 'Deferred &mdash; ' + reason +
+                        ' (US-014: excluded from execution)';
+            return '<span class="status-pill deferred" title="' + tip +
+                   '">Deferred &middot; ' + reason + '</span>';
+        }
         return '<span class="status-pill ' + cls + '">' + status + '</span>';
     }
 
@@ -498,13 +656,15 @@ _JS = r"""
                 '<td>' + escapeHtml(row.dataset) + '</td>' +
                 '<td>' + escapeHtml(row.phase) + '</td>' +
                 '<td>' + levelBadgeHtml(row) + '</td>' +
-                '<td>' + statusPillHtml(row.status) + '</td>' +
+                '<td>' + visualCoreHtml(row) + '</td>' +
+                '<td>' + statusPillHtml(row.status, row) + '</td>' +
                 '<td class="num-cell acc-cell ' + accClass(row.val_acc) + '">' +
                     fmtAcc(row.val_acc) + '</td>' +
                 '<td class="num-cell">' +
                     (row.epochs_run !== null && row.epochs_run !== undefined ? row.epochs_run : '—') +
                 '</td>' +
-                '<td class="num-cell">' + fmtRuntime(row.runtime_s) + '</td>'
+                '<td class="num-cell">' + fmtRuntime(row.runtime_s) + '</td>' +
+                '<td>' + historyIndicatorHtml(row) + '</td>'
             );
             frag.appendChild(tr);
         });
@@ -515,7 +675,7 @@ _JS = r"""
         const out = { A: {}, B: {}, C: {} };
         PHASES.forEach(function (p) {
             out[p] = { total: 0, pending: 0, running: 0, complete: 0, failed: 0,
-                       best_val_acc: null };
+                       deferred: 0, best_val_acc: null };
         });
         rows.forEach(function (r) {
             const c = out[r.phase];
@@ -543,6 +703,7 @@ _JS = r"""
         setStat('stat-running',  c.running !== undefined ? c.running : '—');
         setStat('stat-complete', c.complete !== undefined ? c.complete : '—');
         setStat('stat-failed',   c.failed !== undefined ? c.failed : '—');
+        setStat('stat-deferred', c.deferred !== undefined ? c.deferred : '—');
         setStat('stat-best',     c.best_val_acc === null || c.best_val_acc === undefined
                                   ? '—' : fmtAcc(c.best_val_acc));
         // Global "All 186" indicator
@@ -687,17 +848,41 @@ _JS = r"""
         return Math.floor(s / 3600) + 'h ago';
     }
 
+    function fmtCountdown(ms) {
+        if (ms < 0) ms = 0;
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const r = s - m * 60;
+        return m + ':' + (r < 10 ? '0' + r : r);
+    }
+
     function updateRelTs() {
         const el = document.getElementById('ts-polled');
         if (!el) return;
         if (state.lastPolledMs === null) {
             el.textContent = '—';
             el.className = '';
+        } else {
+            const delta = Date.now() - state.lastPolledMs;
+            el.textContent = fmtRel(delta);
+            el.className = (delta > STALE_THRESHOLD_MS) ? 'ts-stale' : 'ts-fresh';
+        }
+        // US-019: countdown to the next scheduled poll. While the tab is
+        // hidden the timer is paused (visibilitychange handler); reflect
+        // that with "(paused)" instead of a stale countdown.
+        const cd = document.getElementById('ts-countdown');
+        if (!cd) return;
+        if (state.pollTimer === null) {
+            cd.textContent = '(paused)';
             return;
         }
-        const delta = Date.now() - state.lastPolledMs;
-        el.textContent = fmtRel(delta);
-        el.className = (delta > STALE_THRESHOLD_MS) ? 'ts-stale' : 'ts-fresh';
+        if (state.lastPolledMs === null) {
+            cd.textContent = '—';
+            return;
+        }
+        const elapsed = Date.now() - state.lastPolledMs;
+        const remaining = POLL_INTERVAL_MS - elapsed;
+        cd.textContent = fmtCountdown(remaining);
     }
 
     // -- Data load + polling (US-013) -------------------------------------
@@ -804,6 +989,172 @@ _JS = r"""
         if (clr) clr.addEventListener('click', clearAllFilters);
     }
 
+    // -- US-018: Lazy learning-curve drawer ------------------------------
+
+    const HISTORY_CACHE = new Map();   // tag -> parsed history doc
+    const HISTORY_PENDING = new Map(); // tag -> in-flight Promise
+
+    function findRowByTag(tag) {
+        for (let i = 0; i < state.rows.length; i++) {
+            if (state.rows[i].tag === tag) return state.rows[i];
+        }
+        return null;
+    }
+
+    function openCurvesDrawer(tag) {
+        const row = findRowByTag(tag);
+        if (!row) return;
+        const drawer = document.getElementById('curves-drawer');
+        const titleEl = document.getElementById('drawer-title');
+        const bodyEl = document.getElementById('drawer-body');
+        if (!drawer || !titleEl || !bodyEl) return;
+        titleEl.textContent = tag;
+        drawer.classList.add('open');
+
+        // Pending / Deferred / Failed rows: show the placeholder, don't fetch.
+        if (!row.has_history) {
+            bodyEl.innerHTML =
+                '<div class="placeholder">No learning curves yet — cell is ' +
+                escapeHtml(row.status) + '.</div>';
+            return;
+        }
+
+        // Cached: instant re-render, no network.
+        if (HISTORY_CACHE.has(tag)) {
+            renderCurves(bodyEl, HISTORY_CACHE.get(tag));
+            return;
+        }
+
+        bodyEl.innerHTML = '<div class="placeholder">Loading learning curves…</div>';
+
+        if (!HISTORY_PENDING.has(tag)) {
+            const url = './runs/final/' + tag + '/history.json?t=' + Date.now();
+            const p = fetch(url, { cache: 'no-store' })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function (doc) {
+                    HISTORY_CACHE.set(tag, doc);
+                    return doc;
+                });
+            HISTORY_PENDING.set(tag, p);
+        }
+        HISTORY_PENDING.get(tag)
+            .then(function (doc) {
+                // The drawer may have been closed or switched to another
+                // tag before the fetch resolved; only render if still on tag.
+                if (titleEl.textContent === tag && drawer.classList.contains('open')) {
+                    renderCurves(bodyEl, doc);
+                }
+            })
+            .catch(function (err) {
+                if (titleEl.textContent === tag) {
+                    bodyEl.innerHTML =
+                        '<div class="placeholder">Failed to load history: ' +
+                        escapeHtml(err.message) + '</div>';
+                }
+            })
+            .finally(function () {
+                HISTORY_PENDING.delete(tag);
+            });
+    }
+
+    function closeCurvesDrawer() {
+        const drawer = document.getElementById('curves-drawer');
+        if (drawer) drawer.classList.remove('open');
+    }
+
+    function renderCurves(bodyEl, doc) {
+        // If Plotly isn't available (offline file://, ad-blocker), fall back
+        // to a tiny SVG-free table so the drawer still has *something*.
+        if (typeof window.Plotly === 'undefined') {
+            renderCurvesFallback(bodyEl, doc);
+            return;
+        }
+        bodyEl.innerHTML =
+            '<div id="plot-loss" class="plot-container"></div>' +
+            '<div id="plot-acc"  class="plot-container"></div>';
+        const hist = (doc && doc.history) || [];
+        const epochs = hist.map(function (r) { return r.epoch; });
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor:  'rgba(0,0,0,0)',
+            font: { color: '#e8eaf0', size: 11 },
+            margin: { l: 48, r: 16, t: 32, b: 32 },
+            xaxis: { title: 'Epoch', gridcolor: '#2a3040' },
+            yaxis: { gridcolor: '#2a3040' },
+            legend: { orientation: 'h', y: 1.16 },
+        };
+        const cfg = { displayModeBar: false, responsive: true };
+        window.Plotly.newPlot('plot-loss', [
+            { x: epochs, y: hist.map(function (r) { return r.train_loss; }),
+              name: 'train_loss', mode: 'lines+markers',
+              line: { color: '#4fc3f7' } },
+            { x: epochs, y: hist.map(function (r) { return r.val_loss; }),
+              name: 'val_loss',   mode: 'lines+markers',
+              line: { color: '#ff7043' } },
+        ], Object.assign({}, layout, { title: 'Loss' }), cfg);
+        window.Plotly.newPlot('plot-acc', [
+            { x: epochs, y: hist.map(function (r) { return r.train_acc; }),
+              name: 'train_acc', mode: 'lines+markers',
+              line: { color: '#9ccc65' } },
+            { x: epochs, y: hist.map(function (r) { return r.val_acc; }),
+              name: 'val_acc',   mode: 'lines+markers',
+              line: { color: '#81c784' } },
+        ], Object.assign({}, layout, { title: 'Accuracy' }), cfg);
+    }
+
+    function renderCurvesFallback(bodyEl, doc) {
+        const hist = (doc && doc.history) || [];
+        const rows = hist.map(function (r) {
+            return '<tr><td>' + r.epoch +
+                '</td><td>' + (r.train_loss === null ? '—' : r.train_loss.toFixed(4)) +
+                '</td><td>' + (r.val_loss   === null ? '—' : r.val_loss.toFixed(4)) +
+                '</td><td>' + (r.train_acc  === null ? '—' : (r.train_acc * 100).toFixed(2) + '%') +
+                '</td><td>' + (r.val_acc    === null ? '—' : (r.val_acc   * 100).toFixed(2) + '%') +
+                '</td></tr>';
+        }).join('');
+        bodyEl.innerHTML =
+            '<div class="placeholder">Plotly not loaded — showing raw history.</div>' +
+            '<table class="exp-table"><thead><tr><th>Ep</th><th>train_loss</th><th>val_loss</th><th>train_acc</th><th>val_acc</th></tr></thead><tbody>' +
+            rows + '</tbody></table>';
+    }
+
+    function bindCurvesDrawer() {
+        // Clicks bubble from <tr>; open the drawer for that row's tag.
+        const tbody = document.getElementById('exp-tbody');
+        if (tbody) {
+            tbody.addEventListener('click', function (ev) {
+                const tr = ev.target.closest('tr.exp-row');
+                if (!tr || !tr.dataset.tag) return;
+                openCurvesDrawer(tr.dataset.tag);
+            });
+        }
+        const closeBtn = document.getElementById('drawer-close');
+        if (closeBtn) closeBtn.addEventListener('click', closeCurvesDrawer);
+        // Esc closes the drawer.
+        document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape') closeCurvesDrawer();
+        });
+    }
+
+    function bindManualRefresh() {
+        // US-019: "🔄 Refresh now" forces an immediate JSON fetch but does
+        // NOT touch the 10-min polling cadence (so an impatient user can't
+        // accidentally turn the dashboard into a tight polling loop).
+        const btn = document.getElementById('manual-refresh');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            btn.textContent = '⟳ refreshing…';
+            loadJsonOnce().finally(function () {
+                btn.disabled = false;
+                btn.textContent = '🔄 Refresh now';
+            });
+        });
+    }
+
     function init() {
         // Restore active phase + per-phase filters from localStorage.
         let saved = 'A';
@@ -816,6 +1167,8 @@ _JS = r"""
 
         bindTabs();
         bindChips();
+        bindManualRefresh();
+        bindCurvesDrawer();
         bindVisibility();
 
         // Bootstrap from inline data (works on file://).
@@ -871,7 +1224,7 @@ def _html_template(initial_doc_json: str) -> str:
 
     chip_model   = _chip_html("model",   "MODEL",   MODELS)
     chip_dataset = _chip_html("dataset", "DATASET", DATASETS)
-    chip_status  = _chip_html("status",  "STATUS",  ("Pending", "Running", "Complete", "Failed"))
+    chip_status  = _chip_html("status",  "STATUS",  ("Pending", "Running", "Complete", "Failed", "Deferred"))
     chip_axis    = _chip_html("axis",    "AXIS",    AXES)
 
     # JSON is embedded inside <script type="application/json"> so browsers
@@ -886,13 +1239,21 @@ def _html_template(initial_doc_json: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Final Experiment Dashboard — 186 cells</title>
 <style>{_CSS}</style>
+<!-- US-018: Plotly is loaded with `defer` and used only when a row is
+     clicked. Initial paint does NOT depend on the CDN, so an offline /
+     CDN-blocked environment falls back to a raw-numbers table. -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
 </head>
 <body>
 <div class="header">
   <h1>🔬 Final Experiment Dashboard</h1>
   <div class="subtitle">186-cell Research Phase &middot; 3 architectures &middot; 2 datasets &middot; 5-level degradation curve</div>
   <div class="timestamps">
-    Generated: <span id="ts-generated">—</span> &middot; Last polled: <span id="ts-polled">—</span>
+    Generated: <span id="ts-generated">—</span>
+    &middot; Last polled: <span id="ts-polled">—</span>
+    &middot; Next poll in: <span id="ts-countdown">—</span>
+    <button type="button" id="manual-refresh" class="manual-refresh-btn"
+            title="Force an immediate fetch (US-019). Does not change the 10-minute auto-poll cadence.">🔄 Refresh now</button>
   </div>
 </div>
 
@@ -902,6 +1263,7 @@ def _html_template(initial_doc_json: str) -> str:
   <div class="stat-card"><div class="stat-value running"   id="stat-running">—</div>  <div class="stat-label">Running</div></div>
   <div class="stat-card"><div class="stat-value complete"  id="stat-complete">—</div> <div class="stat-label">Complete</div></div>
   <div class="stat-card"><div class="stat-value failed"    id="stat-failed">—</div>   <div class="stat-label">Failed</div></div>
+  <div class="stat-card"><div class="stat-value deferred"  id="stat-deferred">—</div> <div class="stat-label">Deferred</div></div>
   <div class="stat-card"><div class="stat-value"           id="stat-best">—</div>     <div class="stat-label">Best val_acc</div></div>
   <div class="stat-card"><div class="stat-value"           id="stat-all">—</div>      <div class="stat-label">All Cells</div></div>
 </div>
@@ -934,15 +1296,30 @@ def _html_template(initial_doc_json: str) -> str:
         <th>Dataset</th>
         <th>Phase</th>
         <th>Level</th>
+        <th>Visual</th>
         <th>Status</th>
         <th>val_acc</th>
         <th>Epochs</th>
         <th>Runtime</th>
+        <th>Curves</th>
       </tr>
     </thead>
     <tbody id="exp-tbody"></tbody>
   </table>
 </div>
+
+<!-- US-018: lazy-loaded learning-curve drawer. Hidden via CSS transform
+     until a row is clicked; populated by `openCurvesDrawer(tag)`. -->
+<aside id="curves-drawer" class="curves-drawer" aria-hidden="true">
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawer-title">—</span>
+    <button type="button" class="drawer-close" id="drawer-close"
+            aria-label="Close learning curves drawer">×</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <div class="placeholder">Click a row to load learning curves.</div>
+  </div>
+</aside>
 
 <script type="application/json" id="initial-data">{safe_json}</script>
 <script>{_JS}</script>
@@ -1018,7 +1395,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(
             f"final_exp_json: {json_summary['rows']} rows "
             f"(pending={c['pending']}, running={c['running']}, "
-            f"complete={c['complete']}, failed={c['failed']}) "
+            f"complete={c['complete']}, failed={c['failed']}, "
+            f"deferred={c.get('deferred', 0)}) "
             f"-> {json_summary['out']}"
         )
     except Exception as e:  # noqa: BLE001 — keep HTML render alive on aggregator failure

@@ -84,7 +84,7 @@ def _check_column_headers_in_order() -> None:
         runs_root.mkdir(parents=True)
         build_dashboard(out_path=out, runs_root=runs_root)
         body = out.read_text(encoding="utf-8")
-    expected = ["Tag", "Model", "Dataset", "Phase", "Level", "Status", "val_acc", "Epochs", "Runtime"]
+    expected = ["Tag", "Model", "Dataset", "Phase", "Level", "Visual", "Status", "val_acc", "Epochs", "Runtime", "Curves"]
     positions = [body.index(f"<th>{h}</th>") for h in expected]
     assert positions == sorted(positions), f"column headers out of order: {expected} -> {positions}"
     print(f"OK [headers] -- {len(expected)} columns in order: {' | '.join(expected)}.")
@@ -150,7 +150,7 @@ def _check_chip_filter_groups_present() -> None:
     expected_values = (
         "resnet50", "densenet121", "transnext_base",
         "cifar10", "mnist",
-        "Pending", "Running", "Complete", "Failed",
+        "Pending", "Running", "Complete", "Failed", "Deferred",
         "resolution", "blur", "noise", "saturation", "salt_pepper",
     )
     for v in expected_values:
@@ -192,6 +192,118 @@ def _check_no_legacy_markup_leaks() -> None:
     print("OK [clean] -- no legacy phase-section / detail-row / PSNR-SSIM / gate-verdict leakage.")
 
 
+def _check_polling_cadence_is_10_minutes() -> None:
+    """US-019: dashboard polling cadence must be 600,000 ms (10 min).
+
+    Static-grep the rendered HTML for the constant assignment so a future
+    edit can't silently drop us back to 30 s without breaking the test."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert "POLL_INTERVAL_MS = 600000" in body, (
+        "POLL_INTERVAL_MS must be 600000 (10 min) per US-019"
+    )
+    # Belt-and-braces: 30000 should NOT be the assigned value any more.
+    assert "POLL_INTERVAL_MS = 30000" not in body, (
+        "stale 30 s polling cadence still present"
+    )
+    print("OK [polling] -- POLL_INTERVAL_MS=600000 (10 min) per US-019.")
+
+
+def _check_manual_refresh_and_countdown_pill_present() -> None:
+    """US-019: header must surface a 'Next poll in' countdown + a manual
+    'Refresh now' button. The button forces a fetch via `loadJsonOnce()`
+    without altering the polling timer."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert 'id="ts-countdown"' in body, "missing countdown span"
+    assert 'id="manual-refresh"' in body, "missing manual-refresh button"
+    assert "Refresh now" in body, "manual-refresh button label missing"
+    assert "fmtCountdown" in body, "JS must define fmtCountdown helper"
+    assert "bindManualRefresh" in body, "JS must wire the manual-refresh click handler"
+    # The button must call loadJsonOnce, not setInterval — otherwise it
+    # could create a parallel polling loop.
+    bind_idx = body.index("bindManualRefresh")
+    bind_block = body[bind_idx:bind_idx + 600]
+    assert "loadJsonOnce" in bind_block, "manual refresh must call loadJsonOnce"
+    assert "setInterval" not in bind_block, "manual refresh must NOT install a new polling interval"
+    print("OK [manual-refresh] -- countdown pill + Refresh-now button + fmtCountdown wired.")
+
+
+def _check_curves_drawer_lazy_loaded() -> None:
+    """US-018: dashboard ships a learning-curve drawer that
+    (a) declares Plotly via `defer` so initial paint is unblocked,
+    (b) does NOT fetch any history.json from the bootstrap path,
+    (c) wires a row-click handler that calls openCurvesDrawer,
+    (d) caches fetched payloads in HISTORY_CACHE."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+
+    # CDN load tag must be `defer` so it does not block first paint.
+    assert "cdn.plot.ly/plotly" in body, "Plotly CDN script missing"
+    assert "<script src=\"https://cdn.plot.ly/plotly" in body
+    assert "defer></script>" in body, "Plotly script must be deferred"
+
+    # Drawer markup + JS hooks present.
+    assert 'id="curves-drawer"' in body
+    assert 'id="drawer-title"' in body
+    assert 'id="drawer-body"' in body
+    assert 'id="drawer-close"' in body
+    assert "openCurvesDrawer" in body
+    assert "closeCurvesDrawer" in body
+    assert "HISTORY_CACHE" in body, "JS must cache fetched history payloads"
+    assert "renderCurvesFallback" in body, "fallback for offline/no-Plotly required"
+
+    # Initial paint must NOT fetch any history.json. The string 'history.json'
+    # may legitimately appear in the open-handler URL template, but the
+    # `init` block (and the polling path) must not contain it.
+    init_idx = body.find("function init()")
+    assert init_idx > 0
+    init_block = body[init_idx:init_idx + 2400]
+    assert "history.json" not in init_block, (
+        "init() must NOT fetch history.json; it is opened lazily on row click"
+    )
+
+    # has_history pill rendered.
+    assert "historyIndicatorHtml" in body
+    assert "history-indicator" in body
+    print("OK [curves-drawer] -- Plotly deferred; drawer markup; row-click + cache wired.")
+
+
+def _check_visual_core_column_renders() -> None:
+    """US-017: Visual column renders an <img loading="lazy"> when row.visual_core
+    is non-null, and a missing-state placeholder otherwise. The renderer also
+    declares the CSS class for the thumbnail."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    # JS function + classes must be present.
+    assert "visualCoreHtml" in body, "JS must define visualCoreHtml renderer (US-017)"
+    assert "visual-core-thumb" in body, "missing .visual-core-thumb class"
+    assert "visual-core-missing" in body, "missing .visual-core-missing placeholder"
+    assert 'loading="lazy"' in body, "Visual Core <img> must use loading='lazy'"
+    # The Visual <th> sits between Level and Status in the column order.
+    pos_level = body.index("<th>Level</th>")
+    pos_visual = body.index("<th>Visual</th>")
+    pos_status = body.index("<th>Status</th>")
+    assert pos_level < pos_visual < pos_status, "Visual column must sit between Level and Status"
+    print("OK [visual-core] -- Visual column rendered with lazy <img> + missing placeholder.")
+
+
 def _check_thumbs_dir_back_compat() -> None:
     """build_dashboard must accept (and ignore) thumbs_dir for refresh_trackers back-compat."""
     with tempfile.TemporaryDirectory() as td:
@@ -215,6 +327,10 @@ def main() -> int:
     _check_chip_filter_groups_present()
     _check_polling_and_timestamp_ui()
     _check_no_legacy_markup_leaks()
+    _check_polling_cadence_is_10_minutes()
+    _check_manual_refresh_and_countdown_pill_present()
+    _check_visual_core_column_renders()
+    _check_curves_drawer_lazy_loaded()
     _check_thumbs_dir_back_compat()
     print("\nAll dashboard scaffold checks passed.")
     return 0

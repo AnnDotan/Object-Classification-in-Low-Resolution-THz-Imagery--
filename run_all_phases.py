@@ -21,6 +21,7 @@ import time
 import json
 import argparse
 from pathlib import Path
+from typing import Optional
 
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 
@@ -288,25 +289,39 @@ def _required_hparams_present(matrix) -> tuple[bool, list[str]]:
     return (not missing, missing)
 
 
-def _refresh_final_exp_md() -> None:
-    """Best-effort call to scripts/update_final_exp.py after each cell.
-    Missing script -> warn-and-continue (acceptance: 'no crash-stop')."""
-    script = Path("scripts/update_final_exp.py")
-    if not script.exists():
-        # Don't spam every iteration — print once.
-        if not getattr(_refresh_final_exp_md, "_warned", False):
-            print(f"[WARN] {script} not found; Final_Exp.md will not auto-refresh.",
-                  file=sys.stderr)
-            _refresh_final_exp_md._warned = True
-        return
+def _load_refresh_trackers():
+    """Load scripts/refresh_trackers.py via importlib (no scripts/__init__.py)."""
+    import importlib.util
+    src = Path(__file__).resolve().parent / "scripts" / "refresh_trackers.py"
+    spec = importlib.util.spec_from_file_location("scripts_refresh_trackers", src)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_sync_trackers_git():
+    import importlib.util
+    src = Path(__file__).resolve().parent / "scripts" / "sync_trackers_git.py"
+    spec = importlib.util.spec_from_file_location("scripts_sync_trackers_git", src)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _refresh_trackers_default(cell: Optional[str] = None) -> None:
+    """Default per-cell refresh hook (US-019).
+
+    When `cell` is provided, runs the incremental refresh path: patches only
+    that row in Final_Exp.json and rebuilds the HTML; MD regen is skipped.
+    Errors are logged but never raised — mirrors the previous behavior.
+    """
     try:
-        import subprocess
-        subprocess.run(
-            [sys.executable, str(script)],
-            check=False, capture_output=True, timeout=30,
-        )
+        mod = _load_refresh_trackers()
+        result = mod.refresh_all(cell=cell) if cell else mod.refresh_all()
+        for err in result.get("errors", []):
+            print(f"[refresh][WARN] {err}", file=sys.stderr)
     except Exception as e:
-        print(f"[WARN] Final_Exp.md refresh failed: {e}", file=sys.stderr)
+        print(f"[refresh][WARN] refresh_all raised: {e}", file=sys.stderr)
 
 
 def run_final_plan(
@@ -318,11 +333,16 @@ def run_final_plan(
     engine: str = "lightning",
     run_cell_fn=None,           # injectable for testing
     tune_all_fn=None,           # injectable for testing
-    refresh_fn=None,            # injectable for testing
+    refresh_fn=None,            # injectable for testing (US-016: refreshes BOTH trackers)
+    phase_boundary_fn=None,     # injectable for testing (US-016: SYNCHRONIZER push)
 ) -> int:
     """Iterate the 186-cell matrix, dispatching each cell via run_cell.
 
     Returns 0 if every cell completed (or was skipped), 1 if any cell failed.
+
+    Per-cell: refresh_fn() updates Final_Exp.md AND Final_Exp.html.
+    Per-phase boundary: phase_boundary_fn(phase, n_cells) commits + pushes
+    tracker files via SYNCHRONIZER (fail-soft).
     """
     assert mode != "pilot", (
         "--plan final --mode pilot is rejected per CLAUDE.md "
@@ -333,7 +353,10 @@ def run_final_plan(
     if run_cell_fn is None:
         from run_systematic import run_cell as run_cell_fn
     if refresh_fn is None:
-        refresh_fn = _refresh_final_exp_md
+        refresh_fn = _refresh_trackers_default
+    if phase_boundary_fn is None:
+        _sync = _load_sync_trackers_git()
+        phase_boundary_fn = _sync.commit_and_push_phase_boundary
     from src.experiments.matrix import build_final_matrix
 
     matrix = build_final_matrix()
@@ -341,6 +364,17 @@ def run_final_plan(
         if phase not in FINAL_PHASES:
             raise ValueError(f"unknown phase {phase!r}; expected one of {FINAL_PHASES} or 'all'")
         matrix = [c for c in matrix if c.phase == phase]
+
+    # US-014 quarantine guard: TransNeXt rows are deferred pending hardware.
+    # Skip them so the runner never dispatches a TransNeXt cell, but keep the
+    # matrix/186 denominator intact in the trackers (the aggregator marks
+    # those rows "Deferred" via src.experiments.run_status.is_quarantined).
+    from src.experiments.run_status import is_quarantined as _is_quarantined
+    quarantined = [c for c in matrix if _is_quarantined(c.model)]
+    if quarantined:
+        print(f"[quarantine] skipping {len(quarantined)} TransNeXt cell(s) "
+              f"(US-014: pending hardware)", file=sys.stderr)
+        matrix = [c for c in matrix if not _is_quarantined(c.model)]
 
     if tune_first:
         all_present, missing = _required_hparams_present(matrix)
@@ -365,6 +399,56 @@ def run_final_plan(
           f"skip_existing={skip_existing}, n={len(matrix)}")
     print("=" * 72)
 
+    # Phase boundary tracker: count attempted (run + skipped) cells per phase so
+    # we can fire commit_and_push_phase_boundary once each phase reaches its
+    # full expected count.
+    phase_attempted: dict[str, int] = {"A": 0, "B": 0, "C": 0}
+    phase_total: dict[str, int] = {"A": 0, "B": 0, "C": 0}
+    for c in matrix:
+        phase_total[c.phase] += 1
+
+    # SIGINT handler: on Ctrl-C, drop an INTERRUPTED sentinel under the
+    # currently-running cell (US-016) so detect_status flips it to Failed,
+    # then flush a tracker refresh before re-raising so the dashboard
+    # reflects the partial state.
+    import signal
+    from src.experiments.run_status import INTERRUPTED_SENTINEL
+    _interrupted = {"flag": False}
+    _current_cell: dict[str, Optional[str]] = {"tag": None}
+    def _on_sigint(_sig, _frm):
+        if _interrupted["flag"]:
+            return
+        _interrupted["flag"] = True
+        active = _current_cell["tag"]
+        if active:
+            sentinel = Path("runs") / "final" / active / INTERRUPTED_SENTINEL
+            try:
+                sentinel.parent.mkdir(parents=True, exist_ok=True)
+                sentinel.write_text(
+                    f"sigint at cell {active}\n", encoding="utf-8",
+                )
+                print(f"\n[run_all_phases] SIGINT — wrote {sentinel}",
+                      file=sys.stderr)
+            except OSError as e:
+                print(f"[run_all_phases][WARN] could not write sentinel: {e}",
+                      file=sys.stderr)
+        else:
+            print("\n[run_all_phases] SIGINT received between cells.",
+                  file=sys.stderr)
+        try:
+            # Incremental refresh on SIGINT (US-019): patch only the
+            # interrupted cell's row so the dashboard surfaces Failed
+            # without re-scanning the full 186-cell matrix.
+            if active:
+                refresh_fn(cell=active)
+            else:
+                refresh_fn()
+        except Exception as e:
+            print(f"[run_all_phases][WARN] refresh on SIGINT raised: {e}",
+                  file=sys.stderr)
+        raise KeyboardInterrupt
+    _prev_handler = signal.signal(signal.SIGINT, _on_sigint)
+
     results: list[dict] = []
     failed = 0
     skipped = 0
@@ -374,10 +458,22 @@ def run_final_plan(
             print(f"  [SKIP {i}/{len(matrix)}] {spec.tag} — metrics.json already complete")
             results.append({"tag": spec.tag, "phase": spec.phase, "status": "SKIPPED"})
             skipped += 1
+            # Still count toward phase boundary so the SYNCHRONIZER fires when
+            # the LAST phase cell is reached, even if it was skipped.
+            phase_attempted[spec.phase] += 1
+            if phase_attempted[spec.phase] == phase_total[spec.phase]:
+                try:
+                    sync_result = phase_boundary_fn(spec.phase, phase_total[spec.phase])
+                    if sync_result.get("errors"):
+                        for err in sync_result["errors"]:
+                            print(f"[sync][WARN] {err}", file=sys.stderr)
+                except Exception as e:
+                    print(f"[sync][WARN] phase_boundary_fn raised: {e}", file=sys.stderr)
             continue
 
         print(f"\n  [{i}/{len(matrix)}] dispatch {spec.tag} (phase {spec.phase}) ...")
         t0 = time.time()
+        _current_cell["tag"] = spec.tag
         try:
             run_cell_fn(spec.tag, mode=mode, engine=engine)
             dt = time.time() - t0
@@ -396,12 +492,41 @@ def run_final_plan(
                 "time": f"{dt:.1f}s",
             })
             # Continue to next cell — no crash-stop.
+        finally:
+            _current_cell["tag"] = None
 
-        # Refresh Final_Exp.md after every cell (success OR fail), best-effort.
+        # Incremental tracker refresh after every cell (US-019): patch only
+        # this row's hydration in Final_Exp.json + rebuild the HTML; MD is
+        # skipped here because the next phase boundary (or a manual full
+        # refresh) will regenerate it.
         try:
-            refresh_fn()
+            refresh_fn(cell=spec.tag)
+        except TypeError:
+            # Test stubs may not accept the kwarg; fall back to full refresh.
+            try:
+                refresh_fn()
+            except Exception as e:
+                print(f"[WARN] tracker refresh raised: {e}", file=sys.stderr)
         except Exception as e:
-            print(f"[WARN] Final_Exp.md refresh raised: {e}", file=sys.stderr)
+            print(f"[WARN] tracker refresh raised: {e}", file=sys.stderr)
+
+        # Phase boundary check: if this cell completed the phase, fire SYNCHRONIZER.
+        phase_attempted[spec.phase] += 1
+        if phase_attempted[spec.phase] == phase_total[spec.phase]:
+            try:
+                sync_result = phase_boundary_fn(spec.phase, phase_total[spec.phase])
+                if sync_result.get("errors"):
+                    for err in sync_result["errors"]:
+                        print(f"[sync][WARN] {err}", file=sys.stderr)
+            except Exception as e:
+                # phase_boundary_fn is supposed to be fail-soft, but defend anyway.
+                print(f"[sync][WARN] phase_boundary_fn raised: {e}", file=sys.stderr)
+
+    # Restore prior SIGINT handler.
+    try:
+        signal.signal(signal.SIGINT, _prev_handler)
+    except Exception:
+        pass
 
     completed = sum(1 for r in results if r["status"] == "OK")
     print("\n" + "=" * 72)

@@ -22,10 +22,16 @@ from typing import Literal, TypedDict
 SCHEMA_VERSION: Literal[1] = 1
 
 Phase = Literal["A", "B", "C"]
-Status = Literal["Pending", "Running", "Complete", "Failed"]
+Status = Literal["Pending", "Running", "Complete", "Failed", "Deferred"]
 
 PHASES: tuple[Phase, ...] = ("A", "B", "C")
-STATUSES: tuple[Status, ...] = ("Pending", "Running", "Complete", "Failed")
+# `"Deferred"` (US-014) is for cells whose model is quarantined pending
+# hardware (e.g. TransNeXt). Deferred cells stay in the matrix so the 186
+# denominator is preserved, but they are excluded from execution-driving
+# iterators in `run_all_phases.py` and rendered with a distinct badge.
+STATUSES: tuple[Status, ...] = (
+    "Pending", "Running", "Complete", "Failed", "Deferred",
+)
 
 
 class ParamsDict(TypedDict):
@@ -52,6 +58,21 @@ class FinalExpRow(TypedDict):
     runtime_s: float | None
     started_at: str | None
     finished_at: str | None
+    # US-014 quarantine: True when the cell is excluded from execution
+    # (e.g. TransNeXt rows pending hardware). `quarantine_reason` is a
+    # short human-readable string the dashboard renders in the badge.
+    quarantined: bool
+    quarantine_reason: str | None
+    # US-017 Visual Core: relative path (from artifacts/Final_Exp.html) to
+    # the side-by-side Original|Degraded preview PNG produced by
+    # `src/tools/render_cell_thumbs.py`. None when the PNG is missing
+    # (e.g. before the renderer has run, or in a torch-free environment).
+    visual_core: str | None
+    # US-018: True iff `runs/final/<tag>/history.json` exists. The dashboard
+    # uses this to decide whether to render a 📈 indicator on the row and
+    # whether clicking should attempt the lazy fetch. Aggregator never
+    # opens the file; presence is checked via Path.exists().
+    has_history: bool
 
 
 class CountsDict(TypedDict):
@@ -60,6 +81,7 @@ class CountsDict(TypedDict):
     running: int
     complete: int
     failed: int
+    deferred: int
 
 
 class FinalExpDoc(TypedDict):

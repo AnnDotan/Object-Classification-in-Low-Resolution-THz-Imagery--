@@ -25,6 +25,7 @@ from .module import THzClassifier
 from .datamodule import THzDataModule
 from .callbacks import (
     DashboardRefreshCallback,
+    HistoryJSONCallback,
     LegacyCheckpointCallback,
     LegacyJSONMetricsCallback,
     LegacyMetricsCSVCallback,
@@ -228,6 +229,8 @@ def run_experiment(
     callbacks = [
         LegacyMetricsCSVCallback(run_dir),
         LegacyJSONMetricsCallback(run_dir),
+        # US-018: per-epoch learning curves for the dashboard's lazy Plotly drawer.
+        HistoryJSONCallback(run_dir, tag=run_name),
         LegacyCheckpointCallback(run_dir, run_meta),
         LogSampleImagesCallback(run_dir),
         DashboardRefreshCallback(),

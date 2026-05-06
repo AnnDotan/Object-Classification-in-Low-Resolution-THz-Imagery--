@@ -34,7 +34,7 @@ def _make_recorder():
 
     refreshes = [0]
 
-    def fake_refresh():
+    def fake_refresh(cell=None):
         refreshes[0] += 1
 
     return calls, refreshes, fake_run_cell, fake_refresh
@@ -85,7 +85,7 @@ def _check_pilot_mode_rejected() -> None:
         run_final_plan(
             phase="A", mode="pilot", skip_existing=False,
             run_cell_fn=lambda *a, **k: None,
-            refresh_fn=lambda: None,
+            refresh_fn=lambda cell=None: None,
         )
     except AssertionError as e:
         assert "pilot" in str(e).lower()
@@ -106,7 +106,7 @@ def _check_failure_does_not_crash_stop() -> None:
 
     refreshes = [0]
 
-    def fake_refresh():
+    def fake_refresh(cell=None):
         refreshes[0] += 1
 
     rc = run_final_plan(

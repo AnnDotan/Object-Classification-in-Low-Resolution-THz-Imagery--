@@ -37,6 +37,7 @@ import time
 import json
 import argparse
 from pathlib import Path
+from typing import Optional
 
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 
@@ -187,6 +188,81 @@ def _load_best_hparams(model: str, dataset: str) -> dict:
     return blob
 
 
+# Phase A frozen hyperparameters from CLAUDE.md "Training Hyperparameters" table.
+# Used as a fallback when artifacts/best_hparams/{model}_{dataset}.json is missing
+# AND the cell is Phase A (clean baseline). For Phase B/C, missing hparams remains
+# a hard error — Optuna tuning is mandatory there.
+PHASE_A_FROZEN_HPARAMS: dict[str, dict] = {
+    "resnet50": {
+        "head_lr": 1e-3,
+        "backbone_lr": 1e-4,
+        "weight_decay": 1e-4,
+        "label_smoothing": 0.1,
+        "warmup_epochs": 3,
+    },
+    "densenet121": {
+        "head_lr": 1e-3,
+        "backbone_lr": 1e-4,
+        "weight_decay": 1e-4,
+        "label_smoothing": 0.1,
+        "warmup_epochs": 2,
+    },
+    # TransNeXt sizes share the LP-style anchor — kept here for completeness but
+    # not exercised in the current Phase A scope (TransNeXt rows remain Pending
+    # per the active PRD until a stronger GPU is available).
+    "transnext_micro": {
+        "head_lr": 1e-3,
+        "backbone_lr": 0.0,
+        "weight_decay": 5e-2,
+        "label_smoothing": 0.0,
+        "warmup_epochs": 5,
+    },
+    "transnext_small": {
+        "head_lr": 1e-3,
+        "backbone_lr": 0.0,
+        "weight_decay": 5e-2,
+        "label_smoothing": 0.0,
+        "warmup_epochs": 5,
+    },
+    "transnext_base": {
+        "head_lr": 1e-3,
+        "backbone_lr": 0.0,
+        "weight_decay": 5e-2,
+        "label_smoothing": 0.0,
+        "warmup_epochs": 5,
+    },
+}
+
+
+def _load_hparams_for_cell(spec) -> dict:
+    """Load best_hparams for a CellSpec, with Phase A fallback to CLAUDE.md.
+
+    Resolution order:
+      1. ``artifacts/best_hparams/{model}_{dataset}.json`` if present (Optuna winner).
+      2. If absent AND ``spec.phase == 'A'`` AND model has frozen defaults:
+         return a synthetic blob carrying the CLAUDE.md frozen hparams.
+      3. Otherwise (Phase B/C, or unknown model in Phase A): re-raise the
+         original FileNotFoundError from _load_best_hparams.
+    """
+    path = Path("artifacts/best_hparams") / f"{spec.model}_{spec.dataset}.json"
+    if path.exists():
+        return _load_best_hparams(spec.model, spec.dataset)
+    if spec.phase == "A" and spec.model in PHASE_A_FROZEN_HPARAMS:
+        return {
+            "model": spec.model,
+            "dataset": spec.dataset,
+            "study_name": f"phase_a_frozen_{spec.model}_{spec.dataset}",
+            "best_value": None,
+            "best_params": dict(PHASE_A_FROZEN_HPARAMS[spec.model]),
+            "n_trials_completed": 0,
+            "priors_file_hash": None,
+            "phase": "A",
+            "level": None,
+            "source": "claude_md_frozen",
+        }
+    return _load_best_hparams(spec.model, spec.dataset)
+
+
 def _cell_config(spec, hparams: dict, mode: str) -> dict:
     """Build run_experiment kwargs from a CellSpec + best_hparams.
 
@@ -263,19 +339,52 @@ def _merge_metadata_into_metrics_json(
     metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
 
+def _measure_image_quality_for_cell(spec, run_dir: Path, n_samples: int = 256) -> Optional[str]:
+    """US-016: write `runs/final/<tag>/image_quality.json` after a cell trains.
+
+    Skipped for Phase A (clean) — PSNR/SSIM against an identity pipeline is
+    degenerate (inf / 1.0). Idempotent: returns early if the file already
+    exists. Soft-fail: returns the error string instead of raising so the
+    runner can continue to the next cell.
+    """
+    if spec.phase == "A":
+        return None
+    out = run_dir / "image_quality.json"
+    if out.exists():
+        return None
+    try:
+        from src.tools.measure_image_quality import measure  # lazy
+        result = measure(
+            dataset=spec.dataset,
+            deg_cfg=spec.degrade_config,
+            n_samples=n_samples,
+        )
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return None
+    except Exception as e:  # noqa: BLE001 — best-effort post-train side-channel
+        return f"{type(e).__name__}: {e}"
+
+
 def run_cell(
     cell_tag: str,
     mode: str = "full",
     engine: str = "lightning",
     *,
     run_experiment_fn=None,         # injectable for testing
+    measure_quality_fn=None,        # injectable for testing
 ):
     """Dispatch a single cell from the 186-cell matrix.
 
     Resolves the tag against build_final_matrix(), loads the (model, dataset)
     Optuna winner, calls run_experiment with run_name_override=tag so output
-    lands at runs/final/<tag>/, then merges hparams + cell metadata into
-    metrics.json for downstream dashboards.
+    lands at runs/final/<tag>/, then:
+      1. Merges hparams + cell metadata into metrics.json (US-008).
+      2. Writes image_quality.json with PSNR/SSIM (US-016) for Phase B/C cells.
+
+    The PSNR/SSIM step is best-effort — failure is logged to stderr and the
+    return value is unaffected. `measure_quality_fn` is injectable so unit
+    tests can avoid loading torchvision.
     """
     from src.experiments.matrix import cells_by_tag
 
@@ -286,13 +395,20 @@ def run_cell(
             f"Expected one of the 186 tags from build_final_matrix()."
         )
     spec = by_tag[cell_tag]
-    hparams = _load_best_hparams(spec.model, spec.dataset)
+    hparams = _load_hparams_for_cell(spec)
     config = _cell_config(spec, hparams, mode)
 
     run_experiment = run_experiment_fn or _resolve_run_experiment(engine)
-    run_dir = run_experiment(**config)
-    _merge_metadata_into_metrics_json(Path(run_dir), spec, hparams)
-    return Path(run_dir)
+    run_dir = Path(run_experiment(**config))
+    _merge_metadata_into_metrics_json(run_dir, spec, hparams)
+
+    quality_fn = measure_quality_fn or _measure_image_quality_for_cell
+    quality_err = quality_fn(spec, run_dir)
+    if quality_err:
+        print(f"[run_cell][WARN] image_quality.json for {cell_tag}: {quality_err}",
+              file=sys.stderr)
+
+    return run_dir
 
 
 def run_systematic(levels: list[int], mode: str = "pilot", dataset: str = "cifar10",

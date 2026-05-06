@@ -17,6 +17,7 @@ Optuna study + runner code (US-005) is loaded lazily on demand to keep
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -37,6 +38,13 @@ REQUIRED_HPARAMS = (
     "warmup_epochs",
 )
 SUPPORTED_DISTRIBUTIONS = ("uniform", "loguniform", "categorical")
+
+# Project convention (CLAUDE.md "narrowed to paper-derived priors ± 1 decade
+# max", PRD US-015): a `loguniform` band may extend at most one decade above
+# AND one decade below the paper anchor — total span up to 2 decades, i.e.
+# `high / low ≤ MAX_LOGUNIFORM_RATIO`. Any wider band is "blind exploration"
+# and the validator rejects it.
+MAX_LOGUNIFORM_RATIO: float = 100.0
 
 
 class PriorsValidationError(ValueError):
@@ -81,6 +89,14 @@ def _validate_hparam(name: str, hp: Any) -> list[str]:
                     f"{path}: loguniform requires strictly positive low/high "
                     f"(got low={hp['low']}, high={hp['high']})"
                 )
+            elif dist == "loguniform":
+                ratio = hp["high"] / hp["low"]
+                if ratio > MAX_LOGUNIFORM_RATIO:
+                    errors.append(
+                        f"{path}: loguniform band too wide — high/low={ratio:.4g} "
+                        f"exceeds MAX_LOGUNIFORM_RATIO={MAX_LOGUNIFORM_RATIO} "
+                        f"(±1 decade from anchor; PRD US-015)"
+                    )
     else:  # categorical
         choices = hp.get("choices")
         if not isinstance(choices, list) or len(choices) == 0:
@@ -149,6 +165,25 @@ def load_priors(model_name: str) -> dict:
             f"does not match requested {model_name!r}"
         )
     return data
+
+
+def priors_file_hash(model_name: str) -> str:
+    """Return SHA-256 hex digest of the on-disk priors file for `model_name`.
+
+    Used by `metrics.json.hparams_source.priors_file_hash` (PRD US-008) so a
+    completed run can be traced back to the exact priors recipe that seeded
+    its Optuna study. Hashing is byte-stream: any change to the file (even
+    a trailing newline tweak) produces a new digest.
+    """
+    path = PRIORS_DIR / f"{model_name}.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"priors file not found: {path}. "
+            f"Expected one of {SUPPORTED_MODELS}."
+        )
+    h = hashlib.sha256()
+    h.update(path.read_bytes())
+    return h.hexdigest()
 
 
 def _cmd_validate_only() -> int:
@@ -230,6 +265,21 @@ def main(argv: list[str] | None = None) -> int:
 
     models = [args.model] if args.model else list(SUPPORTED_MODELS)
     datasets = [args.dataset] if args.dataset else list(SUPPORTED_DATASETS)
+
+    # US-014 quarantine guard: skip TransNeXt when iterating over all
+    # SUPPORTED_MODELS. An explicit `--model transnext_*` bypasses the guard
+    # so the guard cannot silently override an operator-stated intent.
+    from src.experiments.run_status import is_quarantined as _is_quarantined
+    if not args.model:
+        before = list(models)
+        models = [m for m in models if not _is_quarantined(m)]
+        skipped = [m for m in before if m not in models]
+        if skipped:
+            print(
+                f"[quarantine] skipping {len(skipped)} quarantined model(s) "
+                f"({', '.join(skipped)}); pass --model {skipped[0]} to override.",
+                file=sys.stderr,
+            )
 
     return run_studies(
         models=models,
