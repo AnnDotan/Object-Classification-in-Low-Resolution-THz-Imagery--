@@ -40,6 +40,47 @@ Until that lands, run `python -m src.tools.build_final_exp_json` manually (or re
 - Privacy test gotcha: patching `builtins.open` alone misses pathlib's reads — pathlib uses `io.open`, which is the same callable but a different module attribute. Patching only builtins leaves io.open pointing at the original. Patch BOTH `builtins.open` and `io.open` together.
 - Pre-existing failure noted (NOT a regression from this PRD's work): src/tests/test_dashboard.py can't import in environments without torch — src/tools/build_final_dashboard.py imports `from src.experiments.matrix import build_final_matrix` at module top-level, and matrix imports DegradeConfig -> torch. The fix is the US-004 rewrite, which will switch to torch-free `iter_cells()` for parity with the aggregator.
 
+## US-004..US-007: Pilot-styled scaffold + JSON load + tabs + level badge — DONE 2026-05-06
+
+Bundled milestone (per operator request: "viewable dashboard" before logic/filters).
+
+### US-004: Rewrite build_final_dashboard.py
+- Full rewrite replacing the legacy <details>-row layout (project US-015) with a pilot-styled scaffold (header + stats bar + sticky tab bar + filter shell + single table).
+- Switched to torch-free src.experiments.cells.iter_cells() — drops the build_final_matrix dependency, which transitively imported torch and broke test_dashboard.py in non-GPU environments.
+- CSS variable block lifted verbatim from artifacts/dashboard_experiment_plan.html (--bg/--surface*/--border/--text/--text-dim/--accent/--green*/--orange/--red/--blue) plus 5 new --L1..--L5 ramp tokens for the level badge intensity grade.
+- build_dashboard signature: (out_path, runs_root, *, thumbs_dir=None). thumbs_dir kept as keyword-only and ignored — refresh_trackers.refresh_final_exp_html and any legacy callers passing it keep working.
+- Stats bar contains 7 cards: total/pending/running/complete/failed/best_val_acc + a global "All Cells" indicator for cross-phase context.
+- Tab bar is a sticky nav; tab counts come from EXPECTED_COUNTS (6/30/150) and stay accurate even before the JSON loads.
+
+### US-005: Inline JS — fetch + render
+- IIFE with strict mode; no globals leak.
+- DOMContentLoaded handler → fetch('./Final_Exp.json', { cache: 'no-store' }) → ingest(doc) → renderRows + recomputeCountsByPhase + renderTabCounts + applyActivePhase.
+- Banner element shows "Could not load Final_Exp.json — run scripts/refresh_trackers.py" on fetch failure (no console-only failures).
+- Row dataset attributes: data-tag / data-phase / data-model / data-dataset / data-status / data-level / data-axis — primed for the US-008+ filter pass.
+
+### US-006: Three-tab phase nav + localStorage
+- Active phase persisted under localStorage key `final_exp.active_phase` (try/catch wraps every storage access — Safari private mode doesn't crash the dashboard).
+- Tab switching uses display:none/'' on rows — same mechanism as the pilot dashboard, which already had structural assertions for it. No DOM rebuild on tab change.
+- Default tab on first ever load: Phase A.
+- Stats bar reactively recomputes from rows visible in the active phase; the global "All Cells" card stays at 186 always.
+
+### US-007: Level badge column with params tooltip
+- 7 badge styles: lvl-clean (Phase A) + lvl-1..lvl-5 with intensity grade green→red.
+- Phase A renders "clean" caption (green2 on surface2). Phase B renders just "L{n}". Phase C renders "L{n}" + axis caption underneath (e.g. "noise" beneath "L3").
+- Native title attribute exposes the full params dict on hover: "low_res=N | blur=KxK σ=S | noise=N | S&P=P | sat=S".
+- Tooltip works without JS (pure HTML title) — degrades gracefully if JS fails.
+
+### Tests
+- test_dashboard.py rewritten — 6 checks pass: summary shape, static scaffold, column-header order, inline-JS contract (fetch path, level/tab/row helpers, localStorage key), no legacy markup leakage, thumbs_dir kwarg back-compat.
+- test_build_final_exp_json.py still 7/7 — no regression in the aggregator from the dashboard rewrite.
+
+### Open for visual verification (operator)
+- Tabs visually distinct in active state.
+- Stats bar reads correctly per active phase.
+- Level badges render with intensity ramp + tooltip on hover.
+- Banner appears when Final_Exp.json is absent.
+- localStorage persistence: refresh page, last tab restored.
+
 ## Learnings
 - The project does not use pytest, mypy, or any conftest.py — tests follow a stdlib + tempfile pattern with `def main(): ...; sys.exit(main())`.
 - run_status.detect_status emits "Complete", not the PRD's "Done". Schema matches the on-disk producer; renderer maps both for display.
