@@ -6,6 +6,40 @@
 
 ---
 
+## Stage -1 — GPU environment bootstrap (≈ 5–10 min, first run only)
+
+Run this **once per machine** before anything else. It is a fail-fast, environment-only step (THz Protocol — no experimental logic touched). Driven by [scripts/setup_gpu_env.py](../../scripts/setup_gpu_env.py).
+
+What it does:
+1. Audits `nvidia-smi`, driver version, CUDA toolkit, and per-device VRAM.
+2. Refuses to continue on Python ≥ 3.13 (no PyTorch wheels yet — the 3.14 incompatibility flagged 2026-05-07).
+3. Installs the CUDA-matched `torch / torchvision / torchaudio` wheels via the official `https://download.pytorch.org/whl/cu1XX` index.
+4. Installs project deps: `pytorch-lightning, optuna, optuna-integration[pytorch-lightning], plotly, pandas, opencv-python, matplotlib, timm, scikit-learn, torchmetrics, rich, pyyaml, tqdm`.
+5. Writes a fresh `requirements.lock.txt` (UTF-8) for diff against the legacy UTF-16 `requirements.txt`.
+6. Smoke-tests: `torch.cuda.is_available()`, per-device VRAM ≥ `--min-vram-gib` (default 6 GiB — ResNet50/DenseNet121 batch-32 floor), and a live 64×64 matmul on device 0.
+
+**One-shot bootstrap (recommended):**
+
+```powershell
+python scripts/setup_gpu_env.py
+```
+
+**Other modes:**
+
+```powershell
+python scripts/setup_gpu_env.py --audit-only            # report hardware + Python, no install
+python scripts/setup_gpu_env.py --dry-run               # print pip commands without running them
+python scripts/setup_gpu_env.py --cuda-override 12.1    # bypass auto-detect
+python scripts/setup_gpu_env.py --min-vram-gib 8        # tighter VRAM floor
+python scripts/setup_gpu_env.py --make-venv .venv-gpu   # bootstrap a 3.10/3.11 venv first
+```
+
+If the audit reports Python ≥ 3.13 (e.g. the current `.venv` running 3.14.2), the script exits with the exact `py -3.11 -m venv` command needed. Re-run the bootstrap from the activated 3.11 venv.
+
+Proceed to the pre-flight only after seeing `Stage -1 complete — environment ready for Stage 1 (Optuna pre-tune)`.
+
+---
+
 ## Pre-flight (≈ 30 s)
 
 Sanity-check the codebase before burning GPU hours.
