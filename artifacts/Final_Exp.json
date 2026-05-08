@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-06T23:15:14+00:00",
+  "generated_at": "2026-05-08T16:52:19+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -26,7 +26,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L1_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -53,7 +53,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L1_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -80,7 +80,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L1_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -107,7 +107,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L1_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -133,8 +133,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L1_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -160,8 +160,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L1_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -188,7 +188,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L2_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -215,7 +215,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L2_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -242,7 +242,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L2_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -269,7 +269,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L2_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -295,8 +295,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L2_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -322,8 +322,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L2_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -350,7 +350,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L3_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -377,7 +377,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L3_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -404,7 +404,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L3_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -431,7 +431,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L3_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -457,8 +457,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L3_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -484,8 +484,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L3_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -512,7 +512,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L4_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -539,7 +539,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L4_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -566,7 +566,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L4_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -593,7 +593,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L4_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -619,8 +619,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L4_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -646,8 +646,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L4_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -674,7 +674,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L5_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -701,7 +701,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L5_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -728,7 +728,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L5_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -755,7 +755,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_B_L5_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -781,8 +781,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L5_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -808,8 +808,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_B_L5_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -836,7 +836,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -863,7 +863,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -890,7 +890,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -917,7 +917,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -943,8 +943,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -970,8 +970,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_blur_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -998,7 +998,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1025,7 +1025,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1052,7 +1052,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1079,7 +1079,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1105,8 +1105,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1132,8 +1132,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_noise_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1160,7 +1160,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1187,7 +1187,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1214,7 +1214,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1241,7 +1241,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1267,8 +1267,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1294,8 +1294,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_resolution_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1322,7 +1322,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1349,7 +1349,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1376,7 +1376,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1403,7 +1403,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1429,8 +1429,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1456,8 +1456,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1484,7 +1484,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1511,7 +1511,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1538,7 +1538,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1565,7 +1565,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1591,8 +1591,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1618,8 +1618,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L1_saturation_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1646,7 +1646,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1673,7 +1673,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1700,7 +1700,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1727,7 +1727,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1753,8 +1753,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1780,8 +1780,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_blur_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1808,7 +1808,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1835,7 +1835,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -1862,7 +1862,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -1889,7 +1889,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -1915,8 +1915,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -1942,8 +1942,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_noise_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -1970,7 +1970,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -1997,7 +1997,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2024,7 +2024,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2051,7 +2051,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2077,8 +2077,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2104,8 +2104,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_resolution_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2132,7 +2132,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2159,7 +2159,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2186,7 +2186,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2213,7 +2213,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2239,8 +2239,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2266,8 +2266,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2294,7 +2294,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2321,7 +2321,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2348,7 +2348,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2375,7 +2375,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2401,8 +2401,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2428,8 +2428,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L2_saturation_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2456,7 +2456,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2483,7 +2483,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2510,7 +2510,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2537,7 +2537,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2563,8 +2563,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2590,8 +2590,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_blur_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2618,7 +2618,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2645,7 +2645,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2672,7 +2672,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2699,7 +2699,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2725,8 +2725,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2752,8 +2752,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_noise_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2780,7 +2780,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2807,7 +2807,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2834,7 +2834,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -2861,7 +2861,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -2887,8 +2887,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -2914,8 +2914,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_resolution_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -2942,7 +2942,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -2969,7 +2969,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -2996,7 +2996,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3023,7 +3023,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3049,8 +3049,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3076,8 +3076,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3104,7 +3104,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3131,7 +3131,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3158,7 +3158,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3185,7 +3185,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3211,8 +3211,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3238,8 +3238,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L3_saturation_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3266,7 +3266,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3293,7 +3293,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3320,7 +3320,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3347,7 +3347,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3373,8 +3373,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3400,8 +3400,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_blur_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3428,7 +3428,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3455,7 +3455,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3482,7 +3482,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3509,7 +3509,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3535,8 +3535,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3562,8 +3562,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_noise_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3590,7 +3590,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3617,7 +3617,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3644,7 +3644,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3671,7 +3671,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3697,8 +3697,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3724,8 +3724,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_resolution_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3752,7 +3752,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3779,7 +3779,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3806,7 +3806,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3833,7 +3833,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -3859,8 +3859,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -3886,8 +3886,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -3914,7 +3914,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -3941,7 +3941,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -3968,7 +3968,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -3995,7 +3995,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4021,8 +4021,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4048,8 +4048,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L4_saturation_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4076,7 +4076,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -4103,7 +4103,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -4130,7 +4130,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -4157,7 +4157,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4183,8 +4183,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4210,8 +4210,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_blur_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4238,7 +4238,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -4265,7 +4265,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -4292,7 +4292,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -4319,7 +4319,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4345,8 +4345,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4372,8 +4372,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_noise_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4400,7 +4400,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -4427,7 +4427,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -4454,7 +4454,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -4481,7 +4481,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4507,8 +4507,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4534,8 +4534,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_resolution_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4562,7 +4562,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -4589,7 +4589,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -4616,7 +4616,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -4643,7 +4643,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4669,8 +4669,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4696,8 +4696,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4724,7 +4724,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_densenet121_cifar10.png",
       "has_history": false
     },
     {
@@ -4751,7 +4751,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_densenet121_mnist.png",
       "has_history": false
     },
     {
@@ -4778,7 +4778,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_resnet50_cifar10.png",
       "has_history": false
     },
     {
@@ -4805,7 +4805,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_resnet50_mnist.png",
       "has_history": false
     },
     {
@@ -4831,8 +4831,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -4858,8 +4858,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_C_L5_saturation_transnext_base_mnist.png",
       "has_history": false
     },
     {
@@ -4886,7 +4886,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_clean_densenet121_cifar10.png",
       "has_history": true
     },
     {
@@ -4913,7 +4913,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_clean_densenet121_mnist.png",
       "has_history": true
     },
     {
@@ -4940,7 +4940,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_clean_resnet50_cifar10.png",
       "has_history": true
     },
     {
@@ -4967,7 +4967,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": null,
+      "visual_core": "dashboard_thumbs/final_clean_resnet50_mnist.png",
       "has_history": true
     },
     {
@@ -4993,8 +4993,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_clean_transnext_base_cifar10.png",
       "has_history": false
     },
     {
@@ -5020,8 +5020,8 @@
       "started_at": null,
       "finished_at": null,
       "quarantined": true,
-      "quarantine_reason": "Pending Hardware",
-      "visual_core": null,
+      "quarantine_reason": "Awaiting Native-Resolution Refactor",
+      "visual_core": "dashboard_thumbs/final_clean_transnext_base_mnist.png",
       "has_history": false
     }
   ],

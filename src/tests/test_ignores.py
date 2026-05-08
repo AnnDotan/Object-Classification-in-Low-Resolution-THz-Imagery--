@@ -24,7 +24,6 @@ SHOULD_IGNORE = [
     "artifacts/optuna_thz.db",
     "artifacts/dashboard_thumbs/final_clean_resnet50_cifar10.png",
     "artifacts/best_hparams/resnet50_cifar10.json",
-    "artifacts/Final_Exp.html",
     "runs/final/final_clean_resnet50_cifar10/best.ckpt",
     "runs/systematic/legacy_run/best.ckpt",
     "runs/final/x/model_last.pt",
@@ -39,6 +38,10 @@ SHOULD_TRACK = [
     "artifacts/priors/resnet50.json",
     "artifacts/priors/densenet121.json",
     "artifacts/priors/transnext_base.json",
+    # US-016: SYNCHRONIZER commits artifacts/Final_Exp.html at every phase
+    # boundary so the remote always reflects the latest campaign snapshot.
+    # It IS the canonical Gold Standard dashboard — must be tracked.
+    "artifacts/Final_Exp.html",
 ]
 
 

@@ -28,5 +28,8 @@ Research director for the "Object Classification in Low-Resolution THz Imagery" 
 - Write: `agents/`, `AGENTS.md`, `TODO.md` (planning only)
 
 ## Invocation Protocol
+- **Pre-flight (mandatory before any `EnterPlanMode`):** MASTER must first ask SYNCHRONIZER:
+  > *"Is my current context (uploaded Sources) aligned with the latest local Git state?"*
+  Planning may not begin until SYNCHRONIZER returns ✅ aligned (or the user explicitly acknowledges any stale Sources). The legacy Drive-sync pre-flight is removed — the project is strictly local.
 - Every sub-agent task begins with: `MASTER → <AGENT>: plan first, then await approval`.
 - Sub-agents return plans as markdown; MASTER approves/rejects inline.

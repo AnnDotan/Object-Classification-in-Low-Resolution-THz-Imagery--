@@ -2,7 +2,15 @@
 
 **Audience:** operator on the GPU box. Run these commands sequentially in your training environment (torch + CUDA installed).
 
-**Scope:** 4 CNN (model, dataset) pairs × Optuna tune on L3 + 5-level Phase B sweep = **20 cells**. TransNeXt is quarantined (US-014). See [docs/prds/PHASE_B_VISUAL_CORE.md](../prds/PHASE_B_VISUAL_CORE.md) US-014 → US-019.
+**Scope:** 4 CNN (model, dataset) pairs × Optuna tune on L3 + top-3 full-convergence validation + 5-level Phase B sweep = **20 cells**. TransNeXt is quarantined (US-014). See [docs/prds/PHASE_B_VISUAL_CORE.md](../prds/PHASE_B_VISUAL_CORE.md) US-014 → US-019 and [docs/prds/PHASE_B_RUN.md](../prds/PHASE_B_RUN.md) US-020 → US-030.
+
+**Methodology — Option C hybrid (locked 2026-05-07):**
+- Stage 1 (`tune_all.py`) is a **fast proxy tune** (5 epochs / 2k train / 1k val per [`src/tune_hyperparams.py`](../../src/tune_hyperparams.py) `run_studies` defaults) — ~3 GPU-h to rank 20 trials per pair.
+- Stage 1.5 ([`scripts/validate_top3.py`](../../scripts/validate_top3.py)) re-trains the **top-3 trials per pair** at production protocol (60 epochs / 10k train / 5k val / patience 10) and writes the validated winner with `validated_at_full_convergence: true` — ~15 GPU-h for all 4 pairs.
+- Stage 2 (Phase B sweep, `run_all_phases.py --plan final --phase B`) reads only validated winner JSONs.
+- Total tune+validate budget: ~18 GPU-h vs. ~100 GPU-h for full-Optuna-at-60-epochs. Defensible methodology in the paper: "Optuna ranked candidates with a 5-epoch / 2k-subset proxy; the top-3 per pair were validated at full convergence."
+
+**Combined orchestration:** [`scripts/run_tune_chain.ps1`](../../scripts/run_tune_chain.ps1) runs Stage 1 + Stage 1.5 sequentially, with skip-existing logic so re-runs are safe.
 
 ---
 
@@ -61,12 +69,27 @@ nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
 
 ---
 
-## Stage 1 — Optuna pre-tune at L3 Moderate (≈ 12–14 GPU-hours)
+## Stage 1 — Optuna fast pre-tune at L3 Moderate (≈ 3 GPU-hours, proxy ranking)
 
-Fires 4 studies × 20 trials, seeded from the paper-anchored priors at [artifacts/priors/](../../artifacts/priors/). TransNeXt is auto-skipped by [tune_all.py](../../tune_all.py) (US-016 quarantine guard). Results land at `artifacts/best_hparams/{model}_{dataset}.json` with the priors-file SHA-256 round-tripped for reproducibility.
+> **NOTE (2026-05-07):** This is the **fast proxy tune** (5 ep / 2k train / 1k val) — a low-budget ranking pass, NOT the convergence-quality production training. The validated winners come from Stage 1.5 below. The `~12–14 GPU-h` figure in older revisions of this runbook assumed full-fidelity Optuna; that path was rejected as Option B-full per [PHASE_B_RUN.md](../prds/PHASE_B_RUN.md) §8 O4.
+
+Fires 4 studies × 20 trials, seeded from the paper-anchored priors at [artifacts/priors/](../../artifacts/priors/). TransNeXt is auto-skipped by [tune_all.py](../../tune_all.py) (US-016 quarantine guard). Per-pair fast winners land at `artifacts/best_hparams/{model}_{dataset}.json` with the priors-file SHA-256 round-tripped — **these are overwritten in Stage 1.5**.
+
+**Recommended (combined Stage 1 + 1.5 driver):**
 
 ```powershell
-python tune_all.py --n-trials 20
+$proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile","-WindowStyle","Hidden","-File","scripts\run_tune_chain.ps1" -PassThru
+"PID=$($proc.Id)"  # save for later kill if needed
+# Watch progress: tail -f .venv-gpu/tune_chain.log
+```
+
+**Manual per-pair (foreground):**
+
+```powershell
+.venv-gpu\Scripts\python.exe tune_all.py --n-trials 20 --model resnet50 --dataset cifar10
+.venv-gpu\Scripts\python.exe tune_all.py --n-trials 20 --model densenet121 --dataset cifar10
+.venv-gpu\Scripts\python.exe tune_all.py --n-trials 20 --model resnet50 --dataset mnist
+.venv-gpu\Scripts\python.exe tune_all.py --n-trials 20 --model densenet121 --dataset mnist
 ```
 
 **Resumable.** The Optuna study DB ([artifacts/optuna_thz.db](../../artifacts/optuna_thz.db)) lives on disk; rerun the same command after a crash and trials continue from where they died.
@@ -84,6 +107,30 @@ python -c "import json; print(json.dumps(json.load(open('artifacts/best_hparams/
 ```
 
 The `priors_file_hash` field must match `python -c \"import tune_all; print(tune_all.priors_file_hash('resnet50'))\"`.
+
+---
+
+## Stage 1.5 — Top-3 full-convergence validation (≈ 15 GPU-hours)
+
+For each (model, dataset) pair: load the SQLite study, take the top-3 trials by fast val_acc, re-train each at the production protocol (60 ep / 10k train / 5k val / patience=10), pick the winner by full val_acc, and write the validated winner JSON with `validated_at_full_convergence: true`.
+
+```powershell
+.venv-gpu\Scripts\python.exe scripts\validate_top3.py
+# or per-pair:
+.venv-gpu\Scripts\python.exe scripts\validate_top3.py --model resnet50 --dataset cifar10
+```
+
+Idempotent at two levels:
+- Per-pair: skipped if `artifacts/best_hparams/{m}_{d}.json` already has `validated_at_full_convergence: true`.
+- Per-trial: result cached at `artifacts/validation/{m}_{d}_rank{N}.json`.
+
+**Verify all 4 pairs validated before Stage 2:**
+
+```powershell
+.venv-gpu\Scripts\python.exe -c "import json; from pathlib import Path; ok=all(json.loads(Path(f'artifacts/best_hparams/{m}_{d}.json').read_text(encoding='utf-8')).get('validated_at_full_convergence') for m in ('resnet50','densenet121') for d in ('cifar10','mnist')); print('all 4 validated:', ok)"
+```
+
+Expect `all 4 validated: True`.
 
 ---
 
@@ -117,11 +164,11 @@ python scripts/refresh_trackers.py            # final tracker refresh
 python -c "import json; d=json.load(open('artifacts/Final_Exp.json')); print(d['counts'])"
 ```
 
-Expect `complete >= 24` (Phase A 4 + Phase B 20). [Final_Exp.md](../../Final_Exp.md) status summary should read `Phase B (Combined): 20/30` with the `Deferred (TransNeXt — Pending Hardware): 62/186` line intact.
+Expect `complete >= 24` (Phase A 4 + Phase B 20). [Final_Exp.md](../../Final_Exp.md) status summary should read `Phase B (Combined): 20/30` with the `Deferred (TransNeXt — Awaiting Native-Resolution Refactor): 62/186` line intact.
 
 Open [artifacts/Final_Exp.html](../../artifacts/Final_Exp.html) and confirm:
 - Visual column shows Original|Degraded thumbnails for every Phase A/B row.
-- Status pills: Phase A green, Phase B mostly green, TransNeXt rows dashed-purple `Deferred · Pending Hardware`.
+- Status pills: Phase A green, Phase B mostly green, TransNeXt rows dashed-purple `Deferred · Awaiting Native-Resolution Refactor`.
 - Best val_acc populates the stat card per phase.
 
 When satisfied:
@@ -151,3 +198,31 @@ The tracker-sync script only stages `Final_Exp.md`, `artifacts/Final_Exp.json`, 
 - `python tune_all.py --n-trials 20 --model transnext_base` — bypasses the US-014 quarantine. Only use when MASTER explicitly reactivates TransNeXt with a hardware tier upgrade.
 - `python run_all_phases.py --plan final --mode pilot` — rejected by assertion (CLAUDE.md "quality over speed").
 - `git add runs/`, `git push runs/` — weight privacy violation; `runs/final/**` is gitignored + claudeignored on purpose.
+- `python run_all_phases.py --plan final --phase B --skip-existing` **before Stage 1.5 has produced validated winners** — Phase B's `_load_hparams_for_cell` would consume the fast-tune winners (5-ep / 2k subset proxy), violating the convergence-first protocol. Always check `validated_at_full_convergence` is `true` first.
+
+---
+
+## Known issues / gotchas (2026-05-07 handoff notes)
+
+These are not blockers but will save time on a fresh box. Each is also captured in [`progress.txt`](../../progress.txt) under the relevant US.
+
+1. **`setup_gpu_env.py:make_venv` doesn't pick Python 3.12** — only iterates `RECOMMENDED_PY_MINORS = (11, 10)` even though `MAX_SUPPORTED_PY_MINOR = 12`. Workaround: if your box has 3.12 only (no 3.11/3.10), bootstrap manually:
+   ```powershell
+   py -3.12 -m venv .venv-gpu
+   .venv-gpu\Scripts\python.exe scripts\setup_gpu_env.py     # full bootstrap
+   ```
+   One-line fix candidate: extend the candidate loop to `RECOMMENDED_PY_MINORS + tuple(range(MAX_SUPPORTED_PY_MINOR, 9, -1))`.
+
+2. **`--min-vram-gib 6.0` is strict-fail at exactly 6 GiB cards.** RTX 4050 Laptop reports `5.997 GiB`, fails by ~4 MiB. On any GPU < 6 GiB or strictly equal, append `--min-vram-gib 5.9`. ResNet50 / DenseNet121 mixed-precision actually fit in ~5.5 GiB; the runbook's per-cell `batch_size=16` override remains the OOM-recovery path.
+
+3. **`requirements.txt` is legacy UTF-16-encoded.** `setup_gpu_env.py` warns and writes `requirements.lock.txt` in UTF-8. Re-encode `requirements.txt` to UTF-8 in a separate commit.
+
+4. **`scripts/quarantine_transnext.py:find_running_transnext_processes` does a broad substring match** on `"transnext"` against any python process's full cmdline. VSCode Pylance / Python LSP daemons scan project files including `*transnext*.py`, producing false positives in `test_quarantine_transnext` (PIDs change every run). The substantive check is `nvidia-smi --query-compute-apps` showing zero `python.exe` — that's what gates real GPU work. To tighten: filter for processes whose argv contains a real Python entry point like `tune_all.py --model transnext_base` or `run_systematic.py --model transnext_*`.
+
+5. **PowerShell 5.1 `*>>` writes UTF-16 LE BOM by default + wraps native-exe stderr in ErrorRecord.** This corrupts the tune log so grep treats it as binary, plus prefixes every stderr line with `python.exe :`. [`scripts/run_tune_chain.ps1`](../../scripts/run_tune_chain.ps1) avoids this by using `cmd /c "... >> log 2>&1"` with `PYTHONIOENCODING=utf-8` set in the parent PS process. Result: log is pure UTF-8, grep-clean.
+
+6. **`scripts/validate_top3.py` needed `sys.path.insert(0, REPO_ROOT)` at module top.** Running `python scripts/X.py` only puts `scripts/` on `sys.path`, so `from src.lightning ...` fails. Already fixed in the script. If you add new `scripts/*.py` that import `src.*`, replicate the pattern.
+
+7. **Bash tool background timeout = 10 min max** in this Claude harness. For multi-hour chains, do NOT use `Bash run_in_background`; use `Start-Process powershell -WindowStyle Hidden -File ... -PassThru` to detach OS-level. The launched process survives shell death.
+
+8. **Optuna's `study.optimize(n_trials=20)` ADDS 20 new trials each call** — does not "ensure 20 total". `scripts/run_tune_chain.ps1` guards against accidental doubling by querying SQLite for `t.state.is_finished()` count and skipping the pair if already ≥ 20. If you want fresh trials, delete `artifacts/optuna_thz.db` (and `artifacts/best_hparams/*.json` to invalidate fast winners).

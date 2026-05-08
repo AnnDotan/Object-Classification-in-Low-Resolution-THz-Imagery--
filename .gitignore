@@ -8,6 +8,7 @@ __pycache__/
 # Virtual Environments
 venv/
 .venv/
+.venv-gpu/
 ENV/
 
 # IDE
@@ -65,7 +66,9 @@ artifacts/weights/
 artifacts/optuna_thz.db
 artifacts/dashboard_thumbs/
 artifacts/best_hparams/
-artifacts/Final_Exp.html
+# artifacts/Final_Exp.html is committed by SYNCHRONIZER at phase boundaries (US-016).
+# It IS the canonical Gold Standard dashboard snapshot — must be tracked so the
+# remote always reflects the latest committed campaign state.
 artifacts/figures/
 artifacts/summaries/
 artifacts/tables/

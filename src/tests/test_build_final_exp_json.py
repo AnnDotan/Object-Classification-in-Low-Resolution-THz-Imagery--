@@ -324,7 +324,7 @@ def _check_quarantine_override() -> None:
     row = next(r for r in doc["rows"] if r["tag"] == tag)
     assert row["status"] == "Deferred", f"expected Deferred, got {row['status']}"
     assert row["quarantined"] is True
-    assert row["quarantine_reason"] == "Pending Hardware"
+    assert row["quarantine_reason"] == "Awaiting Native-Resolution Refactor"
     # Counts: leftover metrics is overridden, so complete stays 0.
     assert doc["counts"]["complete"] == 0, doc["counts"]
     assert doc["counts"]["deferred"] == 62, doc["counts"]

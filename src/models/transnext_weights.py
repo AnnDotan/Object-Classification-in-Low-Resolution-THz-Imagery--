@@ -27,8 +27,22 @@ _DEFAULT_URLS: dict[str, str] = {
 }
 
 
+# Real TransNeXt checkpoints are tens to hundreds of MiB. Anything smaller
+# (Git-LFS pointer files, accidental placeholders, partial downloads that
+# survived a crash) must be re-fetched, not silently used.
+MIN_VALID_BYTES: int = 1 << 20  # 1 MiB
+
+
 def _expected_path(model_name: str, weights_dir: Path) -> Path:
     return weights_dir / f"{model_name}_224_1k.pth"
+
+
+def _looks_valid(path: Path) -> bool:
+    """True if `path` exists and is large enough to plausibly be a checkpoint."""
+    try:
+        return path.exists() and path.stat().st_size >= MIN_VALID_BYTES
+    except OSError:
+        return False
 
 
 def _resolve_url(model_name: str) -> str | None:
@@ -77,14 +91,23 @@ def find_or_download_weights(
     """
     weights_dir = weights_dir or Path("artifacts/weights")
     target = _expected_path(model_name, weights_dir)
-    if target.exists():
+    if _looks_valid(target):
         return target
+
+    if target.exists():
+        size = target.stat().st_size
+        print(
+            f"[transnext_weights] {target} exists but is only {size} bytes "
+            f"(< {MIN_VALID_BYTES} threshold) — treating as placeholder and "
+            f"re-fetching.",
+            file=sys.stderr,
+        )
 
     url = _resolve_url(model_name)
     if url:
         print(f"[transnext_weights] downloading {model_name} weights from {url}",
               file=sys.stderr)
-        if _try_download(url, target):
+        if _try_download(url, target) and _looks_valid(target):
             return target
 
     suffix = model_name.removeprefix("transnext_").upper()

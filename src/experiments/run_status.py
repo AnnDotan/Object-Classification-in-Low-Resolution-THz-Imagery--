@@ -21,10 +21,12 @@ _COMPLETE_KEYS: tuple[str, ...] = ("final_val_acc", "best_val_acc", "last_val_ac
 _FAILURE_MARKERS: tuple[str, ...] = ("traceback", "[error]")
 
 # Quarantine policy (US-014, docs/prds/PHASE_B_VISUAL_CORE.md).
-# TransNeXt is deferred until high-end GPU clusters are available; rows
-# render as a separate "Deferred" status so the 186-cell denominator stays
-# intact while excluding TransNeXt from any execution-driving iteration.
-QUARANTINE_REASON = "Pending Hardware"
+# TransNeXt is deferred until a Blackwell-tier GPU is online AND the model
+# wrapper is refactored to consume the THz pipeline at native (non-224×224)
+# resolution. Rows render as a separate "Deferred" status so the 186-cell
+# denominator stays intact while excluding TransNeXt from any execution-driving
+# iteration. Label updated 2026-05-08 for the RTX 5070 migration package.
+QUARANTINE_REASON = "Awaiting Native-Resolution Refactor"
 
 # Filename of the SIGINT sentinel dropped by run_all_phases when a cell is
 # interrupted mid-train (US-016 + US-019). Presence -> the cell is Failed

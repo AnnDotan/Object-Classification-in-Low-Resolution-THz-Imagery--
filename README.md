@@ -46,6 +46,33 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | Python | 3.10+ | 3.12 |
 | CUDA toolkit | 11.8 or 12.x | matching `torch` build |
 
+## Hardware Setup — RTX 5070 (Blackwell, 12 GB) — migration target 2026-05-08
+
+The Phase B sweep was paused on an RTX 4050 Laptop (6 GiB VRAM, ≈5.997 GiB usable, sm_89 Ada) after Stage 1 fast tune completed; the campaign will resume on an RTX 5070 12 GB (Blackwell, sm_120). This section captures the hardware-specific knobs.
+
+| Requirement | RTX 5070 setting | Why |
+|---|---|---|
+| GPU architecture | Blackwell, compute capability `sm_120` | RTX 50-series consumer GPU. PyTorch 2.11.0+cu128 (current pin in [`requirements.lock.txt`](requirements.lock.txt)) ships kernels through `sm_120`. |
+| NVIDIA driver | **NVIDIA Studio Driver** (recommended) or current Game Ready Driver, version ≥ 580.xx | Studio Drivers are stability-validated for ML / creative workloads (less frequent releases, fewer regressions). Either works; Studio is the default for unattended overnight training. |
+| CUDA runtime | **CUDA 12.x** — specifically **CUDA 12.8** (cu128 wheels) | [`scripts/setup_gpu_env.py:KNOWN_CUDA_INDICES`](scripts/setup_gpu_env.py) tops at `((12, 8), "cu128")`. The "nearest ≤ system" heuristic picks `cu128` for any driver reporting CUDA 12.8 / 12.9 / 13.x runtime, which is the right wheel for Blackwell. |
+| VRAM | 12 GiB usable — ResNet50 / DenseNet121 batch 32 mixed-precision fit comfortably with ~6 GiB headroom | Use the default `--min-vram-gib 6.0` (no `--min-vram-gib 5.9` workaround needed on the new box). |
+| Mixed precision | `precision="16-mixed"` (already wired) | Blackwell's BF16 / FP16 tensor cores are well-utilised; AMP is enabled by default in [`src/lightning/`](src/lightning/) when CUDA is available. |
+| Driver-bundled CUDA | Verify with `nvidia-smi` — should report driver ≥ 580 and CUDA runtime ≥ 12.8 | If the runtime row shows `13.x`, the cu128 wheel is still the right pick — Blackwell's Driver-API is forward-compatible. |
+| Power & sleep | AC adapter plugged in, sleep disabled (`powercfg /change standby-timeout-ac 0`) for the multi-hour Stage 1.5 + Stage 2 chains | The whole tune-validate-sweep arc is ~25 GPU-hours; uninterrupted runs are far cheaper than restarts. |
+| `setup_gpu_env.py --make-venv` | Manually use `py -3.12 -m venv .venv-gpu` if the new box only has Python 3.12 | The bundled `make_venv` only iterates `RECOMMENDED_PY_MINORS = (11, 10)` even though `MAX_SUPPORTED_PY_MINOR = 12`. See [docs/runbooks/PHASE_B_EXECUTION.md](docs/runbooks/PHASE_B_EXECUTION.md) → Known issues #1. |
+
+**One-line bootstrap on the new box (assumes Python 3.10/3.11/3.12 already installed + Studio Driver + nvidia-smi working):**
+
+```powershell
+git clone <repo-url>
+Set-Location Object-Classification-in-Low-Resolution-THz-Imagery--
+python scripts\setup_gpu_env.py             # full audit + cu128 install + smoke test
+.venv-gpu\Scripts\python.exe tune_all.py --validate-only
+nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
+```
+
+If the smoke test passes, you are ready for Stage 1.5 (`scripts\run_tune_chain.ps1` skips already-finished pairs, then runs `validate_top3.py`). The full handoff runbook is in [docs/runbooks/PHASE_B_EXECUTION.md](docs/runbooks/PHASE_B_EXECUTION.md).
+
 ## Step 0 — Environment Setup
 
 **Bash (Linux / macOS / git-bash):**

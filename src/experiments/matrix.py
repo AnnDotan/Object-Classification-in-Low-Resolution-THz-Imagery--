@@ -18,19 +18,17 @@ Tag scheme (CLAUDE.md):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import product
 from typing import Optional
 
 from src.data.degrade import DegradeConfig, degrade_config_for
-from src.data.degradation_levels import AXES
-
-
-MODELS: tuple[str, ...] = ("resnet50", "densenet121", "transnext_base")
-DATASETS: tuple[str, ...] = ("cifar10", "mnist")
-LEVELS: tuple[int, ...] = (1, 2, 3, 4, 5)
-
-EXPECTED_COUNTS: dict[str, int] = {"A": 6, "B": 30, "C": 150}
-EXPECTED_TOTAL: int = 186
+from src.experiments.cells import (
+    DATASETS,
+    EXPECTED_COUNTS,
+    EXPECTED_TOTAL,
+    LEVELS,
+    MODELS,
+    iter_cells,
+)
 
 
 @dataclass(frozen=True)
@@ -55,50 +53,25 @@ class CellSpec:
 def build_final_matrix(out_size: int = 224) -> list[CellSpec]:
     """Return the 186 CellSpecs that drive the Final Research Phase.
 
-    Iteration order: Phase A first, then Phase B (level outer, model/dataset
-    inner), then Phase C (level outer, axis next, model/dataset innermost).
-    Downstream tools (run_all_phases.py, dashboard, dedupe filters) rely
-    on this stable ordering.
+    Tag enumeration is delegated to `src.experiments.cells.iter_cells()`
+    (torch-free) so analysis tools can list cells without importing torch.
+    Iteration order — Phase A first, then Phase B (level outer, model/dataset
+    inner), then Phase C (level outer, axis next, model/dataset innermost) —
+    is the contract downstream tools (run_all_phases.py, dashboard, dedupe
+    filters) rely on.
     """
-    cells: list[CellSpec] = []
-
-    # Phase A: clean baselines (no degradation, just upsample to out_size).
-    for model, dataset in product(MODELS, DATASETS):
-        cells.append(CellSpec(
-            tag=f"final_clean_{model}_{dataset}",
-            phase="A",
-            model=model,
-            dataset=dataset,
-            level=None,
-            axis=None,
-            degrade_config=degrade_config_for(None, axis=None, out_size=out_size),
-        ))
-
-    # Phase B: combined degradation across all axes at level L.
-    for level, model, dataset in product(LEVELS, MODELS, DATASETS):
-        cells.append(CellSpec(
-            tag=f"final_B_L{level}_{model}_{dataset}",
-            phase="B",
-            model=model,
-            dataset=dataset,
-            level=level,
-            axis=None,
-            degrade_config=degrade_config_for(level, axis=None, out_size=out_size),
-        ))
-
-    # Phase C: single-axis isolation — one axis at level L, others pinned to L1.
-    for level, axis, model, dataset in product(LEVELS, AXES, MODELS, DATASETS):
-        cells.append(CellSpec(
-            tag=f"final_C_L{level}_{axis}_{model}_{dataset}",
-            phase="C",
-            model=model,
-            dataset=dataset,
-            level=level,
-            axis=axis,
-            degrade_config=degrade_config_for(level, axis=axis, out_size=out_size),
-        ))
-
-    return cells
+    return [
+        CellSpec(
+            tag=meta.tag,
+            phase=meta.phase,
+            model=meta.model,
+            dataset=meta.dataset,
+            level=meta.level,
+            axis=meta.axis,
+            degrade_config=degrade_config_for(meta.level, axis=meta.axis, out_size=out_size),
+        )
+        for meta in iter_cells()
+    ]
 
 
 def cells_by_tag(matrix: Optional[list[CellSpec]] = None) -> dict[str, CellSpec]:

@@ -52,15 +52,15 @@ def test_empty_runs_root_renders_with_quarantine_split():
             f"expected 124 Pending (186 - 62 TransNeXt); "
             f"got {out.count('| Pending |')}"
         )
-        # Quarantined rows show `Deferred — Pending Hardware`.
-        assert out.count("Deferred — Pending Hardware") == 62, (
+        # Quarantined rows show `Deferred — Awaiting Native-Resolution Refactor`.
+        assert out.count("Deferred — Awaiting Native-Resolution Refactor") == 62, (
             f"expected 62 Deferred TransNeXt rows; "
-            f"got {out.count('Deferred — Pending Hardware')}"
+            f"got {out.count('Deferred — Awaiting Native-Resolution Refactor')}"
         )
         # Status summary still uses 186 denominator.
         assert "0/6" in out and "0/30" in out and "0/150" in out
         assert "**Total: 0/186**" in out
-        assert "Deferred (TransNeXt — Pending Hardware): 62/186" in out
+        assert "Deferred (TransNeXt — Awaiting Native-Resolution Refactor): 62/186" in out
         assert "Last updated: 2026-05-05" in out
 
 

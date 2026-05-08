@@ -471,3 +471,291 @@
     - Halt on red band / continuation halt / training crash; otherwise auto-continue.
 - US-007..010 are the actual training executions on the local CUDA GPU.
 - Total tests added in this PRD round: 5 new files, 33 invariants, all PASS.
+
+## US-020: GPU Environment Bootstrap — DONE 2026-05-07
+PRD: docs/prds/PHASE_B_RUN.md US-020 (continues from US-019 of docs/prds/PHASE_B_VISUAL_CORE.md).
+
+Hardware confirmed by `python scripts/setup_gpu_env.py --audit-only`:
+- nvidia-smi present, driver 581.80, CUDA toolkit (runtime) 13.0
+- NVIDIA RTX 4050 Laptop GPU, 6141 MiB VRAM (~5.997 GiB), sm_89
+
+Bootstrap path:
+- Active dev shell was Python 3.14.2 (no PyTorch wheels). Created `.venv-gpu` manually
+  with `py -3.12 -m venv .venv-gpu` (`--make-venv` couldn't pick 3.12 — see follow-up below).
+- `.venv-gpu/` added to .gitignore (was missing alongside `venv/` and `.venv/`).
+- `.venv-gpu\Scripts\python.exe scripts/setup_gpu_env.py` ran end-to-end:
+  - Steps 1-3 OK (hardware, Py 3.12.10, project paths).
+  - Step 4: torch 2.11.0+cu128, torchvision 0.26.0+cu128, torchaudio 2.11.0+cu128
+    (CUDA-13 driver picked cu128 wheel via the "nearest <= system" heuristic in
+    `pytorch_index_for_cuda` — confirmed by inspection).
+  - Step 5: 13 project deps installed (lightning 2.6.1, optuna 4.8.0, optuna-integration
+    4.8.0, plotly 6.7.0, pandas 3.0.2, opencv-python 4.13.0.92, matplotlib 3.10.9,
+    timm 1.0.26, scikit-learn 1.8.0, torchmetrics 1.9.0, rich 15.0.0, PyYAML 6.0.3,
+    tqdm 4.67.3).
+  - `requirements.lock.txt` written (UTF-8). `requirements.txt` left as legacy UTF-16
+    (script flagged with WARN; out-of-scope follow-up).
+  - Step 6 first attempt: FATAL on `gib=5.997 < min_vram_gib=6.0` (default floor).
+- MASTER decision (Option A, 2026-05-07): lower floor to 5.9 GiB without changing
+  batch_size. Rationale: 4 MiB gap, ResNet50/DenseNet121 mixed-precision actually fit
+  in ~5.5 GiB; runbook's per-cell `batch_size=16` override remains the OOM recovery
+  path if any L5 cell trips it.
+- Re-run `--skip-install --min-vram-gib 5.9` → smoke test PASS:
+  `[OK] Allocated + multiplied a 64x64 tensor on device 0.`
+  Final stdout line: `Stage -1 complete - environment ready for Stage 1 (Optuna pre-tune)`.
+- psutil 7.2.2 added separately (not in `setup_gpu_env.py:PROJECT_DEPS`; needed by
+  `scripts/quarantine_transnext.py` for zombie GPU process scanning, although graceful
+  if missing). Lockfile refreshed.
+
+Acceptance:
+- [x] `--audit-only` exits 0 on the GPU box.
+- [x] `torch.cuda.is_available()` is True.
+- [x] `requirements.lock.txt` committed in UTF-8 with all expected deps.
+- [x] No *.ckpt/*.pt/*.pth read; .venv-gpu/ gitignored (verified `git check-ignore -v`).
+- [x] Stdout ends with "Stage -1 complete..." marker.
+
+Follow-ups (NOT blocking Stage 1):
+- `setup_gpu_env.py:make_venv` only iterates `RECOMMENDED_PY_MINORS = (11, 10)` —
+  refuses to pick 3.12 even though `MAX_SUPPORTED_PY_MINOR = 12`. One-line fix:
+  extend the iteration set to include 12 (or all values in `range(10, MAX+1)`).
+- psutil missing from `PROJECT_DEPS`. Add it for completeness; runtime impact is
+  negligible (TransNeXt scan defaults to "no detection found" when missing).
+- `requirements.txt` legacy UTF-16 encoding — re-encode in a separate commit.
+
+## US-021: Pre-Flight Gate — DONE 2026-05-07 (with documented exception)
+PRD: docs/prds/PHASE_B_RUN.md US-021.
+
+Substantive checks PASS:
+- `.venv-gpu\Scripts\python.exe -m src.tests.test_priors`         -> 8/8 OK
+- `.venv-gpu\Scripts\python.exe -m src.tests.test_build_final_exp_json` -> 14/14 OK
+  (PRD spec said 13; actual is 14, US-019 added an extra check)
+- `.venv-gpu\Scripts\python.exe tune_all.py --validate-only`      -> "All 3 priors files valid."
+- `nvidia-smi --query-compute-apps=...` -> 0 python.exe rows. Only Windows
+  system processes (CrossDeviceResume.exe, PhoneExperienceHost.exe,
+  WidgetBoard.exe) hold GPU compute slots.
+
+Documented exception (NOT a real blocker, but flagged here for future cleanup):
+- `test_quarantine_transnext` -> 7/9 PASS, 2 ERROR.
+  Failures: `test_quarantine_removes_dirs_and_skips_refresh` and
+  `test_quarantine_never_opens_weight_files`. Both raise
+  `RuntimeError: Found 2 TransNeXt-like running process(es). PIDs: [<pair>]`
+  with PIDs that turn over between runs (115164/145400 -> 134888/141116 -> ...).
+- Root cause: `quarantine_transnext.py:find_running_transnext_processes()`
+  matches the substring `"transnext"` against the full cmdline of any
+  python.exe process. VSCode's Pylance / Python LSP daemon scans project
+  files including `*transnext*.py`, so its argv intermittently includes
+  those paths -> false positive.
+- Verified harmless via standalone `psutil.process_iter()` enumeration
+  (when the test isn't running, `transnext`-cmdline matches drop to 0)
+  and via `nvidia-smi --query-compute-apps` (no python on GPU).
+- Future Optuna / Phase B runs don't trigger this: they invoke `resnet50`
+  and `densenet121`, not `transnext`.
+- Follow-up (NOT blocking): tighten the needle match in
+  `find_running_transnext_processes()` to require a real entry-point
+  match (e.g. `tune_all.py --model transnext` or
+  `run_systematic.py --model transnext_*`), or add an `--ignore-pid`
+  filter for the calling process and known LSP daemons.
+
+Parallel-execution caveat: the PowerShell tool cancels sibling parallel
+calls when one fails. The US-021 checks must therefore be run serially
+after a single failure — running them in parallel hides successes behind
+the first failure's cancellation cascade.
+
+US-022 ready to launch: `python tune_all.py --n-trials 20 --model resnet50 --dataset cifar10`
+(estimated ~3.5 GPU-h on RTX 4050 Laptop, mixed-precision, batch 32).
+
+## US-022..US-025: Optuna Tune Chain — LAUNCHED 2026-05-07T01:35Z (background)
+PRD: docs/prds/PHASE_B_RUN.md US-022, US-023, US-024, US-025 (locked O1 split, O2 CIFAR-first).
+
+Launch mechanism:
+- Bash run_in_background tool's 600000ms (10 min) timeout was incompatible with
+  the ~13-hour chain. Switched to OS-detached PowerShell Start-Process so the
+  driver survives any shell lifecycle.
+- Driver: scripts/run_tune_chain.ps1 (sequential foreach over 4 pairs).
+- Detached PID: 135548 (powershell.exe -NoProfile -WindowStyle Hidden -File ...).
+- Log: .venv-gpu/tune_chain.log (gitignored).
+- Order (per O2): resnet50_cifar10 -> densenet121_cifar10 -> resnet50_mnist -> densenet121_mnist.
+- Each pair: `tune_all.py --n-trials 20 --model <m> --dataset <d>`.
+- Per-pair failure does NOT stop the chain (foreach continues regardless of $LASTEXITCODE).
+
+Expected wall-clock: ~13 GPU-h total (3.5 + 3.5 + 3 + 3). ETA ~14:30Z.
+
+Monitoring:
+- Live event stream via Monitor tool (task bvkgu1zcz, 1h window).
+- Live dashboard at artifacts/Final_Exp.html auto-polls every 600s, but Optuna
+  trials don't show up there — only Phase B cell completions (US-026..US-029).
+- Optuna SQLite DB at artifacts/optuna_thz.db (resumable on crash).
+- Final winners land at artifacts/best_hparams/{model}_{dataset}.json.
+
+Recovery on crash:
+- Re-run the same `tune_all.py --n-trials 20 --model <m> --dataset <d>` command;
+  the SQLite study resumes from the last saved trial.
+- If the detached process dies mid-chain, the remaining pairs can be launched by
+  re-running scripts/run_tune_chain.ps1 (it skips no pairs, so previously-completed
+  ones will spend zero new trials — Optuna sees the study has 20+ trials and exits).
+
+## Option C Methodology Lock + Re-launch — 2026-05-07T12:11Z
+Reason for revision: my initial "B = ~24 GPU-h" estimate was wrong. Re-derived from
+the killed run's actual per-trial wall-clock (~30s/epoch end-to-end at 5ep/2k) gave:
+- B-full (60ep / 10k / 5k):  ~100 GPU-h tune alone
+- C-hybrid:                  ~7-12 GPU-h total (fast rank + 60ep top-3 validation)
+Decision: C, per CLAUDE.md convergence-first while staying under deadline budget.
+
+What was patched / added:
+- scripts/validate_top3.py (NEW) — for each (model, dataset) pair: load Optuna
+  study from artifacts/optuna_thz.db, take top-K (default 3) trials by fast
+  val_acc, re-train each at 60 ep / 10k train / 5k val / patience=10 (CLAUDE.md
+  production protocol), pick winner by full_val_acc, write validated winner JSON
+  to artifacts/best_hparams/{m}_{d}.json with `validated_at_full_convergence:true`.
+  Per-trial cache at artifacts/validation/{m}_{d}_rank{N}.json (idempotent on resume).
+- scripts/run_tune_chain.ps1 (REWRITTEN) — encoding fix + skip-existing + Stage 2:
+  - PYTHONIOENCODING=utf-8 + cmd-routed `>>` redirect: no more PS UTF-16 BOM
+    or "python.exe :" stderr wrapping. Log is pure UTF-8, grep-clean.
+  - Skip-existing: per pair, query SQLite for completed trial count;
+    skip the tune call if >= 20 (avoids resnet50_cifar10 doubling).
+  - Stage 2: after fast-tune loop, runs validate_top3.py per pair.
+
+Pre-existing best_hparams JSONs (from prior fast-tune runs):
+- artifacts/best_hparams/resnet50_cifar10.json (fast: best_value=0.444, no
+  `validated_at_full_convergence` flag) - will be OVERWRITTEN by validation
+  step's winner JSON. Old fast-rank winner is irrelevant; ranking signal lives
+  in the SQLite study trials, not in this JSON.
+
+Detached re-launch:
+- PID: 131112 (powershell.exe -NoProfile -WindowStyle Hidden -File scripts/run_tune_chain.ps1)
+- Log: .venv-gpu/tune_chain.log (clean UTF-8, gitignored).
+- Monitor task: baucsrn09 (1-hour window; will need re-arming over the chain's lifetime).
+- Confirmed live (T+6s after launch): US-022 SKIP correctly fired,
+  US-023 [densenet121 x cifar10] started.
+
+Estimated total wall-clock: ~12-15 GPU-h
+- Stage 1 fast tune × 3 missing pairs: ~3 GPU-h
+- Stage 2 validation × 4 pairs × 3 trials × ~75 min/trial: ~15 GPU-h
+- Plus first-trial setup overhead (~50 min/pair on cold cache).
+
+## HANDOFF — 2026-05-07T17:36Z (paused for stronger GPU)
+
+Phase B execution paused on local RTX 4050 Laptop after completing all of Stage 1
+(fast Optuna tune) and the initial attempt at Stage 1.5 (top-3 full-convergence
+validation). The first Stage 1.5 attempt FAILED on all 4 pairs with
+`ModuleNotFoundError: No module named 'src'` — root-caused to `python scripts/X.py`
+only adding `scripts/` to sys.path. Fix committed in scripts/validate_top3.py
+(top-of-module `sys.path.insert(0, REPO_ROOT)`). Validated by import smoke test.
+
+A second Stage 1.5 launch (PID 44176) was started at 17:35Z, ran resnet50_cifar10
+rank 0 (trial #1) for ~1 min, then was stopped by user request to migrate to
+stronger hardware. No artifacts/validation/*.json cache files were written.
+
+State on disk (durable, all gitignored):
+- artifacts/optuna_thz.db                   — 92 fast-tune trials across 4 studies
+- artifacts/best_hparams/resnet50_cifar10.json    — fast winner: 0.444 (trial #1, 26 trials)
+- artifacts/best_hparams/densenet121_cifar10.json — fast winner: 0.535 (trial #15, 26 trials)
+- artifacts/best_hparams/resnet50_mnist.json      — fast winner: 0.949 (trial #0, 20 trials)
+- artifacts/best_hparams/densenet121_mnist.json   — fast winner: 0.956 (trial #0, 20 trials)
+- artifacts/validation/                     — empty (Stage 1.5 incomplete)
+- runs/final/final_clean_resnet50_cifar10/  — Phase A baseline, untouched
+- runs/final/final_clean_densenet121_cifar10/ — Phase A baseline, untouched
+- runs/final/final_clean_resnet50_mnist/     — Phase A baseline, untouched
+- runs/final/final_clean_densenet121_mnist/  — Phase A baseline, untouched
+
+Resume on the new GPU box (clean checkout assumed):
+1. python scripts/setup_gpu_env.py
+   - If Py 3.12 only (no 3.11/3.10): py -3.12 -m venv .venv-gpu, then run with the
+     .venv-gpu\Scripts\python.exe.
+   - If GPU < 6 GiB strict: append --min-vram-gib 5.9.
+2. .venv-gpu\Scripts\python.exe -m src.tests.test_priors
+   .venv-gpu\Scripts\python.exe -m src.tests.test_build_final_exp_json
+   .venv-gpu\Scripts\python.exe tune_all.py --validate-only
+   nvidia-smi --query-compute-apps=...   # expect zero python.exe
+3. Copy artifacts/optuna_thz.db + artifacts/best_hparams/*.json from this box if
+   you want to skip re-running Stage 1; otherwise the chain will re-tune fresh.
+4. $proc = Start-Process -FilePath "powershell.exe" `
+     -ArgumentList "-NoProfile","-WindowStyle","Hidden","-File","scripts\run_tune_chain.ps1" `
+     -PassThru
+   - Stage 1: skip-existing on any pair with >= 20 trials (skips all 4 if you copied DB).
+   - Stage 1.5: validate_top3.py for each pair, ~75 min/trial × 12 trials = ~15 GPU-h.
+5. After all 4 best_hparams JSONs have validated_at_full_convergence=true:
+   .venv-gpu\Scripts\python.exe run_all_phases.py --plan final --phase B --skip-existing
+   ~10 GPU-h for the 20-cell sweep.
+6. .venv-gpu\Scripts\python.exe scripts\refresh_trackers.py
+   .venv-gpu\Scripts\python.exe scripts\sync_trackers_git.py
+
+New files added in this session:
+- scripts/run_tune_chain.ps1     — Stage 1 + Stage 1.5 driver, encoding-clean,
+                                   skip-existing aware. UTF-8 log via cmd /c redirect.
+- scripts/validate_top3.py       — Stage 1.5 implementation. Idempotent at pair +
+                                   trial level. Privacy-safe (no weight binaries).
+- requirements.lock.txt          — UTF-8 pip freeze, 60+ packages including
+                                   torch 2.11.0+cu128, lightning 2.6.1, optuna 4.8.0.
+
+Documentation updated:
+- docs/prds/PHASE_B_RUN.md       — Handoff Status table, per-US status lines,
+                                   Decisions Locked O4 (Option C hybrid).
+- docs/prds/US_020_GPU_BOOTSTRAP.md — header note: US-020 superseded; US-021..US-023
+                                      remain as post-Phase-B roadmap.
+- docs/runbooks/PHASE_B_EXECUTION.md — Stage 1.5 section added, Known issues
+                                       (8 gotchas) section added, Stage 1
+                                       reframed as "fast proxy tune".
+- progress.txt                   — this entry.
+
+Not changed (intentionally):
+- CLAUDE.md, AGENTS.md, agents/*.md, PRD.md (root) — historical, no Option C
+  references needed at the project-overview level.
+- Final_Exp.md, artifacts/Final_Exp.json, artifacts/Final_Exp.html — auto-generated,
+  status correctly shows Phase A 4/6, Phase B 0/30.
+
+## MIGRATION PACKAGING — 2026-05-08 (RTX 5070 hand-off)
+
+Per migration brief: project state synced and documentation updated for autonomous
+hand-off to RTX 5070 (Blackwell, 12 GB) box.
+
+Changes:
+- src/experiments/run_status.py: QUARANTINE_REASON
+  "Pending Hardware" -> "Awaiting Native-Resolution Refactor".
+  Two prerequisites for un-quarantining TransNeXt are now explicit in the
+  explanatory note in scripts/update_final_exp.py: (1) Blackwell-tier GPU
+  online and (2) TransNeXt wrapper refactored for native (non-224x224)
+  resolution.
+- Tests updated: src/tests/test_build_final_exp_json.py:327,
+  src/tests/test_update_final_exp.py:55-63. Both suites green
+  (test_build_final_exp_json 14/14, test_update_final_exp 6/6).
+- Tracker artifacts regenerated via scripts/refresh_trackers.py:
+  Final_Exp.md, artifacts/Final_Exp.json, artifacts/Final_Exp.html.
+  62 deferred TransNeXt rows now render with the new label.
+  refresh_trackers.refresh_all reports md_ok=True html_ok=True thumbs_ok=True.
+- README.md: new "Hardware Setup - RTX 5070 (Blackwell, 12 GB)" section
+  inserted after the legacy Hardware & OS Prerequisites table. Captures
+  cu128 wheel choice (driver >= 580, CUDA runtime 12.x ok), NVIDIA Studio
+  Driver recommendation, batch-32 fits with headroom (no --min-vram-gib
+  workaround needed on the 5070), and the manual venv bootstrap workaround
+  for Py 3.12 since setup_gpu_env.py:make_venv only iterates 3.11/3.10.
+- docs/prds/PHASE_B_RUN.md + docs/runbooks/PHASE_B_EXECUTION.md:
+  every "Pending Hardware" prose reference updated to
+  "Awaiting Native-Resolution Refactor" so search results align.
+- 8.5_STATUS_UPDATE.md refreshed with migration delta block.
+
+Verified (no action needed):
+- requirements.txt: 56 packages, 100% pinned with ==, encoding UTF-16 LE
+  with BOM (CRLF) as specified in the migration brief. Note that
+  setup_gpu_env.py Step 5 still WARNs about UTF-16 because it writes the
+  parallel requirements.lock.txt in UTF-8 (canonical for that tool); both
+  files are valid pip inputs.
+- .gitignore: blocks *.pth, *.pt, *.ckpt, *.bin, *.safetensors, *.onnx,
+  *.h5, *.weights, *.pkl, *.msgpack + checkpoints/, weights/, runs/,
+  artifacts/weights/, artifacts/optuna_thz.db, artifacts/best_hparams/.
+  US-013 hardening intact.
+- .claudeignore: same set (minus *.weights), plus runs/final/**/*.ckpt
+  belt-and-braces. Assistant cannot Read or Bash cat any weight binary.
+
+Out of scope (intentionally not changed):
+- requirements.txt encoding stays UTF-16 LE per migration brief (despite
+  setup_gpu_env.py's WARN). New box should use requirements.lock.txt
+  (UTF-8) if the shell pipeline fights the UTF-16 BOM.
+- No runs/, no logs/, no checkpoints copied. The .venv-gpu and tune log
+  are local to this box; new box rebuilds .venv-gpu via setup_gpu_env.py.
+- artifacts/optuna_thz.db + artifacts/best_hparams/*.json are NOT staged
+  for git transfer (gitignored). Operator's choice whether to manually
+  copy them to the new box (saves ~3 GPU-h of Stage 1 re-running) or
+  start fresh.
+
+Resume path on RTX 5070 unchanged - see 8.5_STATUS_UPDATE.md for the
+TL;DR and PHASE_B_EXECUTION.md for the full runbook.
