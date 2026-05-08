@@ -1,4 +1,9 @@
 {
+  "8.5_STATUS_UPDATE.md": {
+    "mtime": 1778259313.3049455,
+    "source_id": "3999369e-d9ec-4583-b1ff-5b8774d03be6",
+    "uploaded_at": "2026-05-08T20:06:21Z"
+  },
   "AGENTS.md": {
     "mtime": 1777833604.0,
     "source_id": "4a14c380-0827-48f9-b26f-76231f95ca73",
@@ -10,14 +15,14 @@
     "uploaded_at": "2026-05-03T19:20:14Z"
   },
   "Final_Exp.md": {
-    "mtime": 1777739472.0,
-    "source_id": "0f07e10d-4ad2-4362-8550-a03ec362e7cb",
-    "uploaded_at": "2026-05-03T19:20:17Z"
+    "mtime": 1778259139.7301593,
+    "source_id": "815c5262-73b2-4d0c-bd74-35d0f7b267ab",
+    "uploaded_at": "2026-05-08T20:09:06Z"
   },
   "README.md": {
-    "mtime": 1777754146.0,
-    "source_id": "8d63e110-5def-49a4-a24f-5b1a4307c55e",
-    "uploaded_at": "2026-05-03T19:20:19Z"
+    "mtime": 1778259176.78649,
+    "source_id": "48f42cdf-9d26-4ef5-9c87-1ce71aa009bd",
+    "uploaded_at": "2026-05-08T20:09:13Z"
   },
   "TODO.md": {
     "mtime": 1777754194.0,
@@ -28,6 +33,11 @@
     "mtime": 1777629192.0,
     "source_id": "8935225b-25c4-49a1-a997-d4e0fd2eb692",
     "uploaded_at": "2026-05-03T19:20:25Z"
+  },
+  "agents/DEBUGGER.md": {
+    "mtime": 1777968870.1062207,
+    "source_id": "e2de5259-ea49-4912-b05e-73e26d8b4959",
+    "uploaded_at": "2026-05-08T20:06:24Z"
   },
   "agents/DESIGNER.md": {
     "mtime": 1775926022.0,
@@ -70,14 +80,39 @@
     "uploaded_at": "2026-05-03T19:20:45Z"
   },
   "agents/SYNCHRONIZER.md": {
-    "mtime": 1777830594.0,
-    "source_id": "64ca0b1b-ca43-4deb-b319-ca67c29667c6",
-    "uploaded_at": "2026-05-03T19:20:48Z"
+    "mtime": 1778006222.7386708,
+    "source_id": "548c91c2-0004-45fb-8c25-c4f51cb15c28",
+    "uploaded_at": "2026-05-08T20:09:19Z"
   },
   "agents/VALIDATOR.md": {
     "mtime": 1777629204.0,
     "source_id": "0d48228e-f1cf-49e8-8873-922e7f9fdcee",
     "uploaded_at": "2026-05-03T19:20:50Z"
+  },
+  "docs/prds/FINAL_EXP_DASHBOARD.md": {
+    "mtime": 1778008252.3515048,
+    "source_id": "20e9d8a7-10a9-4cbe-ab56-933100166756",
+    "uploaded_at": "2026-05-08T20:22:59Z"
+  },
+  "docs/prds/PHASE_B_RUN.md": {
+    "mtime": 1778259236.244091,
+    "source_id": "0c3d5567-ac2f-4b40-927d-92664df4af05",
+    "uploaded_at": "2026-05-08T20:06:27Z"
+  },
+  "docs/prds/PHASE_B_VISUAL_CORE.md": {
+    "mtime": 1778109294.0089424,
+    "source_id": "16dc6dc0-ff5f-4d16-be25-5c04d56cfeb4",
+    "uploaded_at": "2026-05-08T20:06:30Z"
+  },
+  "docs/prds/US_020_GPU_BOOTSTRAP.md": {
+    "mtime": 1778164981.492692,
+    "source_id": "a25bb47b-6116-40b1-9d93-f1845d84b890",
+    "uploaded_at": "2026-05-08T20:06:33Z"
+  },
+  "docs/runbooks/PHASE_B_EXECUTION.md": {
+    "mtime": 1778259235.2207716,
+    "source_id": "08c2caa2-56f5-453d-9e07-33021d71cad7",
+    "uploaded_at": "2026-05-08T20:06:36Z"
   },
   "papers/2104.00298v3.pdf": {
     "mtime": 1764493970.0,
@@ -110,9 +145,9 @@
     "uploaded_at": "2026-05-03T19:21:23Z"
   },
   "src/data/datasets.py": {
-    "mtime": 1777626456.0,
-    "source_id": "d7d30855-09b1-4132-aeea-4a8e9f4ce3fd",
-    "uploaded_at": "2026-05-03T19:21:25Z"
+    "mtime": 1777844512.0,
+    "source_id": "8c50d44e-e859-4936-92c5-5ac577986916",
+    "uploaded_at": "2026-05-08T20:09:24Z"
   },
   "src/data/degradation_levels.py": {
     "mtime": 1777725556.0,
@@ -130,24 +165,24 @@
     "uploaded_at": "2026-05-03T19:21:33Z"
   },
   "src/lightning/callbacks.py": {
-    "mtime": 1777575240.0,
-    "source_id": "10eb7727-0444-43f5-8234-44d1e421ae07",
-    "uploaded_at": "2026-05-03T19:21:35Z"
+    "mtime": 1778108573.2074468,
+    "source_id": "4720d01a-70f8-4f17-a540-137c69dd8159",
+    "uploaded_at": "2026-05-08T20:09:31Z"
   },
   "src/lightning/datamodule.py": {
-    "mtime": 1777575220.0,
-    "source_id": "b0c14bfe-9727-4de9-b575-b2f9cb8a8110",
-    "uploaded_at": "2026-05-03T19:21:38Z"
+    "mtime": 1777845208.0,
+    "source_id": "7e2b59f5-9777-4391-a57f-ce192acaa7a1",
+    "uploaded_at": "2026-05-08T20:09:37Z"
   },
   "src/lightning/module.py": {
-    "mtime": 1777575216.0,
-    "source_id": "5d68201f-b892-4479-9e8b-555fe22be9bd",
-    "uploaded_at": "2026-05-03T19:21:41Z"
+    "mtime": 1777845562.0,
+    "source_id": "6c3072bb-2d95-4710-8dc9-d43330135336",
+    "uploaded_at": "2026-05-08T20:09:42Z"
   },
   "src/lightning/train.py": {
-    "mtime": 1777626476.0,
-    "source_id": "ab7924fe-32f8-4ee2-9ad0-70a116ae82c7",
-    "uploaded_at": "2026-05-03T19:21:44Z"
+    "mtime": 1778108593.4747112,
+    "source_id": "db1b7e2f-0a7c-4410-9118-4e7d56f48387",
+    "uploaded_at": "2026-05-08T20:09:48Z"
   },
   "src/models/transnext_official/attention_cuda.py": {
     "mtime": 1773991520.0,
@@ -274,25 +309,180 @@
     "source_id": "16296d25-55f4-4c82-8de3-cb5a8af57654",
     "uploaded_at": "2026-05-03T19:22:48Z"
   },
+  "src/models/transnext_weights.py": {
+    "mtime": 1777963529.5272589,
+    "source_id": "2be44225-59b2-4a77-83ce-802de48366cb",
+    "uploaded_at": "2026-05-08T20:23:02Z"
+  },
   "src/models/transnext_wrapper.py": {
     "mtime": 1775658400.0,
     "source_id": "518b8809-5719-45ec-bd91-47269b4d7ba5",
     "uploaded_at": "2026-05-03T19:22:51Z"
+  },
+  "src/tests/__init__.py": {
+    "mtime": 1777626506.0,
+    "source_id": "7e3438c9-0acb-4aa6-8d46-a1e5cb3e5181",
+    "uploaded_at": "2026-05-08T20:23:05Z"
+  },
+  "src/tests/test_backfill_history_json.py": {
+    "mtime": 1778108859.9488597,
+    "source_id": "03e85d80-3657-4ca3-9089-1638564175b1",
+    "uploaded_at": "2026-05-08T20:06:39Z"
+  },
+  "src/tests/test_build_final_exp_json.py": {
+    "mtime": 1778258858.7186952,
+    "source_id": "e50a655e-6c7e-4667-82e1-7d3a5910efa5",
+    "uploaded_at": "2026-05-08T20:06:42Z"
+  },
+  "src/tests/test_dashboard.py": {
+    "mtime": 1778108829.2609186,
+    "source_id": "b1efd987-7878-4d11-ba15-4e61f52651de",
+    "uploaded_at": "2026-05-08T20:23:08Z"
   },
   "src/tests/test_degradation_determinism.py": {
     "mtime": 1777627766.0,
     "source_id": "afb4c37d-7427-4def-bce3-6339d0340518",
     "uploaded_at": "2026-05-03T19:22:53Z"
   },
+  "src/tests/test_final_plan.py": {
+    "mtime": 1778106986.7503219,
+    "source_id": "9b19695e-dc02-43b7-85fa-1ba987e21743",
+    "uploaded_at": "2026-05-08T20:06:45Z"
+  },
+  "src/tests/test_ignores.py": {
+    "mtime": 1778007149.6068487,
+    "source_id": "8c93a9b0-6181-4edb-a62d-5908ee5196b3",
+    "uploaded_at": "2026-05-08T20:06:50Z"
+  },
+  "src/tests/test_image_quality.py": {
+    "mtime": 1777844910.0,
+    "source_id": "59ca4b2c-e015-4501-a926-0f373317d1ad",
+    "uploaded_at": "2026-05-08T20:06:53Z"
+  },
+  "src/tests/test_matrix.py": {
+    "mtime": 1777845718.0,
+    "source_id": "e66f2f9f-0605-4d1b-97f9-762c9b323600",
+    "uploaded_at": "2026-05-08T20:06:56Z"
+  },
+  "src/tests/test_phase_a_clean.py": {
+    "mtime": 1777969387.6656635,
+    "source_id": "c9271a1f-80be-4eb1-a215-e89fcacfa310",
+    "uploaded_at": "2026-05-08T20:06:59Z"
+  },
+  "src/tests/test_phase_a_continuation.py": {
+    "mtime": 1777997140.3819714,
+    "source_id": "9132241f-e425-4ebd-8612-2cdb84b4f90f",
+    "uploaded_at": "2026-05-08T20:07:02Z"
+  },
+  "src/tests/test_phase_a_dashboard.py": {
+    "mtime": 1778004532.2710755,
+    "source_id": "88fe36bc-25d3-4d0c-8a4b-1cf9507afd6b",
+    "uploaded_at": "2026-05-08T20:07:05Z"
+  },
+  "src/tests/test_phase_a_gate.py": {
+    "mtime": 1777970356.5724995,
+    "source_id": "046eac9d-1079-47c8-b6d8-9df4095c9ffa",
+    "uploaded_at": "2026-05-08T20:07:08Z"
+  },
+  "src/tests/test_phase_a_hparams_fallback.py": {
+    "mtime": 1777969447.416447,
+    "source_id": "89077962-ef2b-4aab-a9c6-d062a8a1a5c3",
+    "uploaded_at": "2026-05-08T20:07:12Z"
+  },
+  "src/tests/test_priors.py": {
+    "mtime": 1778093000.977996,
+    "source_id": "ac59f17d-46a8-4992-8a61-f5fc5aa65b76",
+    "uploaded_at": "2026-05-08T20:07:16Z"
+  },
+  "src/tests/test_quarantine_transnext.py": {
+    "mtime": 1778106413.9682837,
+    "source_id": "6e7ce29f-8b72-4419-bc64-e9ea92162314",
+    "uploaded_at": "2026-05-08T20:07:19Z"
+  },
+  "src/tests/test_refresh_trackers.py": {
+    "mtime": 1778107101.2561343,
+    "source_id": "945f7f23-4ae8-49c8-9558-18f61e2fe674",
+    "uploaded_at": "2026-05-08T20:07:22Z"
+  },
+  "src/tests/test_render_thumbs.py": {
+    "mtime": 1777869534.0,
+    "source_id": "10ef9393-cd07-484b-b6c7-acadbdf0c299",
+    "uploaded_at": "2026-05-08T20:07:25Z"
+  },
+  "src/tests/test_run_all_phases_dashboard.py": {
+    "mtime": 1778005626.73627,
+    "source_id": "d6826b3b-b8c8-430a-8dd2-52e175576541",
+    "uploaded_at": "2026-05-08T20:07:27Z"
+  },
+  "src/tests/test_run_cell.py": {
+    "mtime": 1777868114.0,
+    "source_id": "9269b988-031a-4efb-b94a-5f1436bde0a6",
+    "uploaded_at": "2026-05-08T20:07:30Z"
+  },
+  "src/tests/test_run_phase_a.py": {
+    "mtime": 1777997290.5795703,
+    "source_id": "6158a835-76cf-4674-8f54-618ab48e2d30",
+    "uploaded_at": "2026-05-08T20:07:33Z"
+  },
+  "src/tests/test_run_phase_a_hook.py": {
+    "mtime": 1777971975.3649755,
+    "source_id": "c3c3c811-8ae3-4d3a-9eb9-1bfe4f1f3043",
+    "uploaded_at": "2026-05-08T20:07:37Z"
+  },
+  "src/tests/test_saturation.py": {
+    "mtime": 1777844532.0,
+    "source_id": "6be706f4-03e5-426f-9e4b-e1f592bf511f",
+    "uploaded_at": "2026-05-08T20:07:39Z"
+  },
+  "src/tests/test_sync_trackers_git.py": {
+    "mtime": 1778050055.4927201,
+    "source_id": "9793f268-8feb-42e6-96b2-6228881a8135",
+    "uploaded_at": "2026-05-08T20:07:43Z"
+  },
+  "src/tests/test_transnext_modes.py": {
+    "mtime": 1777845622.0,
+    "source_id": "fe6ade53-2823-4da0-9840-0041b5a7bd7f",
+    "uploaded_at": "2026-05-08T20:07:46Z"
+  },
+  "src/tests/test_tune_studies.py": {
+    "mtime": 1777845398.0,
+    "source_id": "9faa04aa-c7cb-4db7-9437-5a0f92c5451a",
+    "uploaded_at": "2026-05-08T20:07:51Z"
+  },
+  "src/tests/test_update_final_exp.py": {
+    "mtime": 1778258866.2989893,
+    "source_id": "d7172ae7-8821-4a77-ad44-b4d7093d411a",
+    "uploaded_at": "2026-05-08T20:23:11Z"
+  },
+  "src/tests/test_wandb_capture.py": {
+    "mtime": 1777869784.0,
+    "source_id": "6f13fd49-c0ea-4613-a4bf-1a188b25f40f",
+    "uploaded_at": "2026-05-08T20:07:54Z"
+  },
   "src/tools/bootstrap_project.py": {
     "mtime": 1773991520.0,
     "source_id": "f3b3be00-bd38-4c2c-82df-daa2909de970",
     "uploaded_at": "2026-05-03T19:22:56Z"
   },
+  "src/tools/build_final_dashboard.py": {
+    "mtime": 1778108770.5949843,
+    "source_id": "f0c50113-5407-4c78-99c3-34ecf1064eee",
+    "uploaded_at": "2026-05-08T20:23:14Z"
+  },
+  "src/tools/build_final_exp_json.py": {
+    "mtime": 1778108660.010023,
+    "source_id": "69878297-1058-4d8d-a251-2c90e97fa918",
+    "uploaded_at": "2026-05-08T20:07:57Z"
+  },
   "src/tools/degradation_robustness.py": {
     "mtime": 1775567142.0,
     "source_id": "90a1ceed-e5a6-43ab-87ed-33bfaf5e0096",
     "uploaded_at": "2026-05-03T19:22:58Z"
+  },
+  "src/tools/final_exp_schema.py": {
+    "mtime": 1778108647.6208813,
+    "source_id": "c96b4aed-fd75-44a5-8e51-1c723417cb53",
+    "uploaded_at": "2026-05-08T20:08:00Z"
   },
   "src/tools/generate_advanced_dashboard.py": {
     "mtime": 1775733970.0,
@@ -319,6 +509,11 @@
     "source_id": "896dd05f-49cb-4fa1-ae90-3e6eda22fde6",
     "uploaded_at": "2026-05-03T19:23:11Z"
   },
+  "src/tools/measure_image_quality.py": {
+    "mtime": 1777844890.0,
+    "source_id": "a242e5de-f388-4cc7-9cd6-b2d1776bc752",
+    "uploaded_at": "2026-05-08T20:08:04Z"
+  },
   "src/tools/plot_experiments.py": {
     "mtime": 1773991520.0,
     "source_id": "8ca42136-f4fb-46cc-83d0-3680c2ffb4ce",
@@ -328,6 +523,16 @@
     "mtime": 1775733970.0,
     "source_id": "21ee9a19-e07a-43cc-993f-07cb98ae058f",
     "uploaded_at": "2026-05-03T19:23:16Z"
+  },
+  "src/tools/render_cell_thumbs.py": {
+    "mtime": 1777869514.0,
+    "source_id": "cfa95373-a72f-4d55-8fba-4b11b40ed16a",
+    "uploaded_at": "2026-05-08T20:08:07Z"
+  },
+  "src/tools/render_curve_thumbs.py": {
+    "mtime": 1777963375.4881604,
+    "source_id": "7cc3f525-829f-4d7a-b2cf-f1bd73bf4ebb",
+    "uploaded_at": "2026-05-08T20:23:17Z"
   },
   "src/tools/summarize_runs.py": {
     "mtime": 1773991520.0,

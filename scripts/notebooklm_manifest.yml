@@ -19,6 +19,10 @@ include:
   - "AGENTS.md"
   - "TODO.md"
   - "Final_Exp.md"
+  - "8.5_STATUS_UPDATE.md"        # 2026-05-08 RTX 5070 migration snapshot
+
+  # Operator runbooks (added 2026-05-08 — Phase B execution + future Phase C)
+  - "docs/runbooks/*.md"
 
   # Agent specifications
   - "agents/*.md"
