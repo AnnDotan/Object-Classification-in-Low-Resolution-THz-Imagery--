@@ -76,6 +76,12 @@ _CSS = r"""
     --L5:        #ff5252;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+    /* Account for sticky tab-bar (~58px) + sticky thead (~38px) when
+       a row is scrolled-into-view via anchor/scrollIntoView. Without
+       this, the targeted row lands underneath the floating header. */
+    scroll-padding-top: 120px;
+}
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
     background: var(--bg);
@@ -251,11 +257,18 @@ body {
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
     position: sticky;
-    top: 56px; /* below tab-bar */
-    z-index: 1;
+    /* Tab-bar height (~58px) + 18px margin-bottom = ~76px. Previous
+       56px caused the sticky thead to float into the tab-bar gutter
+       and visually clip the first <tr>. */
+    top: 76px;
+    z-index: 3;
     user-select: none;
     white-space: nowrap;
 }
+/* Push the first body row clear of the sticky thead when scrolled
+   to. Without this, row 0 lands under the floating header bar. */
+.exp-table tbody tr.exp-row:first-of-type td { padding-top: 14px; }
+.exp-table tbody tr.exp-row { scroll-margin-top: 120px; }
 .exp-table th:hover {
     color: var(--text);
     background: var(--surface2);

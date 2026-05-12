@@ -18,12 +18,16 @@ from typing import Optional
 # noise_std:   additive Gaussian noise std on [0,1] image.
 # salt_pepper: fraction of pixels flipped to {0, 1}.
 # low_res:     downsample target before bilinear upsample to model input size.
+# Severity bumped 2026-05-12 for the RTX 5070 RALPH Loop campaign:
+# the prior table compressed accuracy across L1..L3 (delta < 4pp on
+# DenseNet × CIFAR-10), so the curve below pushes each axis one notch
+# harder while keeping L1 close-to-clean and L5 a true breaking point.
 DEGRADATION_LEVELS: dict[int, dict[str, float | int]] = {
-    1: {"low_res": 20, "blur_kernel": 3,  "blur_sigma": 0.70, "noise_std": 0.03, "salt_pepper": 0.02, "saturation": 1.00},
-    2: {"low_res": 14, "blur_kernel": 5,  "blur_sigma": 1.00, "noise_std": 0.06, "salt_pepper": 0.05, "saturation": 0.75},
-    3: {"low_res": 10, "blur_kernel": 7,  "blur_sigma": 1.30, "noise_std": 0.09, "salt_pepper": 0.08, "saturation": 0.50},
-    4: {"low_res":  7, "blur_kernel": 9,  "blur_sigma": 1.65, "noise_std": 0.13, "salt_pepper": 0.11, "saturation": 0.25},
-    5: {"low_res":  4, "blur_kernel": 11, "blur_sigma": 2.00, "noise_std": 0.18, "salt_pepper": 0.15, "saturation": 0.00},
+    1: {"low_res": 18, "blur_kernel": 3,  "blur_sigma": 0.80, "noise_std": 0.04, "salt_pepper": 0.03, "saturation": 0.95},
+    2: {"low_res": 12, "blur_kernel": 5,  "blur_sigma": 1.15, "noise_std": 0.08, "salt_pepper": 0.06, "saturation": 0.65},
+    3: {"low_res":  8, "blur_kernel": 7,  "blur_sigma": 1.50, "noise_std": 0.12, "salt_pepper": 0.10, "saturation": 0.40},
+    4: {"low_res":  6, "blur_kernel": 9,  "blur_sigma": 1.85, "noise_std": 0.16, "salt_pepper": 0.14, "saturation": 0.15},
+    5: {"low_res":  3, "blur_kernel": 13, "blur_sigma": 2.30, "noise_std": 0.22, "salt_pepper": 0.18, "saturation": 0.00},
 }
 
 LEVEL_NAMES: dict[int, str] = {

@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 from torchvision.datasets import CIFAR10
 from torchvision import transforms
 from PIL import Image
@@ -13,8 +14,13 @@ dataset = CIFAR10(
     transform=None
 )
 
-# קח תמונה אחת לדוגמה
-img, label = dataset[0]
+# Deterministic resample of a distinct "ground-truth" image (not idx 0).
+# Seed 5070 keeps the draw reproducible across runs while landing on a
+# different class than the original frog at index 0.
+GT_SEED = 5070
+GT_INDEX = random.Random(GT_SEED).randrange(len(dataset))
+img, label = dataset[GT_INDEX]
+print(f"[visualize_degradation] sampled idx={GT_INDEX} class={dataset.classes[label]}")
 img_np = np.array(img)
 
 

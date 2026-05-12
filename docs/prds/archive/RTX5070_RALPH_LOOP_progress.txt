@@ -1,0 +1,28 @@
+# Progress Log — RTX 5070 RALPH Loop
+
+## Learnings
+(Notes discovered during implementation — append-only.)
+
+## US-040 — State Reset
+(pending)
+
+## US-041 — RTX 5070 GPU Bootstrap
+(pending)
+
+## US-042 — TransNeXt Native-Resolution Variants
+(pending)
+
+## US-043 — resnet50 × {cifar10, mnist} tune
+(pending)
+
+## US-044 — densenet121 × {cifar10, mnist} tune
+(pending)
+
+## US-045 — transnext_small_native × {cifar10, mnist} tune
+(pending)
+
+## US-046 — RALPH Loop driver (sequential 186-cell sweep)
+(pending)
+
+## US-047 — End-of-campaign verification + 3 phase-boundary pushes
+(pending)

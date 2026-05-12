@@ -759,3 +759,50 @@ Out of scope (intentionally not changed):
 
 Resume path on RTX 5070 unchanged - see 8.5_STATUS_UPDATE.md for the
 TL;DR and PHASE_B_EXECUTION.md for the full runbook.
+
+# ============================================================
+# RTX 5070 RALPH LOOP — CONSOLIDATED PRD (2026-05-12)
+# ============================================================
+# Ground truth: PRD.md (root). Prior PRDs archived under
+# docs/prds/archive/. Story IDs resume at US-040.
+
+## Preparatory Fixes — DONE 2026-05-12
+- Dashboard CSS (src/tools/build_final_dashboard.py): scroll-padding-top:120px
+  on html, sticky thead bumped 56px->76px (matches tab-bar + 18px margin),
+  z-index 1->3, first-of-type padding-top:14px, scroll-margin-top:120px on
+  all .exp-row. Eliminates first-row clipping behind the floating header.
+- Degradation severity math (src/data/degradation_levels.py): every axis
+  bumped one notch across L1..L5 (low_res 20->18/14->12/10->8/7->6/4->3;
+  blur_sigma 0.70->0.80...2.00->2.30; noise_std 0.03->0.04...0.18->0.22;
+  salt_pepper +0.01..+0.03 per level; saturation curve compressed harder).
+  L1 still close-to-clean, L5 a true breaking point.
+  CAUTION: metrics.json.degradation_levels_hash rotates; no cross-batch
+  comparison crosses the 2026-05-12 boundary.
+- CIFAR-10 ground-truth resample (src/tools/visualize_degradation.py):
+  hard-coded dataset[0] replaced with deterministic
+  random.Random(5070).randrange(len(dataset)); prints sampled idx + class
+  for auditability. Reproducible across runs, distinct from the prior frog.
+
+## US-040: State Reset — Wipe Final_Exp, Optuna DB, validation cache
+(pending — execute first on operator GO; idempotent dry-run before --yes)
+
+## US-041: RTX 5070 GPU Bootstrap — cu128 wheel + bf16 smoke test
+(pending — gated on US-040 clean baseline)
+
+## US-042: TransNeXt Native-Resolution Variants — Un-quarantine
+(pending — gated on US-041; lifts US-014 quarantine for native-res path)
+
+## US-043: Optuna Pre-Tune — resnet50 × {cifar10, mnist}
+(pending — Stage 1 fast rank + Stage 1.5 top-3 validate)
+
+## US-044: Optuna Pre-Tune — densenet121 × {cifar10, mnist}
+(pending — Stage 1 + Stage 1.5)
+
+## US-045: Optuna Pre-Tune — transnext_small_native × {cifar10, mnist}
+(pending — uses new priors from US-042)
+
+## US-046: RALPH Loop Driver — Sequential 186-cell sweep with self-correction
+(pending — gated on 6 validated winner JSONs; single retry budget per cell)
+
+## US-047: End-of-Campaign Verification + Three Phase-Boundary Pushes
+(pending — A-close, B-close, C-close; explicit tracker pathspec only)
