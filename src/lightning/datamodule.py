@@ -39,6 +39,7 @@ class THzDataModule(pl.LightningDataModule):
         saturation: Optional[float] = None,
         root: str = "./data",
         num_workers: int = 0,
+        mnist_pad_to_32: bool = False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -51,6 +52,7 @@ class THzDataModule(pl.LightningDataModule):
             low_res=self.hparams.low_res,
             root=self.hparams.root,
             degradation_type=self.hparams.degradation_type,
+            mnist_pad_to_32=self.hparams.mnist_pad_to_32,
         )
         for k in ("blur_kernel", "blur_sigma", "gaussian_noise_std",
                   "salt_pepper_amount", "p_grayscale", "saturation"):
@@ -78,12 +80,25 @@ class THzDataModule(pl.LightningDataModule):
                 self.val_ds, range(min(self.hparams.val_subset, len(self.val_ds)))
             )
 
+    def _loader_extras(self) -> dict:
+        """US-043 DataLoader throughput knobs (operator mandate 2026-05-12).
+
+        pin_memory and persistent_workers are only meaningful with
+        num_workers > 0. The CPU-only test path keeps num_workers=0, so we
+        guard both flags on that condition to avoid PyTorch's "persistent
+        workers requires num_workers>0" hard error.
+        """
+        if self.hparams.num_workers > 0:
+            return dict(pin_memory=True, persistent_workers=True, prefetch_factor=2)
+        return dict(pin_memory=False)
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_ds,
             batch_size=self.hparams.batch_size,
             shuffle=True,
             num_workers=self.hparams.num_workers,
+            **self._loader_extras(),
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -92,4 +107,5 @@ class THzDataModule(pl.LightningDataModule):
             batch_size=max(self.hparams.batch_size, 64),
             shuffle=False,
             num_workers=self.hparams.num_workers,
+            **self._loader_extras(),
         )

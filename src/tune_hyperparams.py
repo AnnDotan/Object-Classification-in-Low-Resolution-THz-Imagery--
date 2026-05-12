@@ -100,7 +100,11 @@ def build_objective(max_epochs: int, train_subset: int, val_subset: int):
         except Exception:
             wandb_logger = None
 
-        precision = "16-mixed" if pl.pytorch.accelerators.cuda.CUDAAccelerator.is_available() else "32-true"
+        # US-043: bf16-mixed default on CUDA (Blackwell sm_120 native); 32-true on CPU.
+        cuda_avail = pl.pytorch.accelerators.cuda.CUDAAccelerator.is_available()
+        precision = "bf16-mixed" if cuda_avail else "32-true"
+        if cuda_avail:
+            torch.set_float32_matmul_precision("high")  # TF32 on Blackwell
         trainer = pl.Trainer(
             max_epochs=max_epochs,
             accelerator="auto",
@@ -192,6 +196,14 @@ def _l3_train_one_trial(
     )
     classifier = THzClassifier(**classifier_kwargs)
 
+    # US-043: bump num_workers on CUDA for the Optuna trials so the 32->224
+    # bicubic upsample doesn't CPU-bottleneck the GPU. CPU-only path keeps 0.
+    if torch.cuda.is_available():
+        import os
+        _nw = min(max((os.cpu_count() or 4) // 2, 2), 8)
+    else:
+        _nw = 0
+
     dm = THzDataModule(
         dataset=dataset,
         out_size=224,
@@ -205,10 +217,14 @@ def _l3_train_one_trial(
         gaussian_noise_std=float(p["noise_std"]),
         salt_pepper_amount=float(p["salt_pepper"]),
         saturation=float(p["saturation"]),
+        num_workers=_nw,
     )
 
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-    precision = "16-mixed" if torch.cuda.is_available() else "32-true"
+    # US-043: bf16-mixed default on CUDA (Blackwell sm_120 native).
+    precision = "bf16-mixed" if torch.cuda.is_available() else "32-true"
+    if torch.cuda.is_available():
+        torch.set_float32_matmul_precision("high")  # TF32 throughput on Blackwell
     trainer = pl.Trainer(
         max_epochs=max_epochs,
         accelerator=accelerator,

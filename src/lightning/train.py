@@ -111,11 +111,24 @@ def run_experiment(
     early_stopping_patience: int = 0,
     dataset: str = "cifar10",
     pos_bias_interp: str = "bilinear",
+    img_size: int = 224,
+    patch_size: int = 4,
+    pretrain_size: Optional[int] = None,
+    compile_mode: str = "none",
+    precision: Optional[str] = None,
+    mnist_pad_to_32: bool = False,
     run_name_override: Optional[str] = None,
+    num_workers: Optional[int] = None,  # US-043: None -> auto-pick on CUDA, 0 on CPU
 ):
-    if model_name.startswith("transnext_") and out_size != 224:
-        print(f"[INFO] Overriding out_size from {out_size} to 224 for TransNeXt")
-        out_size = 224
+    # V3: the legacy "silently force TransNeXt to 224" override is gone.
+    # TransNeXt rows must specify a compatible (out_size, img_size) pair —
+    # the data pipeline produces out_size pixels, the model expects img_size,
+    # mismatch would silently feed wrong-shaped tensors into the model.
+    if model_name.startswith("transnext_") and out_size != img_size:
+        raise ValueError(
+            f"TransNeXt requires out_size == img_size; got out_size={out_size} "
+            f"img_size={img_size}. Set --img_size to match --out_size."
+        )
 
     pl.seed_everything(42, workers=True)
 
@@ -171,6 +184,12 @@ def run_experiment(
         "early_stopping_patience": early_stopping_patience,
         "dataset": dataset,
         "pos_bias_interp": pos_bias_interp,
+        "img_size": img_size,
+        "patch_size": patch_size,
+        "pretrain_size": pretrain_size,
+        "compile_mode": compile_mode,
+        "precision": precision,
+        "mnist_pad_to_32": mnist_pad_to_32,
         "seed": 42,
     }
     _write_run_config(run_dir, config_snapshot)
@@ -180,6 +199,17 @@ def run_experiment(
         f.write(f"[lightning] run_name={run_name}\n")
         f.write(f"[lightning] dataset={dataset} group={group}\n")
         f.write(f"[lightning] model={model_name} pretrained={pretrained}\n")
+
+    # US-043: auto-pick num_workers on CUDA (operator mandate: high throughput,
+    # >=90% GPU utilization on the 32->224 bicubic upsample). On CPU, keep 0
+    # for test determinism + Windows fork safety.
+    if num_workers is None:
+        if torch.cuda.is_available():
+            import os
+            cpu_count = os.cpu_count() or 4
+            num_workers = min(max(cpu_count // 2, 2), 8)
+        else:
+            num_workers = 0
 
     dm = THzDataModule(
         dataset=dataset,
@@ -195,6 +225,8 @@ def run_experiment(
         salt_pepper_amount=salt_pepper_amount,
         p_grayscale=p_grayscale,
         saturation=saturation,
+        mnist_pad_to_32=mnist_pad_to_32,
+        num_workers=num_workers,
     )
 
     model = THzClassifier(
@@ -214,6 +246,10 @@ def run_experiment(
         mixup_alpha=mixup_alpha,
         cutmix_alpha=cutmix_alpha,
         pos_bias_interp=pos_bias_interp,
+        img_size=img_size,
+        patch_size=patch_size,
+        pretrain_size=pretrain_size,
+        compile_mode=compile_mode,
     )
 
     run_meta = {
@@ -247,10 +283,21 @@ def run_experiment(
         loggers.append(wandb_logger)
 
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    # Precision: explicit `precision` arg wins. Default per US-043 operator
+    # mandate: bf16-mixed on CUDA (Blackwell sm_120 native; no loss scaler;
+    # fp32 dynamic range avoids fp16 underflow). 32-true on CPU.
+    resolved_precision = precision or ("bf16-mixed" if accelerator == "gpu" else "32-true")
+
+    # US-043 operator mandate: enable TF32 on the FP32 matmul path. Free 1.3x
+    # throughput on Blackwell with no accuracy regression validated by the
+    # determinism gate. Idempotent — safe to call before every Trainer.
+    if accelerator == "gpu":
+        torch.set_float32_matmul_precision("high")
     trainer = pl.Trainer(
         max_epochs=epochs,
         accelerator=accelerator,
         devices=1,
+        precision=resolved_precision,
         logger=loggers,
         callbacks=callbacks,
         gradient_clip_val=(max_grad_norm if max_grad_norm and max_grad_norm > 0 else None),
@@ -308,6 +355,23 @@ def main() -> None:
     p.add_argument("--dataset", type=str, default="cifar10", choices=["cifar10", "mnist"])
     p.add_argument("--pos_bias_interp", type=str, default="bilinear",
                    choices=["bilinear", "bicubic", "nearest"])
+    # V3 native-res / Blackwell knobs. Defaults preserve legacy behaviour;
+    # native TransNeXt cells opt in with --img_size 32 --patch_size 2.
+    p.add_argument("--img_size", type=int, default=224,
+                   help="Spatial dim the model expects. 224=legacy, 32=V3 native.")
+    p.add_argument("--patch_size", type=int, default=4,
+                   help="TransNeXt stage-1 stride. 4=legacy, 2=required at img_size=32.")
+    p.add_argument("--pretrain_size", type=int, default=None,
+                   help="CPB coord scale; defaults to 224 if pretrained else img_size.")
+    p.add_argument("--compile_mode", type=str, default="none",
+                   choices=["none", "default", "reduce-overhead", "max-autotune"],
+                   help="torch.compile mode. 'none' disables compile.")
+    p.add_argument("--precision", type=str, default=None,
+                   choices=["16-mixed", "bf16-mixed", "32-true", "16-true", "bf16-true"],
+                   help="Trainer precision. Default: 16-mixed on CUDA, 32-true on CPU.")
+    p.add_argument("--mnist_pad_to_32", action="store_true",
+                   help="V3 native path: reflection-pad MNIST 28->32 BEFORE "
+                        "degradation so the canvas matches CIFAR's 32x32.")
     args = p.parse_args()
 
     run_experiment(
@@ -341,6 +405,12 @@ def main() -> None:
         early_stopping_patience=args.early_stopping_patience,
         dataset=args.dataset,
         pos_bias_interp=args.pos_bias_interp,
+        img_size=args.img_size,
+        patch_size=args.patch_size,
+        pretrain_size=args.pretrain_size,
+        compile_mode=args.compile_mode,
+        precision=args.precision,
+        mnist_pad_to_32=args.mnist_pad_to_32,
     )
 
 

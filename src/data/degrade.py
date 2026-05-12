@@ -82,12 +82,20 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
         torch_rng.manual_seed(int(seed))
 
     # 0) Clean baseline early-return (Phase A): no degradation, only upsample.
+    # US-043 (operator mandate 2026-05-12): bicubic interpolation on the
+    # 32->224 upsample. Reason: bilinear introduces aliasing artifacts that
+    # handicap the ImageNet-pretrained ResNet50 / DenseNet121 receptive-field
+    # hierarchy. Bicubic preserves high-frequency content for the CNN baselines.
+    # Cost: rotates `metrics.json.degradation_levels_hash`; prior Phase A
+    # baselines (frozen pre-US-043) are non-comparable to runs after this
+    # commit. Re-baseline is part of the US-043 scope. Bicubic is deterministic
+    # in PyTorch >= 1.10 so the determinism gate still passes (MSE=0).
     if cfg.degradation_type == 'none':
         if img.shape[-1] != cfg.out_size:
             img = torch.nn.functional.interpolate(
                 img.unsqueeze(0),
                 size=(cfg.out_size, cfg.out_size),
-                mode="bilinear",
+                mode="bicubic",
                 align_corners=False,
             ).squeeze(0)
         return img.clamp(0, 1)
@@ -100,11 +108,14 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
             gray3 = torch.stack([gray, gray, gray], dim=0)
             img = (1.0 - s) * gray3 + s * img
 
-    # 2) downsample to low_res then upsample to out_size
+    # 2) downsample to low_res then upsample to out_size.
+    # US-043: downsample stays bilinear (anti-aliased pooling is sensible for
+    # resolution loss simulation); upsample switches to bicubic to match the
+    # clean-baseline upsample mode. Both stages remain deterministic.
     if cfg.degradation_type in ('all', 'downsampling'):
         img = img.unsqueeze(0)
         img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
-        img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bilinear", align_corners=False)
+        img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bicubic", align_corners=False)
         img = img.squeeze(0)
 
     # 3) blur

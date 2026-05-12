@@ -13,7 +13,8 @@ Companion to [`artifacts/priors/{model}.json`](.) (and `_schema.json`). Authored
 - [`_schema.json`](\_schema.json) — JSON Schema (Draft-07) for prior file shape
 - [`resnet50.json`](resnet50.json) — ResNet50 prior, used for `resnet50_cifar10` + `resnet50_mnist`
 - [`densenet121.json`](densenet121.json) — DenseNet121 prior, used for `densenet121_cifar10` + `densenet121_mnist`
-- [`transnext_base.json`](transnext_base.json) — TransNeXt prior (quarantined; not used in Phase B)
+- [`transnext_base.json`](transnext_base.json) — TransNeXt prior (V3 un-quarantined; bare name routes via `_v3_cell_settings`)
+- [`transnext_small_native.json`](transnext_small_native.json) — TransNeXt native-32 small variant (PRD US-042 alias)
 - this file — paper-quote attribution
 
 ## Hyperparameter sources
@@ -40,7 +41,7 @@ The five hparams enforced by the schema (`head_lr`, `backbone_lr`, `weight_decay
 | `label_smoothing` | `0.1` | `[0.0, 0.2]` (uniform) | [papers/TResNet.pdf](../../papers/TResNet.pdf) §3.3 — DenseNet predates label smoothing; we cite TResNet as the modern CNN training reference |
 | `warmup_epochs` | `0` | `[0, 5]` (uniform → int) | [papers/Densely Connected Convolutional Networks.pdf](../../papers/Densely%20Connected%20Convolutional%20Networks.pdf) §4 — short warmup is standard for cosine fine-tuning |
 
-### TransNeXt — Base ([artifacts/priors/transnext_base.json](transnext_base.json)) — quarantined, not used in Phase B
+### TransNeXt — Base ([artifacts/priors/transnext_base.json](transnext_base.json)) — V3 un-quarantined
 
 | Hparam | Anchor | Range | Source |
 |---|---|---|---|
@@ -48,6 +49,18 @@ The five hparams enforced by the schema (`head_lr`, `backbone_lr`, `weight_decay
 | `backbone_lr` | `5e-5` | `[5e-6, 5e-4]` (loguniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — full FT typically `1e-5`–`1e-4` for ImageNet-pretrained ViTs |
 | `weight_decay` | `5e-2` | `[5e-3, 5e-1]` (loguniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — weight decay `5e-2` |
 | `label_smoothing` | `0.0` | `[0.0, 0.1]` (uniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — LS `0.0` for linear probe; FT can tolerate small LS |
+| `warmup_epochs` | `5` | `[0, 10]` (uniform → int) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — cosine + linear warmup is standard for ViTs |
+
+### TransNeXt — Small Native ([artifacts/priors/transnext_small_native.json](transnext_small_native.json)) — PRD US-042 native-32 alias
+
+Same paper source as `transnext_base` (TransNeXt §A.3). The `_native` alias is architecturally `transnext_small` (embed_dims `[72,144,288,576]`, depths `[5,5,22,5]`) but pre-baked for the V3 native path (`img_size=32`, `patch_size=2`). Search ranges mirror `transnext_base.json` so the decade-bound contract carries over without re-derivation.
+
+| Hparam | Anchor | Range | Source |
+|---|---|---|---|
+| `head_lr` | `5e-4` (V3 FT row, CLAUDE.md) | `[1e-4, 1e-2]` (loguniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — head LR `1e-3` (LP), inherited as FT head anchor; CLAUDE.md V3 row anchors `5e-4` |
+| `backbone_lr` | `5e-5` (V3 FT row) | `[5e-6, 5e-4]` (loguniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — full FT typically `1e-5`–`1e-4`; CLAUDE.md V3 row anchors `5e-5` |
+| `weight_decay` | `5e-2` | `[5e-3, 5e-1]` (loguniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — weight decay `5e-2` |
+| `label_smoothing` | `0.1` (V3 FT row) | `[0.0, 0.1]` (uniform) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — LS `0.0` for LP; CLAUDE.md V3 row anchors `0.1` for FT |
 | `warmup_epochs` | `5` | `[0, 10]` (uniform → int) | [papers/TransNeXt.pdf](../../papers/TransNeXt.pdf) §A.3 — cosine + linear warmup is standard for ViTs |
 
 ## Reproducibility
