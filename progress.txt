@@ -1187,6 +1187,35 @@ Stage 1 fast tune + Phase A baseline re-runs follow in the next iteration.
   5. Write the one-line progress.txt entries the PRD demands.
   6. Report `best_params` + measured GPU throughput it/s.
 
+### Iteration 4b — US-043 Phase A re-baseline on 5070 (post-bicubic)
+Detached process: PID 36044, log: logs/phase_a_rebaseline_20260512_185939.log
+Total wall-clock: ~30 min for all 4 CNN baselines. Throughput on 5070:
+  - ResNet50 @ 224x224 batch=32 bf16-mixed TF32 pin_memory: ~18.8 it/s
+  - DenseNet121 @ 224x224 batch=32 bf16-mixed TF32 pin_memory: ~12.5 it/s
+
+Per-cell verdicts:
+  | Cell                            | val_acc | paper  | delta   | 4050->5070 | decision | epochs |
+  | final_clean_resnet50_mnist      | 0.9914  | 0.995  | -0.36pp | +0.14pp    | CONTINUE | 21     |
+  | final_clean_densenet121_mnist   | 0.9930  | 0.995  | -0.20pp | +0.02pp    | CONTINUE | 29     |
+  | final_clean_resnet50_cifar10    | 0.9518  | 0.930  | +2.18pp | +0.90pp    | CONTINUE | 23     |
+  | final_clean_densenet121_cifar10 | 0.9356  | 0.950  | -1.44pp | +0.46pp    | HALT     | 17     |
+
+KEY SIGNAL: resnet50_cifar10 jumped 0.9428 (4050 bilinear) -> 0.9518 (5070
+bicubic), +0.90pp. The operator's bicubic mandate is EMPIRICALLY VALIDATED
+on the canonical ResNet50 baseline. CIFAR-10 was the cell where bilinear
+aliasing was suspected to handicap the ImageNet receptive field; the
+re-baseline confirms it.
+
+HALT on densenet121_cifar10: conditional val_loss_trend rule fired with
+gap=+5.11pp (>5pp threshold) + 2/5 non-increasing val_loss transitions
++ band=green. Same pattern as the prior 4050 densenet121_mnist HALT that
+operator resolved via manual_override. This is a US-044 prep concern
+(DenseNet121 baselines / tune); does NOT block US-043 (ResNet50 tune).
+
+The 4 archived 4050-era baselines live at
+runs/final/_archive_pre_bicubic_2026-05-12/ for audit. They are
+non-comparable to anything trained after the bicubic switch.
+
 ### Iteration 4a — US-043 infrastructure prep summary
 - What was done
   - Switched degrade.py upsample paths from bilinear to bicubic (operator
