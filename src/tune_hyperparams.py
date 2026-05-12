@@ -196,13 +196,15 @@ def _l3_train_one_trial(
     )
     classifier = THzClassifier(**classifier_kwargs)
 
-    # US-043: bump num_workers on CUDA for the Optuna trials so the 32->224
-    # bicubic upsample doesn't CPU-bottleneck the GPU. CPU-only path keeps 0.
-    if torch.cuda.is_available():
-        import os
-        _nw = min(max((os.cpu_count() or 4) // 2, 2), 8)
-    else:
-        _nw = 0
+    # US-043 (post-iter4b fix): force num_workers=0 in the Optuna trial loop.
+    # Reason: a multi-trial in-process loop on Windows trips a Lightning
+    # `combined_loader` + persistent_workers interaction at trial ~11
+    # (RuntimeError: Please call iter(combined_loader) first.). The 2k-train
+    # subset is small enough that single-process loading is not the
+    # bottleneck — pre-crash throughput was ~24 it/s, compute-bound on bf16.
+    # Production paths (run_experiment via run_cell / run_phase_a) keep the
+    # auto-pick num_workers > 0 because they're single Trainer.fit calls.
+    _nw = 0
 
     dm = THzDataModule(
         dataset=dataset,
