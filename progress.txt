@@ -783,8 +783,80 @@ TL;DR and PHASE_B_EXECUTION.md for the full runbook.
   random.Random(5070).randrange(len(dataset)); prints sampled idx + class
   for auditability. Reproducible across runs, distinct from the prior frog.
 
-## US-040: State Reset — Wipe Final_Exp, Optuna DB, validation cache
-(pending — execute first on operator GO; idempotent dry-run before --yes)
+## US-040: State Reset — Wipe Final_Exp, Optuna DB, validation cache — DONE 2026-05-12
+- scripts/reset_state.py (new). Default mode = dry-run (lists every file it would
+  touch, exits 0, zero filesystem mutation). Destructive path gated behind --yes.
+- Plan/execute split: build_plan(repo_root) returns a ResetPlan dataclass with
+  Action records (kind ∈ {move, delete}, src, dst, note); execute_plan(plan)
+  applies them. The split makes the test surface a pure-function plan inspection
+  separate from the FS-mutating step.
+- Backup collision is idempotent: _next_backup_path() appends .1, .2, ... when
+  the destination already exists, so a re-run never overwrites a prior backup.
+  Verified by test_reset_state._check_backup_collision_appends_suffix.
+- Preservation guard: snapshot_preserved() SHA-256s artifacts/priors/** + the
+  lock file before and after execute_plan(); mismatch returns rc=2 with a
+  CHANGED/REMOVED diff to stderr. Tests assert pre == post for the staged case.
+- Acceptance criteria green:
+    - --dry-run lists/exits 0 (verified by CLI smoke + test_dry_run_cli).
+    - --yes moves optuna_thz.db -> .pre-5070.bak and best_hparams/*.json
+      -> _archive_pre_5070/ (test_execute_plan_moves_and_deletes).
+    - priors/* and requirements.lock.txt untouched (snapshot_preserved
+      pre/post SHA-256 round-trip).
+    - tune_all.py --validate-only still prints "All 3 priors files valid."
+    - mypy scripts/reset_state.py: Success.
+- Smoke against the live repo: dry-run reports "Nothing to do" because operator
+  has already partially reset (optuna_thz.db is gone, best_hparams/ is empty,
+  Final_Exp.{json,html} are deleted per git status). Idempotency confirmed —
+  the script is safe to re-run.
+- Downstream regeneration of Final_Exp.{json,html} is handled by the existing
+  scripts/refresh_trackers.py (US-019); reset_state.py only deletes.
+- Tests added: src/tests/test_reset_state.py — 5 invariants, all PASS:
+  plan-no-mutation, execute, collision, dry-run-cli, empty-state.
+- Learning: importlib.util.spec_from_file_location loads must register the
+  module in sys.modules BEFORE exec_module() when the module declares
+  @dataclass with mutable defaults. Otherwise dataclasses._is_type fails to
+  resolve cls.__module__ at class-construction time and raises AttributeError
+  on NoneType. Added that line to the test loader.
+- Learning: function defaults are captured at def-time, so a test that
+  monkeypatches mod._REPO_ROOT must ensure main() re-reads _REPO_ROOT at call
+  time. Fix: main() now explicitly passes repo_root=_REPO_ROOT into both
+  build_plan() and snapshot_preserved(), making the module-level constant the
+  live source of truth for tests.
+
+## Iteration 1 — US-040 State Reset
+- What was done
+  - Created scripts/reset_state.py implementing the PRD §4 reset protocol.
+  - Created src/tests/test_reset_state.py with 5 invariants.
+  - Updated PRD.md US-040 acceptance criteria from [ ] to [x] (6/6).
+  - Updated progress.txt RTX 5070 RALPH Loop section: US-040 marked DONE.
+- Files affected
+  - NEW: scripts/reset_state.py
+  - NEW: src/tests/test_reset_state.py
+  - EDIT: PRD.md (acceptance checkboxes), progress.txt (status block)
+- Learnings for next cycles:
+  - Patterns:
+    - Split plan/execute when the dry-run contract demands zero FS mutation —
+      build_plan() is pure, execute_plan() is the only mutator. This pattern
+      also lets tests assert "plan equals 8 actions" without staging an
+      execute.
+    - SHA-256 round-trip is a cheap, language-agnostic preservation guard.
+      snapshot_preserved() returns a {relpath: hex} dict that pre/post diff
+      directly.
+  - Traps:
+    - importlib-loaded modules need sys.modules registration before
+      exec_module() if they use @dataclass — dataclasses look up
+      cls.__module__ in sys.modules during decoration.
+    - Function default arguments freeze module-level constants at def-time;
+      use late-binding (resolve inside the function body) when tests need to
+      monkeypatch module-level paths.
+  - Helpful context:
+    - The repo state was already partially reset on disk (operator did the
+      Optuna DB rename + Final_Exp deletion manually earlier), which proved
+      the script's idempotency: dry-run correctly reports "Nothing to do".
+    - tune_all.py --validate-only is the lightweight gate that "priors are
+      still intact" — keep using it as a post-reset smoke check.
+---
+
 
 ## US-041: RTX 5070 GPU Bootstrap — cu128 wheel + bf16 smoke test
 (pending — gated on US-040 clean baseline)

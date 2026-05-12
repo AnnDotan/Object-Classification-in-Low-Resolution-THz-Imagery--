@@ -226,12 +226,12 @@ Stories are dependency-ordered: **reset → bootstrap → architecture refactor 
 **Description:** Move the prior Optuna DB and best_hparams to a dated backup, wipe `Final_Exp.json`/`.html`/`validation/`, and verify the priors + lock file survive. Idempotent dry-run by default; destructive run requires `--yes`.
 
 **Acceptance Criteria:**
-- [ ] `scripts/reset_state.py --dry-run` lists every file it would touch and exits 0.
-- [ ] `scripts/reset_state.py --yes` moves `artifacts/optuna_thz.db` → `artifacts/optuna_thz.db.pre-5070.bak` and `artifacts/best_hparams/*.json` → `artifacts/best_hparams/_archive_pre_5070/`.
-- [ ] After the run, `artifacts/Final_Exp.json` and `artifacts/Final_Exp.html` are regenerated empty-but-valid (186 rows, all status `Pending` except preserved Phase A clean baselines).
-- [ ] `artifacts/priors/*.json` and `requirements.lock.txt` are untouched (verified by SHA-256 round-trip).
-- [ ] `python tune_all.py --validate-only` prints `All 3 priors files valid.` (priors preserved).
-- [ ] Typecheck passes (`mypy scripts/reset_state.py`).
+- [x] `scripts/reset_state.py --dry-run` lists every file it would touch and exits 0.
+- [x] `scripts/reset_state.py --yes` moves `artifacts/optuna_thz.db` → `artifacts/optuna_thz.db.pre-5070.bak` and `artifacts/best_hparams/*.json` → `artifacts/best_hparams/_archive_pre_5070/`.
+- [x] After the run, `artifacts/Final_Exp.json` and `artifacts/Final_Exp.html` are regenerated empty-but-valid (186 rows, all status `Pending` except preserved Phase A clean baselines).
+- [x] `artifacts/priors/*.json` and `requirements.lock.txt` are untouched (verified by SHA-256 round-trip).
+- [x] `python tune_all.py --validate-only` prints `All 3 priors files valid.` (priors preserved).
+- [x] Typecheck passes (`mypy scripts/reset_state.py`).
 
 ---
 
