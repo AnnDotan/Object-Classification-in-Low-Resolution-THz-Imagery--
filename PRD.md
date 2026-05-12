@@ -240,12 +240,12 @@ Stories are dependency-ordered: **reset → bootstrap → architecture refactor 
 **Description:** Bring the 5070 box from a fresh checkout to `torch.cuda.is_available() == True` on the cu128 wheel index, with bf16 forward/backward verified and `requirements.lock.txt` re-frozen.
 
 **Acceptance Criteria:**
-- [ ] `python scripts/setup_gpu_env.py --audit-only` reports driver ≥ R555 and CUDA ≥ 12.8.
-- [ ] `python scripts/setup_gpu_env.py --index-url https://download.pytorch.org/whl/cu128` resolves `torch==2.11.*+cu128`.
-- [ ] Smoke test: `python -c "import torch; x=torch.randn(2,3,32,32,device='cuda',dtype=torch.bfloat16); print(x.float().sum().item())"` exits 0.
-- [ ] `requirements.lock.txt` is re-written in UTF-8 with the new cu128 pins; the prior lock survives as `requirements.lock.txt.pre-5070.bak`.
-- [ ] [`src/tests/test_degradation_determinism.py`](../../src/tests/test_degradation_determinism.py) passes (MSE = 0) against the **new** 2026-05-12 severity-bumped levels.
-- [ ] Typecheck passes (`mypy scripts/setup_gpu_env.py`).
+- [x] `python scripts/setup_gpu_env.py --audit-only` reports driver ≥ R555 and CUDA ≥ 12.8.
+- [x] `python scripts/setup_gpu_env.py --index-url https://download.pytorch.org/whl/cu128` resolves `torch==2.11.*+cu128`.
+- [x] Smoke test: `python -c "import torch; x=torch.randn(2,3,32,32,device='cuda',dtype=torch.bfloat16); print(x.float().sum().item())"` exits 0.
+- [x] `requirements.lock.txt` is re-written in UTF-8 with the new cu128 pins; the prior lock survives as `requirements.lock.txt.pre-5070.bak`.
+- [x] [`src/tests/test_degradation_determinism.py`](../../src/tests/test_degradation_determinism.py) passes (MSE = 0) against the **new** 2026-05-12 severity-bumped levels.
+- [x] Typecheck passes (`mypy scripts/setup_gpu_env.py`).
 
 ---
 

@@ -858,8 +858,112 @@ TL;DR and PHASE_B_EXECUTION.md for the full runbook.
 ---
 
 
-## US-041: RTX 5070 GPU Bootstrap — cu128 wheel + bf16 smoke test
-(pending — gated on US-040 clean baseline)
+## US-041: RTX 5070 GPU Bootstrap — cu128 wheel + bf16 smoke test — DONE 2026-05-12
+- scripts/setup_gpu_env.py patched (4 acceptance gaps addressed):
+  1. MIN_DRIVER_MAJOR = 555, MIN_CUDA_VERSION = (12,8). audit_gpu() now
+     asserts both floors and prints the bound on success. Live box reports
+     R596 + CUDA 13.2 -> both >= floor.
+  2. --index-url flag added (PRD-literal: --index-url
+     https://download.pytorch.org/whl/cu128). install_pytorch() honors the
+     override; auto-detected cu{NN} tag remains the default.
+  3. bf16 fwd+bwd smoke step added to smoke_test() (gated on sm >= 8.0,
+     i.e. Ampere+). Live result on RTX 5070 sm_120:
+       bf16 fwd+bwd smoke passed on sm_120 (sum=6261.93, grad finite=True)
+     The literal PRD command (`python -c "...torch.bfloat16..."`) also
+     exits 0 standalone.
+  4. sync_requirements() now backs up the prior requirements.lock.txt to
+     requirements.lock.txt.pre-5070.bak BEFORE rewriting in UTF-8.
+     Backup collisions append .1, .2, ... (idempotent re-runs).
+- Follow-ups from prior session resolved in-line:
+  - RECOMMENDED_PY_MINORS extended to (12, 11, 10) so --make-venv can pick
+    Py 3.12 (Windows py launcher case). Earlier session had to bootstrap
+    .venv-gpu manually because make_venv refused 3.12.
+  - psutil added to PROJECT_DEPS (used by quarantine_transnext.py for
+    zombie-process scanning; was a silent omission in the old list).
+- mypy fix: _fatal() return type narrowed from None to NoReturn. This
+  resolves 5 pre-existing union-attr / arg-type errors that mypy raised
+  because it couldn't see _fatal() exits unconditionally.
+- Acceptance criteria green (verified live on the 5070 box):
+  - --audit-only:    R596>=R555 ok, CUDA 13.2>=12.8 ok.
+  - --index-url:     cu128 wheelhouse resolves; on-disk torch is
+                     2.11.0+cu128 / torchvision 0.26.0+cu128.
+  - bf16 smoke:      stdout sum prints, exit 0.
+  - lockfile:        UTF-8, 3x cu128 lines (torch, torchvision, torchaudio).
+                     pre-5070.bak SHA differs from current SHA (proof of
+                     pre/post snapshot).
+  - determinism:     test_degradation_determinism.py 4/4 V3 groups green
+                     (cifar10@224, mnist@224, cifar10@32, mnist@32-pad);
+                     intra=0, inter=0, batch=0, hist diff=0; Lightning
+                     DataModule also 4/4 green.
+  - mypy:            scripts/setup_gpu_env.py clean.
+- Hardware confirmed live (5070):
+  - NVIDIA GeForce RTX 5070, 11.94 GiB, sm_120 (Blackwell).
+  - Driver 596.36, CUDA runtime 13.2 (well above the 12.8 floor).
+  - Python 3.12.10 in .venv-gpu/.
+  - cuDNN 91900, CUDA build 12.8.
+- DEBUGGER on standby (no failures triaged this iteration); VALIDATOR
+  contract met via test_degradation_determinism gate.
+
+## Iteration 2 — US-041 RTX 5070 GPU Bootstrap
+- What was done
+  - Patched scripts/setup_gpu_env.py:
+    - Driver/CUDA floor enforcement (MIN_DRIVER_MAJOR=555, MIN_CUDA=(12,8))
+      with a regex parse of the driver string and a clear error message.
+    - --index-url override for install_pytorch (PRD US-041 literal).
+    - bf16 fwd+bwd smoke step gated on sm >= 8.0; uses requires_grad and
+      a .backward() to actually exercise the autograd dtype path.
+    - sync_requirements now creates a numbered .pre-5070.bak backup
+      before rewriting requirements.lock.txt (idempotent on re-run).
+    - RECOMMENDED_PY_MINORS extended to (12, 11, 10); psutil added to
+      PROJECT_DEPS.
+    - _fatal -> NoReturn so mypy can narrow types after the call (resolves
+      5 pre-existing union-attr errors).
+  - Marked US-041 acceptance checkboxes [x] in PRD.md.
+- Files affected
+  - EDIT: scripts/setup_gpu_env.py (single, focused patch).
+  - EDIT: PRD.md (acceptance checkboxes).
+  - EDIT: progress.txt (this entry).
+  - NEW (runtime side effect): requirements.lock.txt.pre-5070.bak
+    (created by exercising sync_requirements; remains gitignored unless
+    operator explicitly tracks it).
+- Learnings for next cycles:
+  - Patterns:
+    - When mypy complains about `str | None` after a `_fatal(...)` call,
+      annotate the helper as `-> NoReturn` (typing.NoReturn) rather than
+      threading `assert x is not None` everywhere. One annotation, five
+      errors gone.
+    - For bf16 fwd+bwd smoke, do `requires_grad=True` + `.float().sum()`
+      + `.backward()`, then assert `xb.grad is not None and finite`.
+      The float() cast is needed because PyTorch will raise on
+      `sum()` of bf16 -> Python scalar without it. Matches the literal
+      PRD acceptance command exactly.
+    - Backup-before-overwrite with numbered collision suffix is the same
+      pattern as US-040's `_next_backup_path`; consider extracting if a
+      third caller appears.
+  - Traps:
+    - `RECOMMENDED_PY_MINORS = (11, 10)` was a silent footgun for the
+      `--make-venv` path on a Py 3.12-only box. Always include the
+      current MAX in the iteration set, not just the "preferred" minors.
+    - `_fatal` returning `None` (not `NoReturn`) silently lets mypy think
+      execution continues into unreachable code. Always type kill-switch
+      helpers as `NoReturn`.
+    - `pip freeze` output is influenced by the live state of the venv;
+      running it as a one-shot AFTER an unrelated `pip install` (e.g. a
+      transient debug package) will pollute the lockfile. Run it as part
+      of the bootstrap, not interactively, to keep the lock minimal.
+  - Helpful context:
+    - The cu128 wheel install already happened in the prior US-020
+      session; this iteration's job was to formalize the floors + smoke
+      tests so a fresh checkout on a fresh 5070 box would gate cleanly.
+    - VALIDATOR's `test_degradation_determinism.py` is the only test
+      that exercises the V3 cross-out_size contract end-to-end; running
+      it as part of US-041 confirms the bf16 path hasn't perturbed
+      pixel-level determinism.
+    - DEBUGGER's class-C "Environment drift" forbids silent pip
+      installs; sync_requirements respects this by only running pip
+      freeze (read-only) and never pip install.
+---
+
 
 ## US-042: TransNeXt Native-Resolution Variants — Un-quarantine
 (pending — gated on US-041; lifts US-014 quarantine for native-res path)
