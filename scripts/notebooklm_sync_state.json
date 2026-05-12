@@ -10,9 +10,9 @@
     "uploaded_at": "2026-05-03T19:20:12Z"
   },
   "CLAUDE.md": {
-    "mtime": 1777754278.0,
-    "source_id": "2f30bc36-be11-454a-a385-a17e1a1eb2b2",
-    "uploaded_at": "2026-05-03T19:20:14Z"
+    "mtime": 1778589130.014143,
+    "source_id": "d4903f72-79e3-46d6-b303-3c825566e4e3",
+    "uploaded_at": "2026-05-12T13:46:29Z"
   },
   "Final_Exp.md": {
     "mtime": 1778259139.7301593,
@@ -89,26 +89,6 @@
     "source_id": "0d48228e-f1cf-49e8-8873-922e7f9fdcee",
     "uploaded_at": "2026-05-03T19:20:50Z"
   },
-  "docs/prds/FINAL_EXP_DASHBOARD.md": {
-    "mtime": 1778008252.3515048,
-    "source_id": "20e9d8a7-10a9-4cbe-ab56-933100166756",
-    "uploaded_at": "2026-05-08T20:22:59Z"
-  },
-  "docs/prds/PHASE_B_RUN.md": {
-    "mtime": 1778259236.244091,
-    "source_id": "0c3d5567-ac2f-4b40-927d-92664df4af05",
-    "uploaded_at": "2026-05-08T20:06:27Z"
-  },
-  "docs/prds/PHASE_B_VISUAL_CORE.md": {
-    "mtime": 1778109294.0089424,
-    "source_id": "16dc6dc0-ff5f-4d16-be25-5c04d56cfeb4",
-    "uploaded_at": "2026-05-08T20:06:30Z"
-  },
-  "docs/prds/US_020_GPU_BOOTSTRAP.md": {
-    "mtime": 1778164981.492692,
-    "source_id": "a25bb47b-6116-40b1-9d93-f1845d84b890",
-    "uploaded_at": "2026-05-08T20:06:33Z"
-  },
   "docs/runbooks/PHASE_B_EXECUTION.md": {
     "mtime": 1778259235.2207716,
     "source_id": "08c2caa2-56f5-453d-9e07-33021d71cad7",
@@ -145,14 +125,14 @@
     "uploaded_at": "2026-05-03T19:21:23Z"
   },
   "src/data/datasets.py": {
-    "mtime": 1777844512.0,
-    "source_id": "8c50d44e-e859-4936-92c5-5ac577986916",
-    "uploaded_at": "2026-05-08T20:09:24Z"
+    "mtime": 1778586878.8432486,
+    "source_id": "e61d57aa-28dc-4ee7-9a86-22eac48f39af",
+    "uploaded_at": "2026-05-12T13:46:33Z"
   },
   "src/data/degradation_levels.py": {
-    "mtime": 1777725556.0,
-    "source_id": "3cfaebbf-8158-4769-a5cc-b795c3915ba8",
-    "uploaded_at": "2026-05-03T19:21:28Z"
+    "mtime": 1778589698.458667,
+    "source_id": "4ad96c65-b6f1-4d53-b0d1-8ce5960287d1",
+    "uploaded_at": "2026-05-12T13:41:18Z"
   },
   "src/data/degrade.py": {
     "mtime": 1777725576.0,
@@ -170,19 +150,19 @@
     "uploaded_at": "2026-05-08T20:09:31Z"
   },
   "src/lightning/datamodule.py": {
-    "mtime": 1777845208.0,
-    "source_id": "7e2b59f5-9777-4391-a57f-ce192acaa7a1",
-    "uploaded_at": "2026-05-08T20:09:37Z"
+    "mtime": 1778586887.5648634,
+    "source_id": "7477b860-29a3-4cbd-a3ba-87be41f6cfa6",
+    "uploaded_at": "2026-05-12T13:41:22Z"
   },
   "src/lightning/module.py": {
-    "mtime": 1777845562.0,
-    "source_id": "6c3072bb-2d95-4710-8dc9-d43330135336",
-    "uploaded_at": "2026-05-08T20:09:42Z"
+    "mtime": 1778586151.9362106,
+    "source_id": "5613fa33-0322-4901-814c-e0007b18f5be",
+    "uploaded_at": "2026-05-12T13:41:27Z"
   },
   "src/lightning/train.py": {
-    "mtime": 1778108593.4747112,
-    "source_id": "db1b7e2f-0a7c-4410-9118-4e7d56f48387",
-    "uploaded_at": "2026-05-08T20:09:48Z"
+    "mtime": 1778586917.6547518,
+    "source_id": "66da5fce-99b2-4863-9693-6ca183e66222",
+    "uploaded_at": "2026-05-12T13:41:31Z"
   },
   "src/models/transnext_official/attention_cuda.py": {
     "mtime": 1773991520.0,
@@ -315,9 +295,9 @@
     "uploaded_at": "2026-05-08T20:23:02Z"
   },
   "src/models/transnext_wrapper.py": {
-    "mtime": 1775658400.0,
-    "source_id": "518b8809-5719-45ec-bd91-47269b4d7ba5",
-    "uploaded_at": "2026-05-03T19:22:51Z"
+    "mtime": 1778586127.3541663,
+    "source_id": "ee2f69bb-93b0-4fbd-90d0-2109c14782ad",
+    "uploaded_at": "2026-05-12T13:41:36Z"
   },
   "src/tests/__init__.py": {
     "mtime": 1777626506.0,
@@ -340,9 +320,9 @@
     "uploaded_at": "2026-05-08T20:23:08Z"
   },
   "src/tests/test_degradation_determinism.py": {
-    "mtime": 1777627766.0,
-    "source_id": "afb4c37d-7427-4def-bce3-6339d0340518",
-    "uploaded_at": "2026-05-03T19:22:53Z"
+    "mtime": 1778586946.5256941,
+    "source_id": "adacd5b3-3586-4747-b974-1670137319e8",
+    "uploaded_at": "2026-05-12T13:41:40Z"
   },
   "src/tests/test_final_plan.py": {
     "mtime": 1778106986.7503219,
@@ -395,9 +375,9 @@
     "uploaded_at": "2026-05-08T20:07:16Z"
   },
   "src/tests/test_quarantine_transnext.py": {
-    "mtime": 1778106413.9682837,
-    "source_id": "6e7ce29f-8b72-4419-bc64-e9ea92162314",
-    "uploaded_at": "2026-05-08T20:07:19Z"
+    "mtime": 1778589079.2791924,
+    "source_id": "2f4eafe6-4339-4a09-bcb7-215251d6eafc",
+    "uploaded_at": "2026-05-12T13:41:45Z"
   },
   "src/tests/test_refresh_trackers.py": {
     "mtime": 1778107101.2561343,
@@ -408,6 +388,11 @@
     "mtime": 1777869534.0,
     "source_id": "10ef9393-cd07-484b-b6c7-acadbdf0c299",
     "uploaded_at": "2026-05-08T20:07:25Z"
+  },
+  "src/tests/test_reset_state.py": {
+    "mtime": 1778591243.390283,
+    "source_id": "a3e2b6ca-fea7-4985-8655-dd544d8577e1",
+    "uploaded_at": "2026-05-12T13:40:14Z"
   },
   "src/tests/test_run_all_phases_dashboard.py": {
     "mtime": 1778005626.73627,
@@ -465,9 +450,9 @@
     "uploaded_at": "2026-05-03T19:22:56Z"
   },
   "src/tools/build_final_dashboard.py": {
-    "mtime": 1778108770.5949843,
-    "source_id": "f0c50113-5407-4c78-99c3-34ecf1064eee",
-    "uploaded_at": "2026-05-08T20:23:14Z"
+    "mtime": 1778589687.185534,
+    "source_id": "f669a1e8-902d-4118-9636-66ca988b5f6e",
+    "uploaded_at": "2026-05-12T13:41:49Z"
   },
   "src/tools/build_final_exp_json.py": {
     "mtime": 1778108660.010023,
@@ -545,9 +530,9 @@
     "uploaded_at": "2026-05-03T19:23:21Z"
   },
   "src/tools/visualize_degradation.py": {
-    "mtime": 1773991522.0,
-    "source_id": "c1850a07-7ecf-47aa-9843-75cb31fe2516",
-    "uploaded_at": "2026-05-03T19:23:24Z"
+    "mtime": 1778589707.4084387,
+    "source_id": "3d288a27-f54d-4074-abcd-70ef407b8093",
+    "uploaded_at": "2026-05-12T13:41:53Z"
   },
   "src/tools/visualize_run.py": {
     "mtime": 1775565412.0,

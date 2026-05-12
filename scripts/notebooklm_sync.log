@@ -1,0 +1,160 @@
+2026-05-03T19:20:12Z ADD AGENTS.md 4a14c380-0827-48f9-b26f-76231f95ca73
+2026-05-03T19:20:14Z ADD CLAUDE.md 2f30bc36-be11-454a-a385-a17e1a1eb2b2
+2026-05-03T19:20:17Z ADD Final_Exp.md 0f07e10d-4ad2-4362-8550-a03ec362e7cb
+2026-05-03T19:20:19Z ADD README.md 8d63e110-5def-49a4-a24f-5b1a4307c55e
+2026-05-03T19:20:22Z ADD TODO.md cc9da7bb-9424-40ce-b8ad-9d89ec962393
+2026-05-03T19:20:25Z ADD agents/DATA_ARCHITECT.md 8935225b-25c4-49a1-a997-d4e0fd2eb692
+2026-05-03T19:20:27Z ADD agents/DESIGNER.md a58d1ba8-37e3-46c5-900f-9cfff28dd2e4
+2026-05-03T19:20:30Z ADD agents/EXECUTOR.md cd6845b4-9dd6-43b3-a958-a239f5fd4d21
+2026-05-03T19:20:32Z ADD agents/LIBRARIAN.md e5846684-2327-4a0c-8d9b-8bbb6c544ca3
+2026-05-03T19:20:34Z ADD agents/MASTER.md 69886722-9488-4bcc-b504-4d96797de5e0
+2026-05-03T19:20:37Z ADD agents/NOTEBOOKLM_SYNC.md a93bf22e-3f73-4e91-b9d6-db4bb2b7685d
+2026-05-03T19:20:40Z ADD agents/OPTIMIZER.md b2877401-5d48-473e-8a30-8f3c57f59c0e
+2026-05-03T19:20:42Z ADD agents/REPORTER.md 405d087e-5082-4218-a32e-aee5c742467c
+2026-05-03T19:20:45Z ADD agents/SECURITY.md ed17e9a4-3beb-4b82-80bd-567fc08adeca
+2026-05-03T19:20:48Z ADD agents/SYNCHRONIZER.md 64ca0b1b-ca43-4deb-b319-ca67c29667c6
+2026-05-03T19:20:50Z ADD agents/VALIDATOR.md 0d48228e-f1cf-49e8-8873-922e7f9fdcee
+2026-05-03T19:20:55Z ADD papers/2104.00298v3.pdf 69f721e0-88c4-46f8-a256-e696adaf2088
+2026-05-03T19:21:01Z ADD papers/Deep_Learning_Models_for_Image_Classification.pdf 5f11744a-3e4d-470a-83c5-9fec4bfb57a0
+2026-05-03T19:21:07Z ADD papers/Densely Connected Convolutional Networks.pdf 5a7b3d74-ef80-42b9-bfcc-404109468a61
+2026-05-03T19:21:12Z ADD papers/Learning Transferable Architectures for Scalable Image Recognition.pdf d57e10d7-5c8e-4211-9b6d-e5cd49cdb726
+2026-05-03T19:21:17Z ADD papers/TResNet.pdf 7fe9a13a-d6e0-4f27-a995-db0fbab8d524
+2026-05-03T19:21:23Z ADD papers/TransNeXt.pdf 2aa11b87-3b22-4359-b5f2-319fdec0c175
+2026-05-03T19:21:25Z ADD src/data/datasets.py d7d30855-09b1-4132-aeea-4a8e9f4ce3fd
+2026-05-03T19:21:28Z ADD src/data/degradation_levels.py 3cfaebbf-8158-4769-a5cc-b795c3915ba8
+2026-05-03T19:21:30Z ADD src/data/degrade.py c96b3df0-68d4-4dff-92bc-ed933b6821fa
+2026-05-03T19:21:33Z ADD src/lightning/__init__.py d8b164bf-1f18-46c8-9ead-0cd7351d4d3f
+2026-05-03T19:21:35Z ADD src/lightning/callbacks.py 10eb7727-0444-43f5-8234-44d1e421ae07
+2026-05-03T19:21:38Z ADD src/lightning/datamodule.py b0c14bfe-9727-4de9-b575-b2f9cb8a8110
+2026-05-03T19:21:41Z ADD src/lightning/module.py 5d68201f-b892-4479-9e8b-555fe22be9bd
+2026-05-03T19:21:44Z ADD src/lightning/train.py ab7924fe-32f8-4ee2-9ad0-70a116ae82c7
+2026-05-03T19:21:46Z ADD src/models/transnext_official/attention_cuda.py 7a27afea-4510-4936-90f3-048a7092c549
+2026-05-03T19:21:49Z ADD src/models/transnext_official/attention_native.py 2135b639-157a-4c7d-a5dd-783859528519
+2026-05-03T19:21:51Z ADD src/models/transnext_official/configs/finetune/transnext_base_384_ft.py 621bf97c-43ac-4373-ac8b-75bd8828547d
+2026-05-03T19:21:54Z ADD src/models/transnext_official/configs/finetune/transnext_small_384_ft.py 655b3118-8805-4bbd-a1ba-cd438aeab5f1
+2026-05-03T19:21:57Z ADD src/models/transnext_official/configs/transnext_base.py 0a4b291d-f9e2-4fe4-8f14-426dade242fe
+2026-05-03T19:21:59Z ADD src/models/transnext_official/configs/transnext_micro.py 2e7f2789-4a6b-45a5-b574-1879822fdb29
+2026-05-03T19:22:02Z ADD src/models/transnext_official/configs/transnext_micro_AAAA_256.py f448a9fe-bcc9-4a5a-8bdd-c00a27f2e524
+2026-05-03T19:22:04Z ADD src/models/transnext_official/configs/transnext_small.py 810fc695-8cc3-48ab-b4ae-139370be6036
+2026-05-03T19:22:07Z ADD src/models/transnext_official/configs/transnext_tiny.py 7105daed-82cd-4aa7-b6f1-9f743d6b7cfd
+2026-05-03T19:22:10Z ADD src/models/transnext_official/datasets.py 40aa0d7d-9165-439c-a6a3-29b5f52b8159
+2026-05-03T19:22:12Z ADD src/models/transnext_official/engine.py c209789e-44ea-46e7-9181-3a71c8eca465
+2026-05-03T19:22:15Z ADD src/models/transnext_official/hubconf.py 94f9de18-e9a2-4bf1-b575-f62e40e113bf
+2026-05-03T19:22:17Z ADD src/models/transnext_official/losses.py ed202433-279b-48a0-a995-9648f5607e2f
+2026-05-03T19:22:20Z ADD src/models/transnext_official/main.py 53046a88-256c-4d2d-a34d-36ab09a71c15
+2026-05-03T19:22:22Z ADD src/models/transnext_official/mcloader/__init__.py a4845822-d41a-449b-8eee-1999624d28f1
+2026-05-03T19:22:25Z ADD src/models/transnext_official/mcloader/classification.py cd479581-4645-464c-99ec-2bbbe98bff1c
+2026-05-03T19:22:27Z ADD src/models/transnext_official/mcloader/data_prefetcher.py 28422416-99d9-48ed-b8b8-be05e8834028
+2026-05-03T19:22:30Z ADD src/models/transnext_official/mcloader/image_list.py a09a1bd2-603c-47a7-8321-a13ed22e5d99
+2026-05-03T19:22:32Z ADD src/models/transnext_official/mcloader/imagenet.py f7c483db-21f7-4a2d-abe7-e1793cc8539b
+2026-05-03T19:22:35Z ADD src/models/transnext_official/mcloader/mcloader.py 31bec5b0-6b12-4494-9c53-4920f2fe3157
+2026-05-03T19:22:38Z ADD src/models/transnext_official/optimizer.py 68dd02f8-9046-4a47-b87a-d8aa6731b647
+2026-05-03T19:22:40Z ADD src/models/transnext_official/run_with_submitit.py 66418d8f-7c4d-4c0c-a6bd-069e8ecb4b92
+2026-05-03T19:22:43Z ADD src/models/transnext_official/samplers.py 22e0a2eb-eaa5-47cb-8d58-b3dc1adf6392
+2026-05-03T19:22:46Z ADD src/models/transnext_official/transnext.py 602c168a-3e35-44dc-b708-931822b557f1
+2026-05-03T19:22:48Z ADD src/models/transnext_official/utils.py 16296d25-55f4-4c82-8de3-cb5a8af57654
+2026-05-03T19:22:51Z ADD src/models/transnext_wrapper.py 518b8809-5719-45ec-bd91-47269b4d7ba5
+2026-05-03T19:22:53Z ADD src/tests/test_degradation_determinism.py afb4c37d-7427-4def-bce3-6339d0340518
+2026-05-03T19:22:56Z ADD src/tools/bootstrap_project.py f3b3be00-bd38-4c2c-82df-daa2909de970
+2026-05-03T19:22:58Z ADD src/tools/degradation_robustness.py 90a1ceed-e5a6-43ab-87ed-33bfaf5e0096
+2026-05-03T19:23:00Z ADD src/tools/generate_advanced_dashboard.py e818a26d-7205-4718-b1aa-5a801cbb95c1
+2026-05-03T19:23:03Z ADD src/tools/generate_dashboard.py 6a276bcd-df9b-4819-96cf-78dbd3756450
+2026-05-03T19:23:06Z ADD src/tools/generate_experiment_plan_dashboard.py df5ac046-548b-4954-b056-1e53afdd4018
+2026-05-03T19:23:08Z ADD src/tools/generate_sample_images.py 72d6fbe2-c18e-4ae0-9370-22cbe2cfde94
+2026-05-03T19:23:11Z ADD src/tools/generate_systematic_dashboard.py 896dd05f-49cb-4fa1-ae90-3e6eda22fde6
+2026-05-03T19:23:14Z ADD src/tools/plot_experiments.py 8ca42136-f4fb-46cc-83d0-3680c2ffb4ce
+2026-05-03T19:23:16Z ADD src/tools/refresh_dashboards.py 21ee9a19-e07a-43cc-993f-07cb98ae058f
+2026-05-03T19:23:19Z ADD src/tools/summarize_runs.py ac385740-35ad-461c-87fd-5fffad80916d
+2026-05-03T19:23:21Z ADD src/tools/top_runs_comparison.py 60622870-ba9d-4713-8968-e7cb50f776fe
+2026-05-03T19:23:24Z ADD src/tools/visualize_degradation.py c1850a07-7ecf-47aa-9843-75cb31fe2516
+2026-05-03T19:23:27Z ADD src/tools/visualize_run.py e1d0b009-7589-4df8-9460-a6f1cb1cf282
+2026-05-08T20:06:21Z ADD 8.5_STATUS_UPDATE.md 3999369e-d9ec-4583-b1ff-5b8774d03be6
+2026-05-08T20:06:24Z ADD agents/DEBUGGER.md e2de5259-ea49-4912-b05e-73e26d8b4959
+2026-05-08T20:06:27Z ADD docs/prds/PHASE_B_RUN.md 0c3d5567-ac2f-4b40-927d-92664df4af05
+2026-05-08T20:06:30Z ADD docs/prds/PHASE_B_VISUAL_CORE.md 16dc6dc0-ff5f-4d16-be25-5c04d56cfeb4
+2026-05-08T20:06:33Z ADD docs/prds/US_020_GPU_BOOTSTRAP.md a25bb47b-6116-40b1-9d93-f1845d84b890
+2026-05-08T20:06:36Z ADD docs/runbooks/PHASE_B_EXECUTION.md 08c2caa2-56f5-453d-9e07-33021d71cad7
+2026-05-08T20:06:39Z ADD src/tests/test_backfill_history_json.py 03e85d80-3657-4ca3-9089-1638564175b1
+2026-05-08T20:06:42Z ADD src/tests/test_build_final_exp_json.py e50a655e-6c7e-4667-82e1-7d3a5910efa5
+2026-05-08T20:06:45Z ADD src/tests/test_final_plan.py 9b19695e-dc02-43b7-85fa-1ba987e21743
+2026-05-08T20:06:50Z ADD src/tests/test_ignores.py 8c93a9b0-6181-4edb-a62d-5908ee5196b3
+2026-05-08T20:06:53Z ADD src/tests/test_image_quality.py 59ca4b2c-e015-4501-a926-0f373317d1ad
+2026-05-08T20:06:56Z ADD src/tests/test_matrix.py e66f2f9f-0605-4d1b-97f9-762c9b323600
+2026-05-08T20:06:59Z ADD src/tests/test_phase_a_clean.py c9271a1f-80be-4eb1-a215-e89fcacfa310
+2026-05-08T20:07:02Z ADD src/tests/test_phase_a_continuation.py 9132241f-e425-4ebd-8612-2cdb84b4f90f
+2026-05-08T20:07:05Z ADD src/tests/test_phase_a_dashboard.py 88fe36bc-25d3-4d0c-8a4b-1cf9507afd6b
+2026-05-08T20:07:08Z ADD src/tests/test_phase_a_gate.py 046eac9d-1079-47c8-b6d8-9df4095c9ffa
+2026-05-08T20:07:12Z ADD src/tests/test_phase_a_hparams_fallback.py 89077962-ef2b-4aab-a9c6-d062a8a1a5c3
+2026-05-08T20:07:16Z ADD src/tests/test_priors.py ac59f17d-46a8-4992-8a61-f5fc5aa65b76
+2026-05-08T20:07:19Z ADD src/tests/test_quarantine_transnext.py 6e7ce29f-8b72-4419-bc64-e9ea92162314
+2026-05-08T20:07:22Z ADD src/tests/test_refresh_trackers.py 945f7f23-4ae8-49c8-9558-18f61e2fe674
+2026-05-08T20:07:25Z ADD src/tests/test_render_thumbs.py 10ef9393-cd07-484b-b6c7-acadbdf0c299
+2026-05-08T20:07:27Z ADD src/tests/test_run_all_phases_dashboard.py d6826b3b-b8c8-430a-8dd2-52e175576541
+2026-05-08T20:07:30Z ADD src/tests/test_run_cell.py 9269b988-031a-4efb-b94a-5f1436bde0a6
+2026-05-08T20:07:33Z ADD src/tests/test_run_phase_a.py 6158a835-76cf-4674-8f54-618ab48e2d30
+2026-05-08T20:07:37Z ADD src/tests/test_run_phase_a_hook.py c3c3c811-8ae3-4d3a-9eb9-1bfe4f1f3043
+2026-05-08T20:07:39Z ADD src/tests/test_saturation.py 6be706f4-03e5-426f-9e4b-e1f592bf511f
+2026-05-08T20:07:43Z ADD src/tests/test_sync_trackers_git.py 9793f268-8feb-42e6-96b2-6228881a8135
+2026-05-08T20:07:46Z ADD src/tests/test_transnext_modes.py fe6ade53-2823-4da0-9840-0041b5a7bd7f
+2026-05-08T20:07:51Z ADD src/tests/test_tune_studies.py 9faa04aa-c7cb-4db7-9437-5a0f92c5451a
+2026-05-08T20:07:54Z ADD src/tests/test_wandb_capture.py 6f13fd49-c0ea-4613-a4bf-1a188b25f40f
+2026-05-08T20:07:57Z ADD src/tools/build_final_exp_json.py 69878297-1058-4d8d-a251-2c90e97fa918
+2026-05-08T20:08:00Z ADD src/tools/final_exp_schema.py c96b4aed-fd75-44a5-8e51-1c723417cb53
+2026-05-08T20:08:04Z ADD src/tools/measure_image_quality.py a242e5de-f388-4cc7-9cd6-b2d1776bc752
+2026-05-08T20:08:07Z ADD src/tools/render_cell_thumbs.py cfa95373-a72f-4d55-8fba-4b11b40ed16a
+2026-05-08T20:09:06Z REFRESH Final_Exp.md 815c5262-73b2-4d0c-bd74-35d0f7b267ab
+2026-05-08T20:09:13Z REFRESH README.md 48f42cdf-9d26-4ef5-9c87-1ce71aa009bd
+2026-05-08T20:09:19Z REFRESH agents/SYNCHRONIZER.md 548c91c2-0004-45fb-8c25-c4f51cb15c28
+2026-05-08T20:09:24Z REFRESH src/data/datasets.py 8c50d44e-e859-4936-92c5-5ac577986916
+2026-05-08T20:09:31Z REFRESH src/lightning/callbacks.py 4720d01a-70f8-4f17-a540-137c69dd8159
+2026-05-08T20:09:37Z REFRESH src/lightning/datamodule.py 7e2b59f5-9777-4391-a57f-ce192acaa7a1
+2026-05-08T20:09:42Z REFRESH src/lightning/module.py 6c3072bb-2d95-4710-8dc9-d43330135336
+2026-05-08T20:09:48Z REFRESH src/lightning/train.py db1b7e2f-0a7c-4410-9118-4e7d56f48387
+2026-05-08T20:22:59Z ADD docs/prds/FINAL_EXP_DASHBOARD.md 20e9d8a7-10a9-4cbe-ab56-933100166756
+2026-05-08T20:23:02Z ADD src/models/transnext_weights.py 2be44225-59b2-4a77-83ce-802de48366cb
+2026-05-08T20:23:05Z ADD src/tests/__init__.py 7e3438c9-0acb-4aa6-8d46-a1e5cb3e5181
+2026-05-08T20:23:08Z ADD src/tests/test_dashboard.py b1efd987-7878-4d11-ba15-4e61f52651de
+2026-05-08T20:23:11Z ADD src/tests/test_update_final_exp.py d7172ae7-8821-4a77-ad44-b4d7093d411a
+2026-05-08T20:23:14Z ADD src/tools/build_final_dashboard.py f0c50113-5407-4c78-99c3-34ecf1064eee
+2026-05-08T20:23:17Z ADD src/tools/render_curve_thumbs.py 7cc3f525-829f-4d7a-b2cf-f1bd73bf4ebb
+2026-05-12T13:40:14Z ADD src/tests/test_reset_state.py a3e2b6ca-fea7-4985-8655-dd544d8577e1
+2026-05-12T13:40:20Z DELETE .claude/skills/NotebookLM.md
+2026-05-12T13:40:22Z DELETE PRD_SKILL.md
+2026-05-12T13:40:24Z DELETE TransNeXt Native Resolution Refactoring Plan
+2026-05-12T13:40:26Z DELETE docs/prds/FINAL_EXP_DASHBOARD.md
+2026-05-12T13:40:28Z DELETE docs/prds/PHASE_B_RUN.md
+2026-05-12T13:40:30Z DELETE docs/prds/PHASE_B_VISUAL_CORE.md
+2026-05-12T13:40:32Z DELETE docs/prds/US_020_GPU_BOOTSTRAP.md
+2026-05-12T13:40:34Z DELETE scripts/fetch_transnext_weights.py
+2026-05-12T13:40:36Z DELETE scripts/update_final_exp.py
+2026-05-12T13:40:38Z DELETE src/config/__init__.py
+2026-05-12T13:40:40Z DELETE src/config/paths.py
+2026-05-12T13:40:44Z DELETE src/experiments/cells.py
+2026-05-12T13:40:46Z DELETE src/experiments/matrix.py
+2026-05-12T13:40:48Z DELETE src/experiments/run_status.py
+2026-05-12T13:40:49Z DELETE-FAIL בניית PRD לתוכנית ניסויים
+2026-05-12T13:40:51Z DELETE הבהרות להרחבת דאשבורד ניסויים
+2026-05-12T13:40:54Z DELETE התאמת PRD לפרויקט AI
+2026-05-12T13:40:55Z DELETE ייעוץ מפרט מחשב לפרויקט THz
+2026-05-12T13:40:58Z DELETE יצירת PDF אוטומטית מ-LaTeX
+2026-05-12T13:40:59Z DELETE יצירת פרומפט לבניית PRD
+2026-05-12T13:41:01Z DELETE מפרט מחשב לפרויקט למידת מכונה
+2026-05-12T13:41:03Z DELETE משמעות המונח Venu בפרויקט
+2026-05-12T13:41:05Z DELETE עדכון פרויקט ושינוי ארכיטקטורה
+2026-05-12T13:41:06Z DELETE-FAIL ענף • ענף • Final Project Experiment Planning
+2026-05-12T13:41:08Z DELETE ענף • ענף • ענף • Final Project Experiment Planning
+2026-05-12T13:41:12Z REFRESH-FAIL CLAUDE.md
+2026-05-12T13:41:14Z REFRESH-FAIL src/data/datasets.py
+2026-05-12T13:41:18Z REFRESH src/data/degradation_levels.py 4ad96c65-b6f1-4d53-b0d1-8ce5960287d1
+2026-05-12T13:41:22Z REFRESH src/lightning/datamodule.py 7477b860-29a3-4cbd-a3ba-87be41f6cfa6
+2026-05-12T13:41:27Z REFRESH src/lightning/module.py 5613fa33-0322-4901-814c-e0007b18f5be
+2026-05-12T13:41:31Z REFRESH src/lightning/train.py 66da5fce-99b2-4863-9693-6ca183e66222
+2026-05-12T13:41:36Z REFRESH src/models/transnext_wrapper.py ee2f69bb-93b0-4fbd-90d0-2109c14782ad
+2026-05-12T13:41:40Z REFRESH src/tests/test_degradation_determinism.py adacd5b3-3586-4747-b974-1670137319e8
+2026-05-12T13:41:45Z REFRESH src/tests/test_quarantine_transnext.py 2f4eafe6-4339-4a09-bcb7-215251d6eafc
+2026-05-12T13:41:49Z REFRESH src/tools/build_final_dashboard.py f669a1e8-902d-4118-9636-66ca988b5f6e
+2026-05-12T13:41:53Z REFRESH src/tools/visualize_degradation.py 3d288a27-f54d-4074-abcd-70ef407b8093
+2026-05-12T13:46:19Z DELETE-FAIL בניית PRD לתוכנית ניסויים
+2026-05-12T13:46:21Z DELETE ענף • ענף • Final Project Experiment Planning
+2026-05-12T13:46:29Z REFRESH CLAUDE.md d4903f72-79e3-46d6-b303-3c825566e4e3
+2026-05-12T13:46:33Z REFRESH src/data/datasets.py e61d57aa-28dc-4ee7-9a86-22eac48f39af
