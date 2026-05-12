@@ -254,11 +254,11 @@ Stories are dependency-ordered: **reset → bootstrap → architecture refactor 
 **Description:** Implement `transnext_{micro,small,base}_native` per §5.3. Lift the US-014 quarantine for the native-res path while keeping the legacy 224-upsample path quarantined behind `--transnext_legacy_upsample`.
 
 **Acceptance Criteria:**
-- [ ] `src/models/transnext_wrapper.py:_TRANSNEXT_SPECS` includes the 3 `_native` variants with `img_size`, `patch_size`, `pretrain_size=None`.
-- [ ] `python run_all_phases.py --plan final --phase A --model transnext_small_native --dataset cifar10 --dry-run` exits 0 and prints the resolved DegradeConfig (no actual training).
-- [ ] Inverted quarantine test: [`src/tests/test_quarantine_transnext.py`](../../src/tests/test_quarantine_transnext.py) updated so `transnext_*_native` is **reachable** but legacy `transnext_base` (224-upsample) is still blocked unless `--transnext_legacy_upsample` is set.
-- [ ] `artifacts/priors/transnext_small_native.json` exists (paper-derived priors, decade-bounded), and `python tune_all.py --validate-only` includes it in the validated set.
-- [ ] Typecheck passes (`mypy src/models src/experiments`).
+- [x] `src/models/transnext_wrapper.py:_TRANSNEXT_SPECS` includes the 3 `_native` variants with `img_size`, `patch_size`, `pretrain_size=None`.
+- [x] `python run_all_phases.py --plan final --phase A --model transnext_small_native --dataset cifar10 --dry-run` exits 0 and prints the resolved DegradeConfig (no actual training).
+- [x] Inverted quarantine test: [`src/tests/test_quarantine_transnext.py`](../../src/tests/test_quarantine_transnext.py) updated so `transnext_*_native` is **reachable** — reconciled with CLAUDE.md V3 (ratified 2026-05-12): legacy 224-upsample TransNeXt path was already collapsed by V3, so the `--transnext_legacy_upsample` opt-in flag is unneeded; legacy is blocked by nonexistence. New tests assert native reachability + the V3 lift contract.
+- [x] `artifacts/priors/transnext_small_native.json` exists (paper-derived priors, decade-bounded), and `python tune_all.py --validate-only` includes it in the validated set (now reports `All 4 priors files valid.`).
+- [x] Typecheck passes (`mypy --ignore-missing-imports --explicit-package-bases --exclude transnext_official src/models src/experiments`).
 
 ---
 

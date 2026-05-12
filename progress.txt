@@ -965,8 +965,153 @@ TL;DR and PHASE_B_EXECUTION.md for the full runbook.
 ---
 
 
-## US-042: TransNeXt Native-Resolution Variants — Un-quarantine
-(pending — gated on US-041; lifts US-014 quarantine for native-res path)
+## US-042: TransNeXt Native-Resolution Variants — Un-quarantine — DONE 2026-05-12
+- Operator chose Option A (additive aliases) to reconcile PRD vs CLAUDE.md V3
+  conflict. PRD US-042 was drafted before the V3 ratification (same date)
+  collapsed the legacy 224-upsample TransNeXt path entirely. Option A adds the
+  PRD-required `_native` keyed entries as additive aliases without resurrecting
+  the legacy path — V3's lift remains the source of truth for routing.
+- src/models/transnext_wrapper.py:
+  - Added 3 new keys to _TRANSNEXT_SPECS: transnext_micro_native,
+    transnext_small_native, transnext_base_native. Each carries
+    `default_img_size=32`, `default_patch_size=2`,
+    `default_pretrain_size=None` in its spec dict.
+  - create_transnext_model signature: img_size / patch_size / pretrain_size
+    now default to None. Resolution precedence (highest first):
+      1. Explicit caller kwarg (non-None).
+      2. `default_*` keys on the model's spec dict (PRD US-042 aliases).
+      3. Wrapper-level fallback (img_size=224, patch_size=4).
+    Backwards-compatible: callers that passed explicit values keep their
+    behavior; callers that now omit them and use a `_native` model name
+    pick up the native-32 defaults.
+  - The `default_*` keys are NOT forwarded into the upstream TransNeXt
+    constructor; comment added so a future reader doesn't try.
+  - TRANSNEXT_NATIVE_VARIANTS tuple exported for callers / tests.
+  - Pre-existing mypy false-positive on `sys.modules.setdefault(..., None)`
+    suppressed with `# type: ignore[arg-type]` + an explanatory comment;
+    this is the intentional block-import idiom used by transnext.py's
+    `is_installed` helper. Without the suppression, mypy fails the
+    "Typecheck passes" acceptance criterion.
+- run_all_phases.py:
+  - run_final_plan gained 3 optional kwargs: `model`, `dataset`, `dry_run`.
+  - matrix filter: post-build, AND-filter by model and dataset when set.
+  - dry_run path: when the requested (model, dataset) does NOT match any
+    matrix cell (e.g., transnext_small_native is not in cells.MODELS),
+    synthesize a CellSpec on-the-fly from `_v3_cell_settings(model, dataset)`
+    + `degrade_config_for`. This lets the literal PRD acceptance command
+    work even though V3 routes via bare names.
+  - dry_run prints the resolved CellSpec (tag, phase, model/dataset,
+    level/axis, out_size, img_size, patch_size, pretrain_size, precision,
+    compile_mode, mnist_pad_to_32, degrade_config) and returns 0 without
+    touching run_cell_fn, refresh_fn, phase_boundary_fn, or
+    insurance_trial_fn.
+  - CLI: --model, --dataset, --dry-run flags added to the argparse
+    parser, threaded into the run_final_plan call.
+- artifacts/priors/transnext_small_native.json:
+  - New paper-derived priors mirroring transnext_base.json (TransNeXt
+    §A.3 anchors); decade-bounded per MAX_LOGUNIFORM_RATIO=100.
+  - notes field documents that the architecture matches transnext_small
+    (embed_dims [72,144,288,576], depths [5,5,22,5]) under the V3 native path.
+  - tune_all.py --validate-only now reports "All 4 priors files valid."
+- tune_all.py:
+  - SUPPORTED_MODELS extended with "transnext_small_native". Pre-existing
+    "transnext_base", "resnet50", "densenet121" unchanged.
+- src/tests/test_quarantine_transnext.py (additive, no edits to existing tests):
+  - New: test_us042_transnext_native_variants_reachable — asserts all 3
+    _native keys exist in _TRANSNEXT_SPECS with correct defaults; asserts
+    each native alias mirrors its base counterpart's embed_dims/num_heads/
+    depths; asserts tune_all.SUPPORTED_MODELS contains
+    "transnext_small_native"; asserts load_priors loads the file.
+  - New: test_us042_run_all_phases_dry_run_resolves_native_cell — calls
+    run_final_plan(phase="A", model="transnext_small_native",
+    dataset="cifar10", dry_run=True). Stubs run_cell_fn/refresh_fn/
+    phase_boundary_fn/insurance_trial_fn to raise on call, so a code
+    regression that accidentally reaches them surfaces here. Asserts rc=0.
+- Acceptance criteria green:
+  - _TRANSNEXT_SPECS includes the 3 _native variants with the right defaults.
+  - Literal PRD command (--plan final --phase A --model
+    transnext_small_native --dataset cifar10 --dry-run) exits 0 and prints
+    the resolved DegradeConfig (clean baseline at out_size=32, img_size=32,
+    patch_size=2, pretrain_size=224, mnist_pad_to_32=False).
+  - test_quarantine_transnext: 11/11 PASS (9 pre-existing V3 + 2 new US-042).
+  - transnext_small_native.json validates; tune_all reports 4 priors valid.
+  - mypy clean on src/models + src/experiments (with --exclude
+    transnext_official to skip vendored upstream code that pre-dates the
+    project and has its own mypy noise).
+- V3 reconciliation note: the PRD's `--transnext_legacy_upsample` opt-in
+  flag is intentionally NOT introduced. Per CLAUDE.md "V3 Native-Resolution
+  refactor (ratified 2026-05-12)", the legacy 224-upsample TransNeXt path
+  was collapsed entirely. There is no legacy code path to gate. Adding the
+  flag as a no-op would create dead surface area; documented in PRD US-042
+  notes + this progress entry instead.
+
+## Iteration 3 — US-042 TransNeXt Native-Resolution Variants
+- What was done
+  - Added 3 `_native` aliases to _TRANSNEXT_SPECS with native-32 defaults
+    baked into the spec dict (default_img_size, default_patch_size,
+    default_pretrain_size). Resolution precedence in
+    create_transnext_model: caller > spec default > wrapper fallback.
+  - Wired --model / --dataset / --dry-run into run_all_phases.py and
+    run_final_plan. Dry-run synthesizes a CellSpec when the (model, dataset)
+    isn't in the matrix (so the PRD's literal command works under V3 routing).
+  - Created artifacts/priors/transnext_small_native.json (paper-derived,
+    decade-bounded). Extended tune_all.py SUPPORTED_MODELS to include it.
+  - Added 2 new tests to test_quarantine_transnext.py — _native reachability
+    and dry-run resolution.
+  - Suppressed a pre-existing mypy false-positive on the block-import idiom
+    so the "Typecheck passes" criterion holds.
+- Files affected
+  - EDIT: src/models/transnext_wrapper.py (additive specs + signature)
+  - EDIT: run_all_phases.py (CLI flags + run_final_plan kwargs + dry-run)
+  - EDIT: tune_all.py (SUPPORTED_MODELS tuple)
+  - EDIT: src/tests/test_quarantine_transnext.py (2 new tests appended)
+  - EDIT: PRD.md (acceptance checkboxes)
+  - EDIT: progress.txt (this entry)
+  - NEW:  artifacts/priors/transnext_small_native.json
+- Learnings for next cycles:
+  - Patterns:
+    - When PRD spec and active project ruling (CLAUDE.md V3) conflict, ask
+      the operator before touching either. Option-A "additive aliases"
+      satisfies the PRD's literal acceptance criteria without rolling back
+      the V3 architectural decision.
+    - Sentinel-None signature with spec-driven defaults is a clean way to
+      add per-variant defaults to a function without breaking existing
+      callers. Three-tier precedence (caller > spec > fallback) is
+      backwards-compatible and self-documenting.
+    - For dry-run paths that need to handle (model, dataset) combinations
+      not in the canonical matrix, synthesize the CellSpec on-the-fly from
+      the routing helpers (`_v3_cell_settings` + `degrade_config_for`).
+      Avoids forking the matrix and keeps the routing source-of-truth in
+      one place.
+    - For dry-run tests, inject stub callables that raise AssertionError if
+      called — a code regression that accidentally reaches the runtime
+      path surfaces immediately in the test rather than silently doing
+      training-shaped work.
+  - Traps:
+    - PRD acceptance criteria can become stale between drafting and
+      execution when an architectural ruling lands the same day. Always
+      cross-reference CLAUDE.md before assuming PRD text is literally
+      actionable.
+    - Mypy errors in vendored third-party code (here:
+      src/models/transnext_official/) pollute the "mypy passes" signal.
+      Use --exclude + --ignore-missing-imports + --explicit-package-bases
+      to scope to project code; document the invocation in PRD/progress so
+      future iterations don't trip over it.
+    - test_final_plan invokes the V3 insurance trial path unless callers
+      pass `insurance_trial_fn=stub`. The test takes >hours because it
+      runs real Lightning training. Not a US-042 regression — pre-existing
+      slowness. Flag this when running regression sweeps.
+  - Helpful context:
+    - The Optuna priors loader auto-discovers any *.json under
+      artifacts/priors/ that's not _schema.json or PRIORS_SOURCES.md.
+      Adding a new file requires zero code changes in the validator.
+    - The dashboard renders rows from build_final_matrix(); adding `_native`
+      aliases as additive specs does NOT add cells to the matrix (cells.py
+      MODELS tuple is the gate). The native aliases are dispatchable only
+      via the explicit --model flag or by callers that build a CellSpec
+      directly.
+---
+
 
 ## US-043: Optuna Pre-Tune — resnet50 × {cifar10, mnist}
 (pending — Stage 1 fast rank + Stage 1.5 top-3 validate)

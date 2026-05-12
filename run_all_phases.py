@@ -324,6 +324,109 @@ def _refresh_trackers_default(cell: Optional[str] = None) -> None:
         print(f"[refresh][WARN] refresh_all raised: {e}", file=sys.stderr)
 
 
+# ============================================================
+# V3 Insurance Trial (Phase-B sanity check)
+# ============================================================
+# The 186-cell matrix runs CNNs at 224 (their ImageNet-pretrain regime) and
+# TransNeXt at native 32 (V3 path). This trial trains a single ResNet50 cell
+# at native 32x32 / L1 / CIFAR-10 so the paper can quote the empirical penalty
+# of forcing a CNN out of its training resolution — justifying the asymmetric
+# design instead of arguing it from architecture alone.
+#
+# Lives OUTSIDE the 186-cell matrix (matrix denominator stays 186). Output
+# goes to runs/insurance/<tag>/ so dashboards that scan runs/final/ don't pick
+# it up by accident.
+
+INSURANCE_TRIAL_TAG = "insurance_resnet50_native32_L1_cifar10"
+
+
+def _build_insurance_trial_config() -> dict:
+    """Hardcoded config for the V3 insurance trial.
+
+    L1 (Mild) degradation parameters lifted verbatim from
+    src/data/degradation_levels.py so this stays in sync with the main
+    plan's L1 cells. ResNet50 hyperparameters mirror the main matrix's
+    resnet50 row so the only experimental variable is `out_size`.
+    """
+    return dict(
+        model_name="resnet50",
+        pretrained=True,
+        dataset="cifar10",
+        # The variable under test: native 32 vs the matrix's 224.
+        out_size=32,
+        img_size=32,
+        low_res=20,           # L1 from degradation_levels.py
+        blur_kernel=3,
+        blur_sigma=0.70,
+        gaussian_noise_std=0.03,
+        salt_pepper_amount=0.02,
+        saturation=1.00,
+        degradation_type="all",
+        # ResNet50 row from MODEL_CONFIGS — keep identical so out_size is
+        # the only confound.
+        lr=1e-3,
+        backbone_lr=5e-5,
+        freeze_backbone=False,
+        weight_decay=5e-4,
+        label_smoothing=0.15,
+        warmup_epochs=3,
+        scheduler_type="cosine",
+        max_grad_norm=1.0,
+        # Final-plan training budget per CLAUDE.md.
+        epochs=60,
+        batch_size=32,
+        train_subset=10000,
+        val_subset=5000,
+        early_stopping_patience=10,
+        # Output routing.
+        group="insurance",
+        run_name_override=INSURANCE_TRIAL_TAG,
+    )
+
+
+def _run_insurance_trial(
+    *,
+    engine: str = "lightning",
+    skip_existing: bool = True,
+    run_experiment_fn=None,
+) -> dict:
+    """Fire the V3 insurance trial. Fail-soft: errors are logged, never raised.
+
+    Returns a status dict {tag, status, time?} suitable for inclusion in the
+    run_final_plan results JSON.
+    """
+    tag = INSURANCE_TRIAL_TAG
+    run_dir = Path("runs") / "insurance" / tag
+    if skip_existing and _has_completed_metrics(run_dir / "metrics.json"):
+        print(f"[insurance] SKIP {tag} — metrics.json already complete")
+        return {"tag": tag, "phase": "INSURANCE", "status": "SKIPPED"}
+
+    config = _build_insurance_trial_config()
+    run_experiment = run_experiment_fn or _resolve_run_experiment(engine)
+
+    print("\n" + "=" * 72)
+    print(f"  [INSURANCE TRIAL] {tag}")
+    print(f"  ResNet50 @ native 32x32 / L1 Mild / CIFAR-10")
+    print(f"  Purpose: quantify CNN penalty at non-native resolution.")
+    print("=" * 72)
+
+    t0 = time.time()
+    try:
+        run_experiment(**config)
+        dt = time.time() - t0
+        print(f"[insurance] OK {tag} ({dt:.1f}s)")
+        return {"tag": tag, "phase": "INSURANCE", "status": "OK", "time": f"{dt:.1f}s"}
+    except Exception as e:
+        dt = time.time() - t0
+        print(f"[insurance][WARN] {tag} failed (continuing main plan): "
+              f"{type(e).__name__}: {e}", file=sys.stderr)
+        return {
+            "tag": tag, "phase": "INSURANCE",
+            "status": f"FAILED: {type(e).__name__}: {e}",
+            "time": f"{dt:.1f}s",
+        }
+
+
 def run_final_plan(
     *,
     phase: str = "all",
@@ -331,10 +434,14 @@ def run_final_plan(
     skip_existing: bool = True,
     tune_first: bool = False,
     engine: str = "lightning",
+    model: Optional[str] = None,    # PRD US-042: filter matrix by model name
+    dataset: Optional[str] = None,  # PRD US-042: filter matrix by dataset
+    dry_run: bool = False,          # PRD US-042: resolve + print CellSpec(s), no training
     run_cell_fn=None,           # injectable for testing
     tune_all_fn=None,           # injectable for testing
     refresh_fn=None,            # injectable for testing (US-016: refreshes BOTH trackers)
     phase_boundary_fn=None,     # injectable for testing (US-016: SYNCHRONIZER push)
+    insurance_trial_fn=None,    # injectable for testing (V3 insurance trial)
 ) -> int:
     """Iterate the 186-cell matrix, dispatching each cell via run_cell.
 
@@ -365,16 +472,63 @@ def run_final_plan(
             raise ValueError(f"unknown phase {phase!r}; expected one of {FINAL_PHASES} or 'all'")
         matrix = [c for c in matrix if c.phase == phase]
 
-    # US-014 quarantine guard: TransNeXt rows are deferred pending hardware.
-    # Skip them so the runner never dispatches a TransNeXt cell, but keep the
-    # matrix/186 denominator intact in the trackers (the aggregator marks
-    # those rows "Deferred" via src.experiments.run_status.is_quarantined).
-    from src.experiments.run_status import is_quarantined as _is_quarantined
-    quarantined = [c for c in matrix if _is_quarantined(c.model)]
-    if quarantined:
-        print(f"[quarantine] skipping {len(quarantined)} TransNeXt cell(s) "
-              f"(US-014: pending hardware)", file=sys.stderr)
-        matrix = [c for c in matrix if not _is_quarantined(c.model)]
+    # PRD US-042: optional model/dataset filters. Used by `--dry-run` smoke
+    # tests and by ad-hoc single-cell dispatches. The filters are AND-ed.
+    if model is not None:
+        matrix = [c for c in matrix if c.model == model]
+    if dataset is not None:
+        matrix = [c for c in matrix if c.dataset == dataset]
+
+    # PRD US-042: `--dry-run` resolves CellSpecs (no training) and exits.
+    # If the requested (model, dataset) is a `_native` alias not present in
+    # the matrix (matrix uses bare `transnext_*` names under V3), synthesize
+    # the spec from `_v3_cell_settings` so the operator can preview the
+    # resolved DegradeConfig before the real training command runs.
+    if dry_run:
+        if not matrix and model is not None and dataset is not None:
+            from src.experiments.matrix import _v3_cell_settings, CellSpec
+            from src.data.degrade import degrade_config_for
+            v3 = _v3_cell_settings(model, dataset)
+            # Default to phase A clean baseline if no phase specified.
+            phases_to_show = [phase] if phase != "all" else ["A"]
+            for ph in phases_to_show:
+                if ph == "A":
+                    tag = f"final_clean_{model}_{dataset}"
+                    lvl, ax = None, None
+                else:
+                    tag = f"final_{ph}_L3_{model}_{dataset}"
+                    lvl, ax = 3, None
+                deg = degrade_config_for(lvl, axis=ax, out_size=v3["out_size"])
+                synthesized = CellSpec(
+                    tag=tag, phase=ph, model=model, dataset=dataset,
+                    level=lvl, axis=ax, degrade_config=deg, **v3,
+                )
+                matrix.append(synthesized)
+        print("=" * 72)
+        print(f"  DRY RUN — phase={phase}, model={model}, dataset={dataset}, "
+              f"resolved {len(matrix)} cell(s)")
+        print("=" * 72)
+        for c in matrix:
+            print(f"\n  tag             : {c.tag}")
+            print(f"  phase           : {c.phase}")
+            print(f"  model / dataset : {c.model} / {c.dataset}")
+            print(f"  level / axis    : {c.level} / {c.axis}")
+            print(f"  out_size        : {c.out_size}")
+            print(f"  img_size        : {c.img_size}")
+            print(f"  patch_size      : {c.patch_size}")
+            print(f"  pretrain_size   : {c.pretrain_size}")
+            print(f"  precision       : {c.precision}")
+            print(f"  compile_mode    : {c.compile_mode}")
+            print(f"  mnist_pad_to_32 : {c.mnist_pad_to_32}")
+            print(f"  degrade_config  : {c.degrade_config}")
+        return 0
+
+    # V3 quarantine lift (ratified 2026-05-12): TransNeXt cells now dispatch
+    # alongside CNN cells. The legacy US-014 filter block that filtered out
+    # `is_quarantined(c.model)` here was removed when the RTX 5070 / Blackwell
+    # hardware came online. `is_quarantined` itself is now a no-op predicate
+    # (always returns False) so tracker / Optuna code that still calls it
+    # continues to work without quarantining anything.
 
     if tune_first:
         all_present, missing = _required_hparams_present(matrix)
@@ -393,6 +547,24 @@ def run_final_plan(
                 print(f"[tune-first] tune_all.py failed (rc={rc}); aborting.",
                       file=sys.stderr)
                 return rc
+
+    # V3 insurance trial: ResNet50 @ native 32 / L1 / CIFAR-10. Runs
+    # alongside Phase B (or the full "all" pass) but is NOT part of the
+    # 186-cell matrix. Fail-soft — its result is recorded but never aborts
+    # the main plan.
+    insurance_result: Optional[dict] = None
+    if phase in ("B", "all"):
+        _insurance = insurance_trial_fn or _run_insurance_trial
+        try:
+            insurance_result = _insurance(engine=engine, skip_existing=skip_existing)
+        except Exception as e:
+            print(f"[insurance][WARN] insurance_trial_fn raised: "
+                  f"{type(e).__name__}: {e}", file=sys.stderr)
+            insurance_result = {
+                "tag": INSURANCE_TRIAL_TAG,
+                "phase": "INSURANCE",
+                "status": f"FAILED: {type(e).__name__}: {e}",
+            }
 
     print("=" * 72)
     print(f"  186-CELL FINAL PLAN — phase={phase}, mode={mode}, "
@@ -532,11 +704,20 @@ def run_final_plan(
     print("\n" + "=" * 72)
     print(f"  FINAL PLAN SUMMARY: {completed} OK, {failed} failed, "
           f"{skipped} skipped (of {len(matrix)} matrix cells)")
+    if insurance_result is not None:
+        print(f"  INSURANCE TRIAL: {insurance_result['status']}")
     print("=" * 72)
+
+    # Append the insurance trial to the results JSON so it's visible to the
+    # paper-figure scripts, but keep it tagged phase="INSURANCE" so they can
+    # filter it out of 186-cell rollups.
+    persisted_results = list(results)
+    if insurance_result is not None:
+        persisted_results.append(insurance_result)
 
     out = Path("artifacts/final_plan_results.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    out.write_text(json.dumps(persisted_results, indent=2), encoding="utf-8")
     print(f"  -> {out}")
 
     return 0 if failed == 0 else 1
@@ -560,6 +741,15 @@ def main():
                              "is missing.")
     parser.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
                         help="Training engine: lightning (default) or legacy hand-rolled trainer")
+    parser.add_argument("--model", default=None,
+                        help="final plan: filter matrix to one model (e.g. transnext_small_native). "
+                             "Used by --dry-run smoke tests; ignored by legacy plan.")
+    parser.add_argument("--dataset", default=None,
+                        help="final plan: filter matrix to one dataset (cifar10 | mnist). "
+                             "Used by --dry-run smoke tests; ignored by legacy plan.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="final plan: resolve filtered CellSpec(s) and print "
+                             "the DegradeConfig + V3 routing; no training.")
     args = parser.parse_args()
 
     if args.plan == "final":
@@ -574,6 +764,9 @@ def main():
             skip_existing=args.skip_existing,
             tune_first=args.tune_first,
             engine=args.engine,
+            model=args.model,
+            dataset=args.dataset,
+            dry_run=args.dry_run,
         )
         sys.exit(rc)
 

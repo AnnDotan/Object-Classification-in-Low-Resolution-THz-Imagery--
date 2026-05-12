@@ -27,7 +27,15 @@ REPO_ROOT = Path(__file__).resolve().parent
 PRIORS_DIR = REPO_ROOT / "artifacts" / "priors"
 SCHEMA_PATH = PRIORS_DIR / "_schema.json"
 
-SUPPORTED_MODELS = ("resnet50", "densenet121", "transnext_base")
+SUPPORTED_MODELS = (
+    "resnet50",
+    "densenet121",
+    "transnext_base",
+    # PRD US-042 native-resolution aliases (V3-routed). Priors files exist
+    # only when paper-derived priors warrant a separate JSON; we ship
+    # `transnext_small_native.json` per the US-042 acceptance criterion.
+    "transnext_small_native",
+)
 SUPPORTED_DATASETS = ("cifar10", "mnist")
 
 REQUIRED_HPARAMS = (

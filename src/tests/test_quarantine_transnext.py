@@ -1,14 +1,19 @@
-"""Unit tests for scripts/quarantine_transnext.py and the matching guard
-in run_all_phases.py (US-014, docs/prds/PHASE_B_VISUAL_CORE.md).
+"""Unit tests for scripts/quarantine_transnext.py and the V3 quarantine lift.
 
-Asserts:
-  - find_quarantine_dirs picks up canonical TransNeXt tags + __v2 siblings
-    and ignores CNN runs.
-  - quarantine(dry_run=True) makes zero filesystem changes.
-  - quarantine() actually removes the planned dirs.
-  - is_quarantined(model) matches all three TransNeXt model strings and
-    no CNN model.
-  - run_all_phases.run_final_plan does not dispatch any TransNeXt cell.
+Historically (US-014): the runner filtered TransNeXt cells via
+is_quarantined() while the project waited for Blackwell hardware.
+
+Current (V3 lift, ratified 2026-05-12): the predicate is a no-op and the
+filter block in run_all_phases.py is gone. Tests now assert the LIFT:
+  - is_quarantined returns False for every input.
+  - The 186-cell matrix dispatches all 186 (62 TransNeXt + 124 CNN).
+  - tune_all.py's default sweep includes TransNeXt.
+  - run_all_phases.py source no longer contains the old filter block.
+
+The quarantine SCRIPT (scripts/quarantine_transnext.py) is retained as a
+manual-cleanup tool — useful for wiping stale TransNeXt run dirs before
+re-running under V3. Tests below still exercise it (find/dry-run/remove)
+to keep the cleanup path working.
 
 Run: python -m src.tests.test_quarantine_transnext
 """
@@ -44,12 +49,19 @@ def _load_quarantine():
 qmod = _load_quarantine()
 
 
-def test_is_quarantined_matches_all_transnext_variants():
-    assert is_quarantined("transnext_base") is True
-    assert is_quarantined("transnext_micro") is True
-    assert is_quarantined("transnext_small") is True
-    assert is_quarantined("TransNeXt_Base") is True
-    # Negative cases — CNNs and edge inputs.
+def test_is_quarantined_returns_false_after_v3_lift():
+    """V3 lift (ratified 2026-05-12): is_quarantined is a permanent no-op.
+
+    Pre-V3 this predicate returned True for TransNeXt models so the runner
+    skipped those cells while the project waited for Blackwell hardware. With
+    the RTX 5070 online, TransNeXt cells dispatch and is_quarantined must
+    return False for every input (callers that still invoke it just see "no
+    quarantine" instead of having to be re-plumbed).
+    """
+    assert is_quarantined("transnext_base") is False
+    assert is_quarantined("transnext_micro") is False
+    assert is_quarantined("transnext_small") is False
+    assert is_quarantined("TransNeXt_Base") is False
     assert is_quarantined("resnet50") is False
     assert is_quarantined("densenet121") is False
     assert is_quarantined("") is False
@@ -141,23 +153,23 @@ def test_quarantine_never_opens_weight_files():
     assert not bad, f"quarantine opened forbidden paths: {bad}"
 
 
-def test_iter_cells_filter_yields_124_cnn_cells():
-    """The guard logic in run_all_phases.run_final_plan filters
-    `is_quarantined(c.model)` from the matrix. We assert the predicate
-    against the torch-free `iter_cells` enumeration (the actual
-    `build_final_matrix` requires torch and is exercised in CI)."""
+def test_v3_lift_iter_cells_dispatches_all_186():
+    """V3 lift: all 186 cells (including the 62 TransNeXt rows) are
+    dispatchable now that is_quarantined is a no-op."""
     from src.experiments.cells import iter_cells
 
     cells = list(iter_cells())
     assert len(cells) == 186, len(cells)
-    cnn = [c for c in cells if not is_quarantined(c.model)]
-    transnext = [c for c in cells if is_quarantined(c.model)]
-    # 2 CNN models * 2 datasets * (1 clean + 5 B + 25 C) = 124
-    assert len(cnn) == 124, f"expected 124 CNN cells; got {len(cnn)}"
-    assert len(transnext) == 62, f"expected 62 TransNeXt cells; got {len(transnext)}"
-    # Every quarantined cell's model contains 'transnext'.
-    for c in transnext:
-        assert "transnext" in c.model.lower(), c.model
+    dispatched = [c for c in cells if not is_quarantined(c.model)]
+    assert len(dispatched) == 186, (
+        f"V3 lift broken: only {len(dispatched)}/186 cells pass is_quarantined"
+    )
+    # Sanity: the matrix still contains TransNeXt rows (their existence is the
+    # point of the lift — if they vanish, something else regressed).
+    transnext_cells = [c for c in cells if "transnext" in c.model.lower()]
+    assert len(transnext_cells) == 62, (
+        f"matrix lost TransNeXt rows: {len(transnext_cells)}/62"
+    )
 
 
 def test_interrupted_sentinel_marks_cell_failed():
@@ -194,13 +206,9 @@ def test_interrupted_sentinel_marks_cell_failed():
         assert detect_status("final_B_L3_densenet121_mnist", runs_root=runs_root) == "Failed"
 
 
-def test_tune_all_skips_transnext_when_iterating_all_models():
-    """US-016: `tune_all.py` (no --model) must skip TransNeXt by default;
-    explicit `--model transnext_*` bypasses the guard.
-
-    `tune_all.main` lazy-imports `src.tune_hyperparams.run_studies`. We
-    inject a fake module via `sys.modules` so the import resolves to our
-    capture without pulling torch + Lightning into the test."""
+def test_v3_lift_tune_all_includes_transnext_by_default():
+    """V3 lift: `tune_all.py` (no --model) now includes TransNeXt in the
+    default sweep because is_quarantined is a no-op."""
     import sys as _sys
     import types as _types
     import tune_all as ta
@@ -216,15 +224,13 @@ def test_tune_all_skips_transnext_when_iterating_all_models():
     fake_module.run_studies = _fake_run_studies
     _sys.modules["src.tune_hyperparams"] = fake_module
     try:
-        # No --model: TransNeXt should be filtered out.
         rc = ta.main(["--n-trials", "1", "--dataset", "cifar10"])
         assert rc == 0
-        assert "transnext_base" not in captured["models"], (
-            f"transnext_base must be filtered; got {captured['models']}"
+        assert "transnext_base" in captured["models"], (
+            f"V3 lift broken: transnext_base missing from default tune sweep; "
+            f"got {captured['models']}"
         )
-        assert set(captured["models"]) == {"resnet50", "densenet121"}, captured["models"]
-
-        # Explicit --model transnext_base: guard must NOT override operator intent.
+        # Explicit --model transnext_base still works (operator intent path).
         captured.clear()
         rc = ta.main(["--n-trials", "1", "--model", "transnext_base", "--dataset", "cifar10"])
         assert rc == 0
@@ -233,32 +239,109 @@ def test_tune_all_skips_transnext_when_iterating_all_models():
         _sys.modules.pop("src.tune_hyperparams", None)
 
 
-def test_run_all_phases_has_quarantine_guard_in_source():
-    """Static guard against accidental removal of the filter in run_all_phases.py.
-
-    Importing run_all_phases.run_final_plan transitively pulls in torch
-    (matrix.py), which isn't installed in every CI tier. Read the source
-    instead to assert the guard predicate is present."""
+def test_v3_lift_run_all_phases_no_longer_filters_quarantine():
+    """V3 lift: the filter block in run_all_phases.py was removed. Asserting
+    the *absence* of the old filter so a future regression that re-introduces
+    it would be caught here."""
     src = (_REPO_ROOT / "run_all_phases.py").read_text(encoding="utf-8")
-    assert "is_quarantined" in src, (
-        "run_all_phases.py must filter the matrix via is_quarantined(c.model) (US-014)"
+    assert "[c for c in matrix if not _is_quarantined(c.model)]" not in src, (
+        "run_all_phases.py re-introduced the legacy US-014 quarantine filter; "
+        "V3 ratified the lift on 2026-05-12 — see CLAUDE.md / matrix.py for the "
+        "fair-comparison reframing."
     )
-    assert "[c for c in matrix if not _is_quarantined(c.model)]" in src, (
-        "run_all_phases.py must drop quarantined cells from the executable matrix"
+
+
+def test_us042_transnext_native_variants_reachable():
+    """PRD US-042: `transnext_{micro,small,base}_native` are reachable through
+    the wrapper specs and (for `_small_native`) the Optuna priors loader.
+
+    Reconciliation with CLAUDE.md V3 (ratified 2026-05-12): the legacy
+    224-upsample TransNeXt path was collapsed entirely by V3. The PRD's
+    `--transnext_legacy_upsample` opt-in flag is therefore unneeded — the
+    legacy path is blocked by nonexistence, not by an explicit gate.
+    """
+    from src.models.transnext_wrapper import (
+        TRANSNEXT_NATIVE_VARIANTS,
+        _TRANSNEXT_SPECS,
     )
+
+    # Spec dict entry for every native variant.
+    for v in TRANSNEXT_NATIVE_VARIANTS:
+        assert v in _TRANSNEXT_SPECS, f"missing _TRANSNEXT_SPECS entry: {v}"
+        spec = _TRANSNEXT_SPECS[v]
+        assert spec["default_img_size"] == 32, (
+            f"{v} default_img_size: expected 32, got {spec.get('default_img_size')}"
+        )
+        assert spec["default_patch_size"] == 2, (
+            f"{v} default_patch_size: expected 2, got {spec.get('default_patch_size')}"
+        )
+        assert spec["default_pretrain_size"] is None, (
+            f"{v} default_pretrain_size: expected None, got {spec.get('default_pretrain_size')}"
+        )
+
+    # Each native variant shares its arch dict with its base counterpart.
+    for native, base in (
+        ("transnext_micro_native", "transnext_micro"),
+        ("transnext_small_native", "transnext_small"),
+        ("transnext_base_native", "transnext_base"),
+    ):
+        for k in ("embed_dims", "num_heads", "depths"):
+            assert _TRANSNEXT_SPECS[native][k] == _TRANSNEXT_SPECS[base][k], (
+                f"{native}.{k} != {base}.{k}: native aliases must mirror their base architecture"
+            )
+
+    # `tune_all.py --validate-only` recognizes the new priors file. We
+    # bypass the CLI and call the loader directly to keep this test fast.
+    import tune_all
+    assert "transnext_small_native" in tune_all.SUPPORTED_MODELS, (
+        "tune_all.SUPPORTED_MODELS missing 'transnext_small_native'"
+    )
+    priors = tune_all.load_priors("transnext_small_native")
+    assert "head_lr" in priors["hparams"]
+    assert "backbone_lr" in priors["hparams"]
+
+
+def test_us042_run_all_phases_dry_run_resolves_native_cell():
+    """PRD US-042: `--plan final --phase A --model transnext_small_native
+    --dataset cifar10 --dry-run` exits 0 and prints the resolved CellSpec."""
+    import run_all_phases
+
+    rc = run_all_phases.run_final_plan(
+        phase="A",
+        model="transnext_small_native",
+        dataset="cifar10",
+        dry_run=True,
+        # Stub the heavy callables — dry-run shouldn't reach them, but pin
+        # them anyway so an accidental code regression surfaces here.
+        run_cell_fn=lambda *a, **kw: (_ for _ in ()).throw(
+            AssertionError("dry-run reached run_cell")
+        ),
+        refresh_fn=lambda: (_ for _ in ()).throw(
+            AssertionError("dry-run reached refresh")
+        ),
+        phase_boundary_fn=lambda *a, **kw: (_ for _ in ()).throw(
+            AssertionError("dry-run reached phase boundary push")
+        ),
+        insurance_trial_fn=lambda *a, **kw: (_ for _ in ()).throw(
+            AssertionError("dry-run reached insurance trial")
+        ),
+    )
+    assert rc == 0, f"dry-run must exit 0, got rc={rc}"
 
 
 def _run_all() -> int:
     fns = [
-        test_is_quarantined_matches_all_transnext_variants,
+        test_is_quarantined_returns_false_after_v3_lift,
         test_find_quarantine_dirs_picks_transnext_and_v2_siblings,
         test_dry_run_does_not_remove_anything,
         test_quarantine_removes_dirs_and_skips_refresh,
         test_quarantine_never_opens_weight_files,
-        test_iter_cells_filter_yields_124_cnn_cells,
+        test_v3_lift_iter_cells_dispatches_all_186,
         test_interrupted_sentinel_marks_cell_failed,
-        test_tune_all_skips_transnext_when_iterating_all_models,
-        test_run_all_phases_has_quarantine_guard_in_source,
+        test_v3_lift_tune_all_includes_transnext_by_default,
+        test_v3_lift_run_all_phases_no_longer_filters_quarantine,
+        test_us042_transnext_native_variants_reachable,
+        test_us042_run_all_phases_dry_run_resolves_native_cell,
     ]
     failures = 0
     for fn in fns:

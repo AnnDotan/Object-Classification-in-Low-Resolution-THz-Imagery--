@@ -1,0 +1,41 @@
+{
+  "model": "transnext_small_native",
+  "notes": "PRD US-042 native-resolution variant — same architecture as transnext_small (embed_dims [72,144,288,576], depths [5,5,22,5]) but pre-baked img_size=32, patch_size=2, pretrain_size=None for the V3 native path. Full fine-tuning per V3 ratification 2026-05-12. Search space mirrors transnext_base.json; the smaller backbone (~36M vs ~89M params) tolerates a slightly higher head_lr anchor at the search ceiling but priors are kept identical to preserve the decade-bound contract.",
+  "hparams": {
+    "head_lr": {
+      "distribution": "loguniform",
+      "low": 1e-4,
+      "high": 1e-2,
+      "citation": "papers/TransNeXt.pdf §A.3 — head LR 1e-3 (LP), inherited as FT head anchor; PRD US-042 §5.3",
+      "note": "Anchor 5e-4 (CLAUDE.md V3 TransNeXt FT row). ±1 decade range, decade-bounded per tune_all.MAX_LOGUNIFORM_RATIO=100."
+    },
+    "backbone_lr": {
+      "distribution": "loguniform",
+      "low": 5e-6,
+      "high": 5e-4,
+      "citation": "papers/TransNeXt.pdf §A.3 — full FT typically uses backbone LR 1e-5 to 1e-4 for ImageNet-pretrained ViTs; CLAUDE.md V3 row anchors 5e-5",
+      "note": "Anchor 5e-5 (CLAUDE.md V3 TransNeXt FT row). The 10x differential vs head_lr matches the CNN baseline. ±1 decade range."
+    },
+    "weight_decay": {
+      "distribution": "loguniform",
+      "low": 5e-3,
+      "high": 5e-1,
+      "citation": "papers/TransNeXt.pdf §A.3 — weight decay 5e-2",
+      "note": "Anchor 5e-2 (CLAUDE.md TransNeXt row). ViTs are sensitive to WD; ±1 decade."
+    },
+    "label_smoothing": {
+      "distribution": "uniform",
+      "low": 0.0,
+      "high": 0.1,
+      "citation": "papers/TransNeXt.pdf §A.3 — label smoothing 0.0 for LP; CLAUDE.md V3 anchors 0.1 for FT",
+      "note": "Anchor 0.1 (CLAUDE.md V3 TransNeXt FT row). Native-32 path keeps LS in [0, 0.1] to bracket the LP and FT regimes."
+    },
+    "warmup_epochs": {
+      "distribution": "uniform",
+      "low": 0,
+      "high": 10,
+      "citation": "papers/TransNeXt.pdf §A.3 — cosine schedule with linear warmup standard for ViTs",
+      "note": "Float; tune_all.py rounds to int. Anchor 5 (typical ViT warmup); wider than CNNs because ViTs benefit more from warmup during full FT."
+    }
+  }
+}
