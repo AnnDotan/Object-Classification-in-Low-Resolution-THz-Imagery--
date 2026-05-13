@@ -131,6 +131,35 @@ US-001: densenet121_mnist winner frozen (best_value=0.9192, trials=20)
 - Verification: pytest 21/21 ✓, test_matrix direct (`OK [isolation] all 150 Phase C cells isolate exactly one axis`) ✓, test_degradation_determinism MSE=0 both groups ✓, mypy 3 files clean ✓.
 - One acceptance item deferred: NotebookLM re-upload (no MCP available; queued alongside US-001/US-002 sync).
 
+## Blur axis rescaled 2026-05-14 — visible degradation on 224×224
+- Operator observation while reviewing the Phase C blur thumbs: all 5 levels looked
+  identical to clean, no visible blur. Root cause: the pre-2026-05-14 kernel/sigma
+  values (K=3..13, σ=0.80..2.30) were designed for native-size imagery (32×32);
+  on the 224×224 upsampled tensor those kernels cover ~1–6% of image width and
+  the Gaussian footprint is effectively a no-op.
+- New curve (pixel-domain at 224×224, kernel = 2·⌈2.5σ⌉+1):
+    L1: K=13, σ=2.5    (mild visible blur)
+    L2: K=25, σ=5.0    (clear softening)
+    L3: K=41, σ=8.0    (clearly blurred)
+    L4: K=61, σ=12.0   (severe)
+    L5: K=91, σ=18.0   (heavy smear)
+- Files touched: `src/data/degradation_levels.py` (DEGRADATION_LEVELS table —
+  ONLY `blur_kernel` and `blur_sigma`; low_res/noise/S&P/saturation unchanged),
+  `CLAUDE.md` table, `README.md` table.
+- Dashboard refreshed: `Final_Exp.json` rebuilt; 60 thumbs re-rendered with --force
+  (30 Phase B all-axis cells + 30 Phase C blur-isolation cells). Phase A (clean)
+  and the 120 Phase C cells with inactive blur (4 inactive axes return to identity
+  per US-003) unchanged.
+- Verification: pytest 21/21 ✓, determinism gate MSE=0 ✓.
+- `degradation_levels_hash` rotates: cross-batch comparison against pre-2026-05-14
+  runs that involved blur is invalidated.
+- DOWNSTREAM CAVEAT (operator-accepted, option (א) from 2026-05-14 conversation):
+  the 4 already-frozen winner JSONs (resnet50×{cifar10,mnist}, densenet121×{cifar10,
+  mnist}) were tuned at the OLD L3 blur (K=7, σ=1.5 — essentially no-op). Phase B
+  L3 cells running under the new blur (K=41, σ=8) will be measurably harder than
+  what those hparams were optimized for. Hparams remain authoritative for now;
+  re-tune deferred unless Phase B L3 execution shows systematic underperformance.
+
 ## US-002 BLOCKED 2026-05-13 — transnext_base pretrained weights missing
 - Stage 1 tune attempt failed immediately:
   `FAIL [transnext_base_cifar10_L3] Pretrained TransNeXt weights missing:`

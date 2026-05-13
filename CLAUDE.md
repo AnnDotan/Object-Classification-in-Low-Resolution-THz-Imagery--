@@ -45,11 +45,13 @@ Tag scheme: `final_clean_{m}_{d}` / `final_B_L{l}_{m}_{d}` / `final_C_L{l}_{ax}_
 
 | Level | Name | low_res | blur kernel | blur σ | noise std | S&P | saturation |
 |---|---|---|---|---|---|---|---|
-| L1 | Mild | 20 | 3 | 0.70 | 0.03 | 0.02 | 1.00 |
-| L2 | Light | 14 | 5 | 1.00 | 0.06 | 0.05 | 0.75 |
-| L3 | Moderate | 10 | 7 | 1.30 | 0.09 | 0.08 | 0.50 |
-| L4 | Severe | 7 | 9 | 1.65 | 0.13 | 0.11 | 0.25 |
-| L5 | Extreme | 4 | 11 | 2.00 | 0.18 | 0.15 | 0.00 |
+| L1 | Mild | 18 | 13 | 2.50 | 0.04 | 0.03 | 0.95 |
+| L2 | Light | 12 | 25 | 5.00 | 0.08 | 0.06 | 0.65 |
+| L3 | Moderate | 8 | 41 | 8.00 | 0.12 | 0.10 | 0.40 |
+| L4 | Severe | 6 | 61 | 12.00 | 0.16 | 0.14 | 0.15 |
+| L5 | Extreme | 3 | 91 | 18.00 | 0.22 | 0.18 | 0.00 |
+
+Blur kernel/σ rescaled 2026-05-14: the prior values (K=3..13, σ=0.80..2.30) were designed for native-size (32×32) imagery; on the 224×224 upsampled tensor they covered ~1–6% of image width and produced essentially invisible blur. The values above are pixel-domain at 224×224 (kernel = 2·⌈2.5σ⌉+1). Other axes unchanged from the 2026-05-12 severity bump.
 
 Saturation is a deterministic lerp: `(1−s)·gray + s·img`, applied **before** noise/S&P so noise color stays correct. Replaces the legacy stochastic `p_grayscale` (kept as a no-op field for backwards-compat).
 

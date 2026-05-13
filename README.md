@@ -256,11 +256,11 @@ Model input (224×224×3)
 
 | Level | Name | low_res | blur kernel | blur σ | noise std | S&P | saturation |
 |---|---|---|---|---|---|---|---|
-| L1 | Mild | 20 | 3 | 0.70 | 0.03 | 0.02 | 1.00 |
-| L2 | Light | 14 | 5 | 1.00 | 0.06 | 0.05 | 0.75 |
-| L3 | Moderate | 10 | 7 | 1.30 | 0.09 | 0.08 | 0.50 |
-| L4 | Severe | 7 | 9 | 1.65 | 0.13 | 0.11 | 0.25 |
-| L5 | Extreme | 4 | 11 | 2.00 | 0.18 | 0.15 | 0.00 |
+| L1 | Mild | 18 | 13 | 2.50 | 0.04 | 0.03 | 0.95 |
+| L2 | Light | 12 | 25 | 5.00 | 0.08 | 0.06 | 0.65 |
+| L3 | Moderate | 8 | 41 | 8.00 | 0.12 | 0.10 | 0.40 |
+| L4 | Severe | 6 | 61 | 12.00 | 0.16 | 0.14 | 0.15 |
+| L5 | Extreme | 3 | 91 | 18.00 | 0.22 | 0.18 | 0.00 |
 
 Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other axis at **identity** (no degradation). This isolates each axis cleanly so Phase C results reflect the named axis only. Pre-US-003 the inactive axes were pinned at L1 mild values — the change was ratified 2026-05-14; see `docs/phase_c.md`.
 

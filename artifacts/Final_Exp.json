@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-13T21:14:45+00:00",
+  "generated_at": "2026-05-13T21:28:06+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -11,8 +11,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -38,8 +38,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -65,8 +65,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -92,8 +92,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -119,8 +119,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -146,8 +146,8 @@
       "axis": null,
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.04,
         "salt_pepper": 0.03,
         "saturation": 0.95
@@ -173,8 +173,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -200,8 +200,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -227,8 +227,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -254,8 +254,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -281,8 +281,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -308,8 +308,8 @@
       "axis": null,
       "params": {
         "low_res": 12,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.08,
         "salt_pepper": 0.06,
         "saturation": 0.65
@@ -335,8 +335,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -362,8 +362,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -389,8 +389,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -416,8 +416,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -443,8 +443,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -470,8 +470,8 @@
       "axis": null,
       "params": {
         "low_res": 8,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.12,
         "salt_pepper": 0.1,
         "saturation": 0.4
@@ -497,8 +497,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -524,8 +524,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -551,8 +551,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -578,8 +578,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -605,8 +605,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -632,8 +632,8 @@
       "axis": null,
       "params": {
         "low_res": 6,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.16,
         "salt_pepper": 0.14,
         "saturation": 0.15
@@ -659,8 +659,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -686,8 +686,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -713,8 +713,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -740,8 +740,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -767,8 +767,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -794,8 +794,8 @@
       "axis": null,
       "params": {
         "low_res": 3,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.22,
         "salt_pepper": 0.18,
         "saturation": 0.0
@@ -821,8 +821,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -848,8 +848,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -875,8 +875,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -902,8 +902,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -929,8 +929,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -956,8 +956,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "blur_kernel": 13,
+        "blur_sigma": 2.5,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1631,8 +1631,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1658,8 +1658,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1685,8 +1685,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1712,8 +1712,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1739,8 +1739,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -1766,8 +1766,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 5,
-        "blur_sigma": 1.15,
+        "blur_kernel": 25,
+        "blur_sigma": 5.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2441,8 +2441,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2468,8 +2468,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2495,8 +2495,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2522,8 +2522,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2549,8 +2549,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -2576,8 +2576,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 7,
-        "blur_sigma": 1.5,
+        "blur_kernel": 41,
+        "blur_sigma": 8.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3251,8 +3251,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3278,8 +3278,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3305,8 +3305,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3332,8 +3332,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3359,8 +3359,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -3386,8 +3386,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 9,
-        "blur_sigma": 1.85,
+        "blur_kernel": 61,
+        "blur_sigma": 12.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4061,8 +4061,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4088,8 +4088,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4115,8 +4115,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4142,8 +4142,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4169,8 +4169,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0
@@ -4196,8 +4196,8 @@
       "axis": "blur",
       "params": {
         "low_res": 224,
-        "blur_kernel": 13,
-        "blur_sigma": 2.3,
+        "blur_kernel": 91,
+        "blur_sigma": 18.0,
         "noise_std": 0.0,
         "salt_pepper": 0.0,
         "saturation": 1.0

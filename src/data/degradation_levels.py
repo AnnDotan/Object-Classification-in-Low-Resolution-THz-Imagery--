@@ -18,16 +18,28 @@ from typing import Optional
 # noise_std:   additive Gaussian noise std on [0,1] image.
 # salt_pepper: fraction of pixels flipped to {0, 1}.
 # low_res:     downsample target before bilinear upsample to model input size.
+# blur_kernel / blur_sigma:
+#   The Gaussian blur runs AFTER the upsample to out_size=224, so kernel
+#   and sigma are pixel-domain values at 224x224. The 2026-05-12 curve
+#   used kernels designed for native-size (32x32) imagery (K=3..13,
+#   sigma=0.8..2.3); at 224x224 those kernels cover ~1-6% of the image
+#   width and produce essentially invisible blur (operator observation
+#   on Phase C blur thumbs, 2026-05-14). The values below are rescaled
+#   to produce perceptually meaningful blur on 224x224:
+#     - kernel = 2 * ceil(2.5 * sigma) + 1 (captures 2.5-sigma footprint,
+#       snapped to odd)
+#     - sigma curve roughly doubles per level (visible -> heavy -> smeared)
 # Severity bumped 2026-05-12 for the RTX 5070 RALPH Loop campaign:
 # the prior table compressed accuracy across L1..L3 (delta < 4pp on
-# DenseNet × CIFAR-10), so the curve below pushes each axis one notch
+# DenseNet x CIFAR-10), so the curve below pushes each axis one notch
 # harder while keeping L1 close-to-clean and L5 a true breaking point.
+# Blur axis re-scaled 2026-05-14 (operator-approved) for 224x224 visibility.
 DEGRADATION_LEVELS: dict[int, dict[str, float | int]] = {
-    1: {"low_res": 18, "blur_kernel": 3,  "blur_sigma": 0.80, "noise_std": 0.04, "salt_pepper": 0.03, "saturation": 0.95},
-    2: {"low_res": 12, "blur_kernel": 5,  "blur_sigma": 1.15, "noise_std": 0.08, "salt_pepper": 0.06, "saturation": 0.65},
-    3: {"low_res":  8, "blur_kernel": 7,  "blur_sigma": 1.50, "noise_std": 0.12, "salt_pepper": 0.10, "saturation": 0.40},
-    4: {"low_res":  6, "blur_kernel": 9,  "blur_sigma": 1.85, "noise_std": 0.16, "salt_pepper": 0.14, "saturation": 0.15},
-    5: {"low_res":  3, "blur_kernel": 13, "blur_sigma": 2.30, "noise_std": 0.22, "salt_pepper": 0.18, "saturation": 0.00},
+    1: {"low_res": 18, "blur_kernel": 13, "blur_sigma":  2.50, "noise_std": 0.04, "salt_pepper": 0.03, "saturation": 0.95},
+    2: {"low_res": 12, "blur_kernel": 25, "blur_sigma":  5.00, "noise_std": 0.08, "salt_pepper": 0.06, "saturation": 0.65},
+    3: {"low_res":  8, "blur_kernel": 41, "blur_sigma":  8.00, "noise_std": 0.12, "salt_pepper": 0.10, "saturation": 0.40},
+    4: {"low_res":  6, "blur_kernel": 61, "blur_sigma": 12.00, "noise_std": 0.16, "salt_pepper": 0.14, "saturation": 0.15},
+    5: {"low_res":  3, "blur_kernel": 91, "blur_sigma": 18.00, "noise_std": 0.22, "salt_pepper": 0.18, "saturation": 0.00},
 }
 
 LEVEL_NAMES: dict[int, str] = {
