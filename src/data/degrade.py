@@ -112,9 +112,16 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     # US-043: downsample stays bilinear (anti-aliased pooling is sensible for
     # resolution loss simulation); upsample switches to bicubic to match the
     # clean-baseline upsample mode. Both stages remain deterministic.
+    # US-003 (2026-05-14): when low_res == out_size the resolution axis is at
+    # identity (Phase C inactive-axis semantic). Skip the bilinear downsample
+    # and do a single bicubic upsample so the pixels match the Phase A clean
+    # baseline upsampling exactly. Without this short-circuit, the cascade
+    # bilinear(32->224) -> bicubic(224->224) would diverge from a single
+    # bicubic(32->224), polluting the per-axis isolation signal.
     if cfg.degradation_type in ('all', 'downsampling'):
         img = img.unsqueeze(0)
-        img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
+        if cfg.low_res != cfg.out_size:
+            img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
         img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bicubic", align_corners=False)
         img = img.squeeze(0)
 

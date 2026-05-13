@@ -287,7 +287,7 @@ Activation rules:
 
 ---
 
-### US-003: Phase C single-axis correction (NEW)
+### US-003: Phase C single-axis correction (NEW) — **CLOSED 2026-05-14**
 
 **Description:** Change Phase C isolation semantics. **Old:** named axis at L<level>, every other axis pinned to **L1 mild** values. **New:** named axis at L<level>, every other axis at **identity (no degradation)**. This isolates each axis cleanly so Phase C results reflect the named axis only.
 
@@ -314,14 +314,14 @@ Activation rules:
 - `docs/phase_c.md` (new, via LIBRARIAN) — record the scientific rationale.
 
 **Acceptance Criteria:**
-- [ ] `level_params(level=L, axis="noise")` returns inactive axes at identity per the table above.
-- [ ] `build_final_matrix()` still emits 186 cells; Phase C cells have **exactly one** non-identity axis (asserted in `test_matrix.py`).
-- [ ] `degradation_levels_hash` in `metrics.json` for any new Phase C cell differs from the prior hash; cross-batch comparisons against pre-US-003 cells are explicitly forbidden in `docs/phase_c.md`.
-- [ ] `test_degradation_determinism.py` green (MSE=0) at out_size=224 for both cifar10 and mnist against the new table.
-- [ ] CLAUDE.md "Phase C single-axis isolation" line updated to: "named axis at level L, every other axis at identity (no degradation)".
-- [ ] LIBRARIAN-owned `docs/phase_c.md` + `README.md` "186-cell plan" reflect the change.
-- [ ] NOTEBOOKLM_SYNC re-uploads `degradation_levels.py`, `matrix.py`, `CLAUDE.md`, `docs/phase_c.md`.
-- [ ] Typecheck passes; pytest green.
+- [x] `level_params(level=L, axis="noise")` returns inactive axes at identity per the table above. *(IDENTITY_VALUES added to degradation_levels.py)*
+- [x] `build_final_matrix()` still emits 186 cells; Phase C cells have **exactly one** non-identity axis (asserted in `test_matrix.py`). *(`_check_phase_c_isolates_single_axis` — `OK [isolation] all 150 Phase C cells isolate exactly one axis`)*
+- [x] `degradation_levels_hash` in `metrics.json` for any new Phase C cell differs from the prior hash; cross-batch comparisons against pre-US-003 cells are explicitly forbidden in `docs/phase_c.md`. *(forbidden in `docs/phase_c.md` "Consequences" section; no pre-US-003 Phase C run dirs exist on 5070A so no cleanup needed)*
+- [x] `test_degradation_determinism.py` green (MSE=0) at out_size=224 for both cifar10 and mnist against the new table. *(both groups PASS)*
+- [x] CLAUDE.md "Phase C single-axis isolation" line updated to: "named axis at level L, every other axis at identity (no degradation)".
+- [x] LIBRARIAN-owned `docs/phase_c.md` + `README.md` "186-cell plan" reflect the change.
+- [ ] NOTEBOOKLM_SYNC re-uploads `degradation_levels.py`, `matrix.py`, `CLAUDE.md`, `docs/phase_c.md`. *(deferred — NotebookLM MCP not available in this session; queued as follow-up alongside US-001/US-002 closures)*
+- [x] Typecheck passes; pytest green. *(mypy: 3 files no issues; pytest: 21 passed; test_matrix direct: counts/uniqueness/isolation/format all OK)*
 
 ---
 

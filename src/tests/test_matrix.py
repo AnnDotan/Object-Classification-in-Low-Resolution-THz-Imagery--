@@ -1,11 +1,15 @@
-"""186-cell matrix invariants (US-007 contract).
+"""186-cell matrix invariants (US-007 contract, US-003 refresh 2026-05-14).
 
 Asserts:
   - exactly 186 cells, with per-phase counts A=6, B=30, C=150
   - every tag is unique (the tag is the primary key for the run dir)
-  - each Phase C L1 cell's degrade_config equals the Phase B L1 config
-    for the same (model, dataset) — an L1 isolation collapses by design
+  - every Phase C cell has exactly one non-identity axis (US-003 invariant)
+  - the non-identity axis matches the cell's `axis` field at the cell's level
   - the cells_by_tag index round-trips
+
+Pre-US-003 the test asserted "Phase C L1 collapses to Phase B L1" — that
+invariant is gone: Phase C L1 now has one axis at L1 mild and four at
+identity, while Phase B L1 has all five at L1 mild.
 
 Run: ``python -m src.tests.test_matrix``
 """
@@ -13,6 +17,7 @@ from __future__ import annotations
 
 import sys
 
+from src.data.degradation_levels import AXIS_KEYS, IDENTITY_VALUES, level_params
 from src.experiments.matrix import (
     EXPECTED_COUNTS,
     EXPECTED_TOTAL,
@@ -45,35 +50,50 @@ def _check_tag_uniqueness() -> None:
     print(f"OK [unique] — all 186 tags unique.")
 
 
-def _check_phase_c_l1_collapses_to_phase_b_l1() -> None:
-    """At L1, every Phase C single-axis isolation must equal Phase B L1
-    for the same (model, dataset) — by construction in degrade_config_for."""
+def _check_phase_c_isolates_single_axis() -> None:
+    """US-003 invariant: every Phase C cell has exactly one non-identity axis,
+    and that axis matches the cell's `axis` field at the cell's level.
+
+    Replaces the pre-US-003 "Phase C L1 collapses to Phase B L1" invariant
+    (which no longer holds — Phase C L1 has 4 identity axes, Phase B L1
+    has 5 L1-mild axes).
+    """
     matrix = build_final_matrix()
-    by_tag = cells_by_tag(matrix)
-
-    phase_b_l1_configs = {
-        (c.model, c.dataset): c.degrade_config
-        for c in matrix
-        if c.phase == "B" and c.level == 1
-    }
-    assert len(phase_b_l1_configs) == 6, (
-        f"expected 6 Phase B L1 cells, got {len(phase_b_l1_configs)}"
-    )
-
-    phase_c_l1 = [c for c in matrix if c.phase == "C" and c.level == 1]
-    assert len(phase_c_l1) == 30, (
-        f"expected 30 Phase C L1 cells (5 axes x 3 models x 2 datasets), got {len(phase_c_l1)}"
+    phase_c = [c for c in matrix if c.phase == "C"]
+    assert len(phase_c) == 150, (
+        f"expected 150 Phase C cells, got {len(phase_c)}"
     )
 
     mismatches: list[str] = []
-    for c in phase_c_l1:
-        ref = phase_b_l1_configs[(c.model, c.dataset)]
-        if c.degrade_config != ref:
-            mismatches.append(c.tag)
-    assert not mismatches, (
-        f"Phase C L1 configs differ from Phase B L1 for: {mismatches[:3]}"
+    wrong_axis_count: list[tuple[str, int]] = []
+
+    for c in phase_c:
+        assert c.axis is not None, f"Phase C cell missing axis: {c.tag}"
+        assert c.level is not None, f"Phase C cell missing level: {c.tag}"
+        params = level_params(c.level, axis=c.axis)
+        active_axes = [
+            ax
+            for ax, keys in AXIS_KEYS.items()
+            if any(params[k] != IDENTITY_VALUES[k] for k in keys)
+        ]
+        # At L1 the active axis's L1-mild value MAY equal the identity value
+        # for axes where DEGRADATION_LEVELS[1] == IDENTITY_VALUES (none do
+        # today — all 5 axes have non-identity L1 values), but we keep the
+        # generic check to survive future curve tweaks.
+        if len(active_axes) != 1:
+            wrong_axis_count.append((c.tag, len(active_axes)))
+            continue
+        if active_axes[0] != c.axis:
+            mismatches.append(f"{c.tag}: active={active_axes[0]} declared={c.axis}")
+
+    assert not wrong_axis_count, (
+        f"Phase C cells with != 1 active axis: {wrong_axis_count[:3]} "
+        f"(total {len(wrong_axis_count)})"
     )
-    print(f"OK [collapse] — all 30 Phase C L1 configs match Phase B L1.")
+    assert not mismatches, (
+        f"Phase C active axis != declared axis: {mismatches[:3]}"
+    )
+    print(f"OK [isolation] — all 150 Phase C cells isolate exactly one axis.")
 
 
 def _check_tag_format_examples() -> None:
@@ -94,7 +114,7 @@ def _check_tag_format_examples() -> None:
 def main() -> int:
     _check_counts()
     _check_tag_uniqueness()
-    _check_phase_c_l1_collapses_to_phase_b_l1()
+    _check_phase_c_isolates_single_axis()
     _check_tag_format_examples()
     return 0
 

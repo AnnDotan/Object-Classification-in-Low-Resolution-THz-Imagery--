@@ -262,7 +262,7 @@ Model input (224×224×3)
 | L4 | Severe | 7 | 9 | 1.65 | 0.13 | 0.11 | 0.25 |
 | L5 | Extreme | 4 | 11 | 2.00 | 0.18 | 0.15 | 0.00 |
 
-Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other axis pinned at L1 mild values.
+Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other axis at **identity** (no degradation). This isolates each axis cleanly so Phase C results reflect the named axis only. Pre-US-003 the inactive axes were pinned at L1 mild values — the change was ratified 2026-05-14; see `docs/phase_c.md`.
 
 ## Models
 

@@ -39,8 +39,11 @@ LEVEL_NAMES: dict[int, str] = {
 }
 
 # axis name -> the keys it controls in DEGRADATION_LEVELS.
-# Phase C single-axis isolation: named axis at level L, every other axis
-# pinned to its L1 (mild) value.
+# Phase C single-axis isolation (US-003, 2026-05-14): named axis at level L,
+# every other axis at IDENTITY (no degradation). The pre-US-003 semantics
+# ("every other axis pinned to L1 mild") confounded the per-axis signal —
+# a "blur at L5" cell still carried L1 noise+S&P+resolution loss, so the
+# measured drop attributed to blur was contaminated by the L1 floor.
 AXIS_KEYS: dict[str, tuple[str, ...]] = {
     "resolution":  ("low_res",),
     "blur":        ("blur_kernel", "blur_sigma"),
@@ -53,11 +56,37 @@ AXIS_KEYS: dict[str, tuple[str, ...]] = {
 AXES: tuple[str, ...] = ("resolution", "noise", "blur", "saturation", "salt_pepper")
 
 
+# Identity (no-degradation) values for inactive axes in Phase C isolation.
+# Each value is the pass-through for its axis:
+#   low_res=224     -> downsample stage short-circuits (degrade.py) to a single
+#                      bicubic upsample from input to out_size, matching the
+#                      Phase A clean baseline upsampling.
+#   blur_kernel=1   -> _gaussian_blur_torch returns img unchanged (kernel<=1 guard).
+#   blur_sigma=0.0  -> consistent with kernel=1 short-circuit.
+#   noise_std=0.0   -> additive-noise step skipped (>0 guard in degrade.py).
+#   salt_pepper=0.0 -> S&P step skipped (>0 guard in degrade.py).
+#   saturation=1.0  -> lerp short-circuit (s<1.0 guard in degrade.py).
+IDENTITY_VALUES: dict[str, float | int] = {
+    "low_res":     224,
+    "blur_kernel": 1,
+    "blur_sigma":  0.0,
+    "noise_std":   0.0,
+    "salt_pepper": 0.0,
+    "saturation":  1.0,
+}
+
+
 def level_params(level: int, axis: Optional[str] = None) -> dict[str, float | int]:
     """Return the parameter dict for a given level.
 
     - level=L, axis=None     -> Phase B combined: all axes at level L.
-    - level=L, axis="blur"   -> Phase C isolation: blur at L, others pinned to L1.
+    - level=L, axis="blur"   -> Phase C isolation: blur at L, every other
+                                axis at IDENTITY (no degradation) per
+                                IDENTITY_VALUES. Pre-US-003 this returned
+                                inactive axes at L1 mild — the change rotates
+                                `degradation_levels_hash` so cross-batch
+                                comparisons across the US-003 boundary are
+                                explicitly forbidden (see docs/phase_c.md).
     """
     if level not in DEGRADATION_LEVELS:
         raise ValueError(f"Unknown level {level}; expected 1..5")
@@ -65,7 +94,7 @@ def level_params(level: int, axis: Optional[str] = None) -> dict[str, float | in
         return dict(DEGRADATION_LEVELS[level])
     if axis not in AXIS_KEYS:
         raise ValueError(f"Unknown axis {axis!r}; expected one of {list(AXIS_KEYS)}")
-    base = dict(DEGRADATION_LEVELS[1])
+    base = dict(IDENTITY_VALUES)
     for k in AXIS_KEYS[axis]:
         base[k] = DEGRADATION_LEVELS[level][k]
     return base

@@ -53,7 +53,7 @@ Tag scheme: `final_clean_{m}_{d}` / `final_B_L{l}_{m}_{d}` / `final_C_L{l}_{ax}_
 
 Saturation is a deterministic lerp: `(1−s)·gray + s·img`, applied **before** noise/S&P so noise color stays correct. Replaces the legacy stochastic `p_grayscale` (kept as a no-op field for backwards-compat).
 
-Phase C single-axis isolation: named axis at level L, every other axis pinned to L1 mild values. At L1, every isolation cell collapses to the Phase B L1 row.
+Phase C single-axis isolation (US-003, 2026-05-14): named axis at level L, every other axis at **identity** (no degradation). At L1, the active axis is at L1 mild while the four inactive axes are at identity — so a Phase C L1 cell is NOT equivalent to Phase B L1 (which has all five axes at L1 mild). See `docs/phase_c.md` for the scientific rationale and the `degradation_levels_hash` rotation note.
 
 ## Training Hyperparameters (paper-anchored, convergence-first)
 
