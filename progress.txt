@@ -1638,8 +1638,70 @@ US-044: densenet121_cifar10 Stage 1 winner staged (best_value=0.4880, trials=20)
 ---
 
 
+### Iteration 4i — US-044 Stage 1 fast tune executed for densenet121_mnist
+- What was done
+  - Launched `tune_all.py --n-trials 20 --model densenet121 --dataset mnist`
+    on the 5070 in the background. Log:
+    logs/stage1_densenet121_mnist_20260513_195029.log.
+  - 20 trials completed in ~28 min wall-clock (study created 19:50:29,
+    final "OK" line at ~20:18). Consistent with the cifar10 leg (4h).
+  - Winner JSON frozen to artifacts/best_hparams/densenet121_mnist.json:
+    best_value=0.9040, best_params={head_lr=1.10e-4, backbone_lr=8.71e-4,
+    weight_decay=4.62e-4, label_smoothing=0.042, warmup_epochs=0.91},
+    n_trials_completed=20, priors_file_hash=91e35a67... (hash-matches
+    tune_all.priors_file_hash("densenet121")).
+- Files affected
+  - UPDATE: artifacts/optuna_thz.db (new study `densenet121_mnist_L3`,
+    gitignored).
+  - NEW: artifacts/best_hparams/densenet121_mnist.json (gitignored;
+    lacks `validated_at_full_convergence` and `effective_batch_size`
+    until Stage 1.5 augments).
+  - NEW: logs/stage1_densenet121_mnist_20260513_195029.log (gitignored).
+- Verification
+  - Stage 1 trial count: 20 ≥ 18 (acceptance #1 now satisfied for BOTH
+    densenet121 pairs).
+  - priors_file_hash round-trip: True (JSON hash == live priors hash).
+  - torch-free pytest: 21 passed in 3.42s — baseline holds.
+- Per-PRD acceptance status for US-044 after 4i
+  - [done] Stage 1 trials ≥ 18 — both datasets satisfied (20/20 each).
+  - [done] priors_file_hash round-trip — both winner JSONs.
+  - [pending] Stage 1.5 validated_at_full_convergence + effective_batch_size
+    — BOTH retrains still required (next: 4j cifar10, then 4k mnist).
+- Learnings for next cycles:
+  - Patterns:
+    - densenet121_mnist Stage 1 winner hparams (trial #?: head_lr=1.10e-4,
+      backbone_lr=8.71e-4, weight_decay=4.62e-4, label_smoothing=0.042,
+      warmup_epochs=0.91) are BIT-IDENTICAL to the resnet50 trial #2
+      winner from Iteration 4f. TPE(seed=42) trial.number=2 generates the
+      same point across studies sharing a priors file structure (both
+      priors files have the same five-axis logspace/uniform definitions).
+      This was predicted by 4g's learnings ("TPE seed=42 trial #2 winner
+      hparams may pick the same recipe for densenet pairs too").
+    - DenseNet121 L3 mnist proxy ceiling: best_val_acc=0.9040 at 5ep,
+      vs resnet50_mnist proxy ceiling 0.8660 (Iteration 4e). DenseNet
+      slightly outperforms ResNet50 on MNIST at L3 even at proxy budget.
+    - Stage 1.5 retrains on cifar10 and mnist for densenet121 likely
+      hit the same trial #2 hparams pick, but the cifar10 leg may
+      re-rank (resnet50 4f showed fast-rank 3 → full-rank 1 swap).
+      Do NOT freeze without Stage 1.5.
+  - Traps:
+    - Both densenet121 winners (cifar10 + mnist) have backbone_lr
+      anchored ~8e-4 — high end of the priors band. Stage 1.5 may
+      show divergence under full convergence; watch the rank-3 trial.
+  - Helpful context:
+    - Next iteration's single task: `scripts/validate_top3.py
+      --model densenet121 --dataset cifar10`. Expected wall-clock
+      ~60-75 min on the 5070 (DenseNet121 ~1.4× ResNet50 per-trial
+      cost; resnet50 Stage 1.5 cifar10 took ~50 min per Iteration 4f).
+    - Top-3 trials are auto-discovered from optuna_thz.db
+      (`densenet121_cifar10_L3` study).
+
+US-044: densenet121_mnist Stage 1 winner staged (best_value=0.9040, trials=20)
+---
+
+
 ## US-044: Optuna Pre-Tune — densenet121 × {cifar10, mnist}
-(in progress — cifar10 Stage 1 done @ 4h; mnist Stage 1 + both Stage 1.5 retrains pending)
+(in progress — both Stage 1 done; Stage 1.5 cifar10 + mnist retrains pending)
 
 ## US-045: Optuna Pre-Tune — transnext_small_native × {cifar10, mnist}
 (pending — uses new priors from US-042)
