@@ -42,42 +42,13 @@ def _maybe_force_native_attention() -> None:
 # Kept here so the wrapper can override img_size / patch_size / pretrain_size
 # without monkey-patching the upstream factory functions (which hardcode
 # `patch_size=4` as a positional kwarg, blocking override via **kwargs).
-#
-# `_native` variants (PRD US-042): same architecture as their base counterpart
-# but with native-32 defaults pre-baked into the spec dict. Functionally
-# equivalent to passing the V3 native overrides at call time
-# (img_size=32, patch_size=2). The matrix uses `_v3_cell_settings` on the bare
-# `transnext_*` names; the `_native` aliases exist for the PRD's explicit
-# `--model transnext_small_native` operator surface and for the Optuna
-# priors file naming. Both routes converge on the same architecture.
 _TRANSNEXT_SPECS: dict[str, dict] = {
     "transnext_micro": dict(embed_dims=[48, 96, 192, 384],  num_heads=[2, 4, 8, 16],  depths=[2, 2, 15, 2]),
     "transnext_tiny":  dict(embed_dims=[72, 144, 288, 576], num_heads=[3, 6, 12, 24], depths=[2, 2, 15, 2]),
     "transnext_small": dict(embed_dims=[72, 144, 288, 576], num_heads=[3, 6, 12, 24], depths=[5, 5, 22, 5]),
     "transnext_base":  dict(embed_dims=[96, 192, 384, 768], num_heads=[4, 8, 16, 32], depths=[5, 5, 23, 5]),
-    # PRD US-042 native-resolution aliases. `default_img_size`, `default_patch_size`,
-    # `default_pretrain_size` are consumed by `create_transnext_model` only when
-    # the caller does NOT override them at call time.
-    "transnext_micro_native": dict(
-        embed_dims=[48, 96, 192, 384],  num_heads=[2, 4, 8, 16],  depths=[2, 2, 15, 2],
-        default_img_size=32, default_patch_size=2, default_pretrain_size=None,
-    ),
-    "transnext_small_native": dict(
-        embed_dims=[72, 144, 288, 576], num_heads=[3, 6, 12, 24], depths=[5, 5, 22, 5],
-        default_img_size=32, default_patch_size=2, default_pretrain_size=None,
-    ),
-    "transnext_base_native": dict(
-        embed_dims=[96, 192, 384, 768], num_heads=[4, 8, 16, 32], depths=[5, 5, 23, 5],
-        default_img_size=32, default_patch_size=2, default_pretrain_size=None,
-    ),
 }
 
-# Module-level sentinel — callers can introspect to check what's resolvable.
-TRANSNEXT_NATIVE_VARIANTS: tuple[str, ...] = (
-    "transnext_micro_native",
-    "transnext_small_native",
-    "transnext_base_native",
-)
 _TRANSNEXT_COMMON = dict(
     window_size=[3, 3, 3, None],
     mlp_ratios=[8, 8, 4, 4],
@@ -96,25 +67,18 @@ def create_transnext_model(
     patch_size: Optional[int] = None,
     pretrain_size: Optional[int] = None,
 ) -> nn.Module:
-    """Build a TransNeXt model with project-level overrides for native-res FT.
+    """Build a TransNeXt model at the upstream 224x224 default.
 
-    V3 native path: `img_size=32, patch_size=2` for both CIFAR-10 and
-    32x32-padded MNIST. Stage-1 grid 16x16, stage-4 grid 2x2 — every stage
-    retains >=4 tokens. CPB MLPs and AggregatedAttention pool sizes are
-    regenerated at construct time from (img_size, sr_ratio, pretrain_size).
-
-    Defaults are resolved with this precedence (highest first):
-      1. Explicit caller kwarg (non-None).
-      2. `default_*` keys on the model's spec dict (PRD US-042 `_native` aliases).
-      3. Wrapper-level fallback: img_size=224, patch_size=4.
+    The 224 path keeps the upstream paper's CPB MLP coord distribution intact
+    and matches the pretrained checkpoints distributed at img_size=224,
+    patch_size=4. CIFAR-10 (32) and MNIST (28) inputs are upsampled to 224
+    by the data pipeline before reaching the model.
 
     Args:
-        img_size: spatial dim the model expects. None -> spec default or 224.
-        patch_size: stage-1 stride. None -> spec default or 4.
+        img_size: spatial dim the model expects. Default 224.
+        patch_size: stage-1 stride. Default 4.
         pretrain_size: scale used by `get_relative_position_cpb` to normalise
-            relative coords for the CPB MLP. When loading 224-pretrained
-            weights into a native-32 model, MUST be 224 so the CPB MLP stays
-            in its training distribution. Defaults to 224 if `pretrained`
+            relative coords for the CPB MLP. Defaults to 224 if `pretrained`
             else `img_size`.
     """
     if model_name not in _TRANSNEXT_SPECS:
@@ -126,19 +90,12 @@ def create_transnext_model(
     TransNeXt = transnext_module.TransNeXt
     spec = _TRANSNEXT_SPECS[model_name]
 
-    # Resolve defaults from spec when caller left them None (PRD US-042).
     if img_size is None:
-        img_size = spec.get("default_img_size", 224)
+        img_size = 224
     if patch_size is None:
-        patch_size = spec.get("default_patch_size", 4)
+        patch_size = 4
     if pretrain_size is None:
-        spec_default = spec.get("default_pretrain_size", "__unset__")
-        if spec_default == "__unset__":
-            pretrain_size = 224 if pretrained else img_size
-        else:
-            pretrain_size = spec_default if spec_default is not None else (
-                224 if pretrained else img_size
-            )
+        pretrain_size = 224 if pretrained else img_size
 
     model = TransNeXt(
         img_size=img_size,
@@ -152,9 +109,7 @@ def create_transnext_model(
         drop_path_rate=drop_path_rate,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
         **_TRANSNEXT_COMMON,
-    )  # `default_img_size`/`default_patch_size`/`default_pretrain_size` are
-    # intentionally NOT forwarded — they're spec-level metadata for the
-    # wrapper's default resolution, never upstream constructor kwargs.
+    )
 
     if pretrained:
         if checkpoint_path is None:

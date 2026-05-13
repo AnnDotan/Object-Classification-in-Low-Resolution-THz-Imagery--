@@ -40,27 +40,25 @@ def _fixed_today() -> _dt.date:
     return _dt.date(2026, 5, 5)
 
 
-def test_empty_runs_root_renders_with_quarantine_split():
-    """US-014 quarantine: TransNeXt rows are Deferred regardless of disk state.
-    Empty runs/final/ -> 124 Pending CNN rows + 62 Deferred TransNeXt rows.
+def test_empty_runs_root_renders_all_pending():
+    """Post-quarantine-lift: all 186 cells (CNN + TransNeXt) render as
+    Pending against an empty runs/final/. The legacy US-014 Deferred path
+    is gone — TransNeXt trains at 224×224 alongside the CNN baselines.
     """
     with tempfile.TemporaryDirectory() as td:
         runs_root = Path(td) / "runs" / "final"
         out = updater.render(runs_root, today=_fixed_today())
-        # `| Pending |` only appears in CNN table rows.
-        assert out.count("| Pending |") == 124, (
-            f"expected 124 Pending (186 - 62 TransNeXt); "
-            f"got {out.count('| Pending |')}"
+        # Every row renders as Pending now.
+        assert out.count("| Pending |") == 186, (
+            f"expected 186 Pending (all rows); got {out.count('| Pending |')}"
         )
-        # Quarantined rows show `Deferred — Awaiting Native-Resolution Refactor`.
-        assert out.count("Deferred — Awaiting Native-Resolution Refactor") == 62, (
-            f"expected 62 Deferred TransNeXt rows; "
-            f"got {out.count('Deferred — Awaiting Native-Resolution Refactor')}"
+        # Deferred TransNeXt label must NOT appear.
+        assert "Deferred — Awaiting Native-Resolution Refactor" not in out, (
+            "legacy US-014 Deferred label leaked through the renderer"
         )
-        # Status summary still uses 186 denominator.
+        # Status summary uses 186 denominator.
         assert "0/6" in out and "0/30" in out and "0/150" in out
         assert "**Total: 0/186**" in out
-        assert "Deferred (TransNeXt — Awaiting Native-Resolution Refactor): 62/186" in out
         assert "Last updated: 2026-05-05" in out
 
 

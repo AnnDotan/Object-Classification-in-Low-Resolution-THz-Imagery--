@@ -39,7 +39,6 @@ class THzDataModule(pl.LightningDataModule):
         saturation: Optional[float] = None,
         root: str = "./data",
         num_workers: int = 0,
-        mnist_pad_to_32: bool = False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -52,7 +51,6 @@ class THzDataModule(pl.LightningDataModule):
             low_res=self.hparams.low_res,
             root=self.hparams.root,
             degradation_type=self.hparams.degradation_type,
-            mnist_pad_to_32=self.hparams.mnist_pad_to_32,
         )
         for k in ("blur_kernel", "blur_sigma", "gaussian_noise_std",
                   "salt_pepper_amount", "p_grayscale", "saturation"):

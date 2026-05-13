@@ -116,14 +116,12 @@ def run_experiment(
     pretrain_size: Optional[int] = None,
     compile_mode: str = "none",
     precision: Optional[str] = None,
-    mnist_pad_to_32: bool = False,
     run_name_override: Optional[str] = None,
     num_workers: Optional[int] = None,  # US-043: None -> auto-pick on CUDA, 0 on CPU
 ):
-    # V3: the legacy "silently force TransNeXt to 224" override is gone.
-    # TransNeXt rows must specify a compatible (out_size, img_size) pair —
-    # the data pipeline produces out_size pixels, the model expects img_size,
-    # mismatch would silently feed wrong-shaped tensors into the model.
+    # All models — CNNs and TransNeXt alike — train at 224x224. The data
+    # pipeline upsamples CIFAR (32) / MNIST (28) to out_size before reaching
+    # the model, and TransNeXt's pretrained checkpoints assume img_size=224.
     if model_name.startswith("transnext_") and out_size != img_size:
         raise ValueError(
             f"TransNeXt requires out_size == img_size; got out_size={out_size} "
@@ -189,7 +187,6 @@ def run_experiment(
         "pretrain_size": pretrain_size,
         "compile_mode": compile_mode,
         "precision": precision,
-        "mnist_pad_to_32": mnist_pad_to_32,
         "seed": 42,
     }
     _write_run_config(run_dir, config_snapshot)
@@ -225,7 +222,6 @@ def run_experiment(
         salt_pepper_amount=salt_pepper_amount,
         p_grayscale=p_grayscale,
         saturation=saturation,
-        mnist_pad_to_32=mnist_pad_to_32,
         num_workers=num_workers,
     )
 
@@ -356,11 +352,11 @@ def main() -> None:
     p.add_argument("--pos_bias_interp", type=str, default="bilinear",
                    choices=["bilinear", "bicubic", "nearest"])
     # V3 native-res / Blackwell knobs. Defaults preserve legacy behaviour;
-    # native TransNeXt cells opt in with --img_size 32 --patch_size 2.
+    # All models train at 224x224.
     p.add_argument("--img_size", type=int, default=224,
-                   help="Spatial dim the model expects. 224=legacy, 32=V3 native.")
+                   help="Spatial dim the model expects (always 224).")
     p.add_argument("--patch_size", type=int, default=4,
-                   help="TransNeXt stage-1 stride. 4=legacy, 2=required at img_size=32.")
+                   help="TransNeXt stage-1 stride (always 4 at 224).")
     p.add_argument("--pretrain_size", type=int, default=None,
                    help="CPB coord scale; defaults to 224 if pretrained else img_size.")
     p.add_argument("--compile_mode", type=str, default="none",
@@ -368,10 +364,7 @@ def main() -> None:
                    help="torch.compile mode. 'none' disables compile.")
     p.add_argument("--precision", type=str, default=None,
                    choices=["16-mixed", "bf16-mixed", "32-true", "16-true", "bf16-true"],
-                   help="Trainer precision. Default: 16-mixed on CUDA, 32-true on CPU.")
-    p.add_argument("--mnist_pad_to_32", action="store_true",
-                   help="V3 native path: reflection-pad MNIST 28->32 BEFORE "
-                        "degradation so the canvas matches CIFAR's 32x32.")
+                   help="Trainer precision. Default: bf16-mixed on CUDA, 32-true on CPU.")
     args = p.parse_args()
 
     run_experiment(
@@ -410,7 +403,6 @@ def main() -> None:
         pretrain_size=args.pretrain_size,
         compile_mode=args.compile_mode,
         precision=args.precision,
-        mnist_pad_to_32=args.mnist_pad_to_32,
     )
 
 

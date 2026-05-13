@@ -190,8 +190,12 @@ def _load_best_hparams(model: str, dataset: str) -> dict:
 
 # Phase A frozen hyperparameters from CLAUDE.md "Training Hyperparameters" table.
 # Used as a fallback when artifacts/best_hparams/{model}_{dataset}.json is missing
-# AND the cell is Phase A (clean baseline). For Phase B/C, missing hparams remains
-# a hard error — Optuna tuning is mandatory there.
+# AND the cell is Phase A (clean baseline). For Phase B/C CNN cells, missing
+# hparams remains a hard error — Optuna tuning is mandatory there.
+#
+# V3 ratification (2026-05-12): TransNeXt entries were rewritten from LP
+# (backbone frozen, label_smoothing=0) to full-FT priors. TransNeXt cells use
+# V3_TRANSNEXT_FT_PRIORS below for ALL phases when no Optuna JSON exists.
 PHASE_A_FROZEN_HPARAMS: dict[str, dict] = {
     "resnet50": {
         "head_lr": 1e-3,
@@ -207,46 +211,53 @@ PHASE_A_FROZEN_HPARAMS: dict[str, dict] = {
         "label_smoothing": 0.1,
         "warmup_epochs": 2,
     },
-    # TransNeXt sizes share the LP-style anchor — kept here for completeness but
-    # not exercised in the current Phase A scope (TransNeXt rows remain Pending
-    # per the active PRD until a stronger GPU is available).
-    "transnext_micro": {
-        "head_lr": 1e-3,
-        "backbone_lr": 0.0,
-        "weight_decay": 5e-2,
-        "label_smoothing": 0.0,
-        "warmup_epochs": 5,
-    },
-    "transnext_small": {
-        "head_lr": 1e-3,
-        "backbone_lr": 0.0,
-        "weight_decay": 5e-2,
-        "label_smoothing": 0.0,
-        "warmup_epochs": 5,
-    },
-    "transnext_base": {
-        "head_lr": 1e-3,
-        "backbone_lr": 0.0,
-        "weight_decay": 5e-2,
-        "label_smoothing": 0.0,
-        "warmup_epochs": 5,
-    },
+}
+
+
+# V3 TransNeXt full-FT priors (ratified by MASTER 2026-05-12).
+#
+# Paper-anchored: TransNeXt §A.3 fine-tune table + the CNN convention of
+# 10x differential backbone vs head LR. Applied as a hardcoded fallback when
+# artifacts/best_hparams/{transnext_*}_{dataset}.json is absent — covers both
+# the "tune-free start" the V3 plan calls for and any future TransNeXt sizes
+# we add (priors are size-agnostic for the small/base/micro variants).
+V3_TRANSNEXT_FT_PRIORS: dict[str, float | int] = {
+    "head_lr": 5e-4,
+    "backbone_lr": 5e-5,
+    "weight_decay": 5e-2,
+    "label_smoothing": 0.1,
+    "warmup_epochs": 5,
+    "drop_path_rate": 0.1,
 }
 
 
 def _load_hparams_for_cell(spec) -> dict:
-    """Load best_hparams for a CellSpec, with Phase A fallback to CLAUDE.md.
+    """Load best_hparams for a CellSpec, with Phase A / V3 TransNeXt fallback.
 
     Resolution order:
       1. ``artifacts/best_hparams/{model}_{dataset}.json`` if present (Optuna winner).
-      2. If absent AND ``spec.phase == 'A'`` AND model has frozen defaults:
+      2. If absent AND model is TransNeXt: return V3_TRANSNEXT_FT_PRIORS
+         (paper-anchored full-FT priors — V3 ratified tune-free start).
+      3. If absent AND ``spec.phase == 'A'`` AND CNN model has frozen defaults:
          return a synthetic blob carrying the CLAUDE.md frozen hparams.
-      3. Otherwise (Phase B/C, or unknown model in Phase A): re-raise the
-         original FileNotFoundError from _load_best_hparams.
+      4. Otherwise (Phase B/C CNN, no Optuna JSON): re-raise FileNotFoundError.
     """
     path = Path("artifacts/best_hparams") / f"{spec.model}_{spec.dataset}.json"
     if path.exists():
         return _load_best_hparams(spec.model, spec.dataset)
+    if spec.model.startswith("transnext_"):
+        return {
+            "model": spec.model,
+            "dataset": spec.dataset,
+            "study_name": f"v3_transnext_ft_priors_{spec.model}_{spec.dataset}",
+            "best_value": None,
+            "best_params": dict(V3_TRANSNEXT_FT_PRIORS),
+            "n_trials_completed": 0,
+            "priors_file_hash": None,
+            "phase": spec.phase,
+            "level": spec.level,
+            "source": "v3_transnext_ft_priors",
+        }
     if spec.phase == "A" and spec.model in PHASE_A_FROZEN_HPARAMS:
         return {
             "model": spec.model,
@@ -269,6 +280,11 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
     The DegradeConfig fields override the legacy CLI flag names because
     that's what THzDataModule consumes. `saturation` is included now that
     train.py forwards it to THzDataModule (US-008 prerequisite).
+
+    Resolution / precision / compile fields (out_size, img_size, patch_size,
+    pretrain_size, compile_mode, precision) are read from CellSpec — they are
+    fixed at 224x224 / bf16-mixed / no-compile but still flow through the
+    CellSpec so future overrides have a single source of truth.
     """
     settings = FINAL_PILOT if mode == "pilot" else FINAL_FULL
     deg = spec.degrade_config
@@ -278,7 +294,7 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
         # Model + training
         "model_name": spec.model,
         "pretrained": True,
-        "out_size": 224,
+        "out_size": spec.out_size,
         "batch_size": 32,
         "freeze_backbone": False,        # all 3 models full FT in final campaign
         "scheduler_type": "cosine",
@@ -288,6 +304,14 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
         "weight_decay": float(bp["weight_decay"]),
         "label_smoothing": float(bp["label_smoothing"]),
         "warmup_epochs": int(round(float(bp["warmup_epochs"]))),
+        "drop_path_rate": float(bp.get("drop_path_rate", 0.0)),
+
+        # Blackwell + TransNeXt knobs (CellSpec is SoT; all 224x224 now)
+        "img_size": spec.img_size,
+        "patch_size": spec.patch_size,
+        "pretrain_size": spec.pretrain_size,
+        "compile_mode": spec.compile_mode,
+        "precision": spec.precision,
 
         # Degradation (from CellSpec.degrade_config)
         "low_res": deg.low_res,

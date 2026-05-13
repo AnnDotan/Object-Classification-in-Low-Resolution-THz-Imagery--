@@ -31,10 +31,6 @@ SUPPORTED_MODELS = (
     "resnet50",
     "densenet121",
     "transnext_base",
-    # PRD US-042 native-resolution aliases (V3-routed). Priors files exist
-    # only when paper-derived priors warrant a separate JSON; we ship
-    # `transnext_small_native.json` per the US-042 acceptance criterion.
-    "transnext_small_native",
 )
 SUPPORTED_DATASETS = ("cifar10", "mnist")
 

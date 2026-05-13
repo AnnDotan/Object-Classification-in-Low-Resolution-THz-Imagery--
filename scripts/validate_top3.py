@@ -41,17 +41,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 DEFAULT_PAIRS = [
-    ("resnet50",    "cifar10"),
-    ("densenet121", "cifar10"),
-    ("resnet50",    "mnist"),
-    ("densenet121", "mnist"),
+    ("resnet50",      "cifar10"),
+    ("densenet121",   "cifar10"),
+    ("transnext_base","cifar10"),
+    ("resnet50",      "mnist"),
+    ("densenet121",   "mnist"),
+    ("transnext_base","mnist"),
 ]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", choices=("resnet50", "densenet121", "transnext_base"),
-                        default=None, help="Restrict to one model (default: all CNN).")
+                        default=None, help="Restrict to one model (default: all).")
     parser.add_argument("--dataset", choices=("cifar10", "mnist"),
                         default=None, help="Restrict to one dataset.")
     parser.add_argument("--top-k", type=int, default=3,
@@ -78,16 +80,13 @@ def main(argv: list[str] | None = None) -> int:
     elif args.model:
         pairs = [(args.model, d) for d in ("cifar10", "mnist")]
     elif args.dataset:
-        pairs = [(m, args.dataset) for m in ("resnet50", "densenet121")]
+        pairs = [(m, args.dataset) for m in ("resnet50", "densenet121", "transnext_base")]
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     args.cache_dir.mkdir(parents=True, exist_ok=True)
 
     rc = 0
     for model, dataset in pairs:
-        if model == "transnext_base":
-            print(f"SKIP {model}_{dataset} (US-014 quarantine)")
-            continue
         try:
             validate_pair(model, dataset, args)
         except Exception as exc:

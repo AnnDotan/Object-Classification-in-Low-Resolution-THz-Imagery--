@@ -15,9 +15,7 @@ from .degrade import DegradeConfig, SEED_OFFSET_TRAIN, SEED_OFFSET_VAL, degrade_
 class DataConfig:
     dataset: str = "cifar10"  # "cifar10" or "mnist"
     root: str = "./data"
-##################################################################################Change to 224 after training
-    #out_size: int = 224
-    out_size: int = 32
+    out_size: int = 224
     low_res: int = 16
     train: bool = True
     download: bool = True

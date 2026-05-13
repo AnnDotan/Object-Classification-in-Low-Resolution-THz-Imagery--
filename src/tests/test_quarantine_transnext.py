@@ -1,10 +1,11 @@
-"""Unit tests for scripts/quarantine_transnext.py and the V3 quarantine lift.
+"""Unit tests for scripts/quarantine_transnext.py and the quarantine lift.
 
 Historically (US-014): the runner filtered TransNeXt cells via
 is_quarantined() while the project waited for Blackwell hardware.
 
-Current (V3 lift, ratified 2026-05-12): the predicate is a no-op and the
-filter block in run_all_phases.py is gone. Tests now assert the LIFT:
+Current (lifted on RTX 5070): the predicate is a no-op and the filter
+block in run_all_phases.py is gone. TransNeXt cells train at 224x224
+alongside the CNN baselines. Tests assert the LIFT:
   - is_quarantined returns False for every input.
   - The 186-cell matrix dispatches all 186 (62 TransNeXt + 124 CNN).
   - tune_all.py's default sweep includes TransNeXt.
@@ -12,8 +13,8 @@ filter block in run_all_phases.py is gone. Tests now assert the LIFT:
 
 The quarantine SCRIPT (scripts/quarantine_transnext.py) is retained as a
 manual-cleanup tool — useful for wiping stale TransNeXt run dirs before
-re-running under V3. Tests below still exercise it (find/dry-run/remove)
-to keep the cleanup path working.
+re-running. Tests below still exercise it (find/dry-run/remove) to keep
+the cleanup path working.
 
 Run: python -m src.tests.test_quarantine_transnext
 """
@@ -251,68 +252,16 @@ def test_v3_lift_run_all_phases_no_longer_filters_quarantine():
     )
 
 
-def test_us042_transnext_native_variants_reachable():
-    """PRD US-042: `transnext_{micro,small,base}_native` are reachable through
-    the wrapper specs and (for `_small_native`) the Optuna priors loader.
-
-    Reconciliation with CLAUDE.md V3 (ratified 2026-05-12): the legacy
-    224-upsample TransNeXt path was collapsed entirely by V3. The PRD's
-    `--transnext_legacy_upsample` opt-in flag is therefore unneeded — the
-    legacy path is blocked by nonexistence, not by an explicit gate.
-    """
-    from src.models.transnext_wrapper import (
-        TRANSNEXT_NATIVE_VARIANTS,
-        _TRANSNEXT_SPECS,
-    )
-
-    # Spec dict entry for every native variant.
-    for v in TRANSNEXT_NATIVE_VARIANTS:
-        assert v in _TRANSNEXT_SPECS, f"missing _TRANSNEXT_SPECS entry: {v}"
-        spec = _TRANSNEXT_SPECS[v]
-        assert spec["default_img_size"] == 32, (
-            f"{v} default_img_size: expected 32, got {spec.get('default_img_size')}"
-        )
-        assert spec["default_patch_size"] == 2, (
-            f"{v} default_patch_size: expected 2, got {spec.get('default_patch_size')}"
-        )
-        assert spec["default_pretrain_size"] is None, (
-            f"{v} default_pretrain_size: expected None, got {spec.get('default_pretrain_size')}"
-        )
-
-    # Each native variant shares its arch dict with its base counterpart.
-    for native, base in (
-        ("transnext_micro_native", "transnext_micro"),
-        ("transnext_small_native", "transnext_small"),
-        ("transnext_base_native", "transnext_base"),
-    ):
-        for k in ("embed_dims", "num_heads", "depths"):
-            assert _TRANSNEXT_SPECS[native][k] == _TRANSNEXT_SPECS[base][k], (
-                f"{native}.{k} != {base}.{k}: native aliases must mirror their base architecture"
-            )
-
-    # `tune_all.py --validate-only` recognizes the new priors file. We
-    # bypass the CLI and call the loader directly to keep this test fast.
-    import tune_all
-    assert "transnext_small_native" in tune_all.SUPPORTED_MODELS, (
-        "tune_all.SUPPORTED_MODELS missing 'transnext_small_native'"
-    )
-    priors = tune_all.load_priors("transnext_small_native")
-    assert "head_lr" in priors["hparams"]
-    assert "backbone_lr" in priors["hparams"]
-
-
-def test_us042_run_all_phases_dry_run_resolves_native_cell():
-    """PRD US-042: `--plan final --phase A --model transnext_small_native
-    --dataset cifar10 --dry-run` exits 0 and prints the resolved CellSpec."""
+def test_run_all_phases_dry_run_resolves_transnext_cell():
+    """`--plan final --phase A --model transnext_base --dataset cifar10
+    --dry-run` exits 0 and prints the resolved CellSpec."""
     import run_all_phases
 
     rc = run_all_phases.run_final_plan(
         phase="A",
-        model="transnext_small_native",
+        model="transnext_base",
         dataset="cifar10",
         dry_run=True,
-        # Stub the heavy callables — dry-run shouldn't reach them, but pin
-        # them anyway so an accidental code regression surfaces here.
         run_cell_fn=lambda *a, **kw: (_ for _ in ()).throw(
             AssertionError("dry-run reached run_cell")
         ),
@@ -321,9 +270,6 @@ def test_us042_run_all_phases_dry_run_resolves_native_cell():
         ),
         phase_boundary_fn=lambda *a, **kw: (_ for _ in ()).throw(
             AssertionError("dry-run reached phase boundary push")
-        ),
-        insurance_trial_fn=lambda *a, **kw: (_ for _ in ()).throw(
-            AssertionError("dry-run reached insurance trial")
         ),
     )
     assert rc == 0, f"dry-run must exit 0, got rc={rc}"
@@ -340,8 +286,7 @@ def _run_all() -> int:
         test_interrupted_sentinel_marks_cell_failed,
         test_v3_lift_tune_all_includes_transnext_by_default,
         test_v3_lift_run_all_phases_no_longer_filters_quarantine,
-        test_us042_transnext_native_variants_reachable,
-        test_us042_run_all_phases_dry_run_resolves_native_cell,
+        test_run_all_phases_dry_run_resolves_transnext_cell,
     ]
     failures = 0
     for fn in fns:
