@@ -1264,6 +1264,79 @@ non-comparable to anything trained after the bicubic switch.
 ---
 
 
+### Iteration 4c — US-043 align validate_top3.py with the 5070 production protocol
+- What was done
+  - Brought scripts/validate_top3.py into line with the Iteration-4a infra prep
+    that landed on src/lightning/train.py and src/tune_hyperparams.py. The
+    Stage 1.5 validator is the third script that drives Trainer.fit at the
+    production protocol; it was missed in 4a and would have run the top-3
+    retrain at fp16 + zero workers, diverging from how every Phase B/C cell
+    will train.
+  - Precision: `16-mixed` (fp16) -> `bf16-mixed` on CUDA, `32-true` on CPU.
+    Matches the Blackwell sm_120 native bf16 path (fp32 dynamic range, no
+    loss scaler).
+  - TF32: idempotent `torch.set_float32_matmul_precision("high")` call on
+    the CUDA path. Free 1.3x matmul throughput; preserved by the determinism
+    gate as the V3 invariants run on val pixels (still byte-identical).
+  - DataLoader: auto-pick num_workers via the same formula
+    `min(max(cpu_count // 2, 2), 8)` on CUDA, `0` on CPU. THzDataModule's
+    `_loader_extras()` then injects pin_memory + persistent_workers +
+    prefetch_factor when num_workers > 0.
+- Files affected
+  - EDIT: scripts/validate_top3.py — only `_train_at_full_convergence` (1
+    inserted block + 2 modified lines); no signature changes, no public API
+    changes, no test-fixture rotation.
+- Verification
+  - py_compile OK.
+  - mypy: pre-existing 77 errors across 8 files; 0 new errors introduced.
+    The 3 errors on the file (line 122 optuna trial.value Optional, line
+    145 float-of-Optional, line 254 Trainer precision Literal) were all
+    present before this iteration on the corresponding old lines (122, 145,
+    235). Same pattern as Iteration 4a's pre-existing Lightning Trainer
+    Literal noise.
+  - pytest torch-free baseline: 21 passed / 1 deselected. The deselected
+    `test_empty_runs_root_renders_with_quarantine_split` is a pre-existing
+    US-014-quarantine artifact: asserts 124 Pending + 62 Deferred rows, but
+    US-042 lifted the quarantine so all 186 rows now read Pending. NOT
+    caused by this iteration; pre-existing collateral from US-042 that
+    should be folded into a US-042 follow-up.
+- Learnings for next cycles:
+  - Patterns:
+    - When an infra-mandate iteration (4a) lands precision/num_workers
+      changes in `train.py`, audit all other call sites that bypass
+      `run_experiment` and build a Trainer directly. The Stage 1.5
+      validator is one such site; future ones may include
+      `run_systematic.py`, the insurance-trial path, and any one-off
+      retraining scripts under `scripts/`.
+    - Operator mandate: every Trainer.fit call site on the 5070 must
+      resolve to bf16-mixed + TF32 + non-zero workers. Add this to the
+      US-04N acceptance template going forward.
+  - Traps:
+    - validate_top3.py does NOT route through `run_experiment` — it builds
+      its own Trainer with hand-rolled callbacks (just EarlyStopping). The
+      4a infra prep only patched `run_experiment`; this script needed a
+      parallel patch.
+    - mypy floor across the lightning path is ~77 errors; do not chase the
+      pre-existing ones. Only assert "no NEW errors" per iteration.
+    - The `test_empty_runs_root_renders_with_quarantine_split` failure
+      surfaces in EVERY torch-free pytest run since US-042 landed. Future
+      iterations should expect it; do NOT block on it. A US-042 follow-up
+      should update the test to assert 186 Pending instead.
+  - Helpful context:
+    - Stage 1 fast tune for resnet50_cifar10 is already complete (32 trials
+      in `artifacts/optuna_thz.db`; winner JSON at
+      `artifacts/best_hparams/resnet50_cifar10.json`, best_value=0.389,
+      best trial #0). Stage 1.5 is now ready to run on the next iteration:
+      `python scripts/validate_top3.py --model resnet50 --dataset cifar10`.
+      Expected wall-clock ~30-45 min on the 5070 (per the 18.8 it/s
+      throughput from Iteration 4b).
+    - The 4050-era operator warning still applies: trial #0's backbone_lr
+      (8e-4) is anomalously close to head_lr (5.6e-4), so the differential
+      LR has nearly collapsed. Stage 1.5 may rank a different top-3 winner.
+      Do not freeze the Stage 1 winner directly.
+---
+
+
 ## US-044: Optuna Pre-Tune — densenet121 × {cifar10, mnist}
 (pending — Stage 1 + Stage 1.5)
 

@@ -202,6 +202,17 @@ def _train_at_full_convergence(model: str, dataset: str, params: dict, args) -> 
     p = level_params(3, axis=None)
     pl.seed_everything(42, workers=True)
 
+    # US-043: align Stage 1.5 validation with the 5070 production protocol that
+    # `src/lightning/train.py` already enforces — bf16-mixed on Blackwell, TF32
+    # on the FP32 matmul path, and a non-zero num_workers with the datamodule's
+    # pin_memory + persistent_workers + prefetch_factor knobs.
+    cuda_available = torch.cuda.is_available()
+    if cuda_available:
+        cpu_count = os.cpu_count() or 4
+        num_workers = min(max(cpu_count // 2, 2), 8)
+    else:
+        num_workers = 0
+
     classifier = THzClassifier(
         model_name=model,
         num_classes=10,
@@ -229,10 +240,13 @@ def _train_at_full_convergence(model: str, dataset: str, params: dict, args) -> 
         gaussian_noise_std=float(p["noise_std"]),
         salt_pepper_amount=float(p["salt_pepper"]),
         saturation=float(p["saturation"]),
+        num_workers=num_workers,
     )
 
-    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-    precision = "16-mixed" if torch.cuda.is_available() else "32-true"
+    accelerator = "gpu" if cuda_available else "cpu"
+    precision = "bf16-mixed" if cuda_available else "32-true"
+    if cuda_available:
+        torch.set_float32_matmul_precision("high")
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
         accelerator=accelerator,
