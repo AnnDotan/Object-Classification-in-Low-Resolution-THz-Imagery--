@@ -1380,6 +1380,49 @@ non-comparable to anything trained after the bicubic switch.
 
 US-043: resnet50_cifar10 Stage 1 winner staged (best_value=0.3850, trials=20)
 
+### Iteration 4e — US-043 Stage 1 fast tune executed for resnet50_mnist
+- What was done
+  - Launched `tune_all.py --n-trials 20 --model resnet50 --dataset mnist` on
+    the 5070. Background log:
+    logs/stage1_resnet50_mnist_20260513_150818.log.
+  - 20 trials finished in ~20 min wall-clock (study created 15:08:18,
+    Trial 19 closed 15:27:47). Consistent with the per-trial budget on
+    the 5070 (~1 min/trial at the 5ep/2k/1k proxy).
+  - Winner JSON: artifacts/best_hparams/resnet50_mnist.json with
+    best_value=0.8660 (trial #11), n_trials_completed=20,
+    priors_file_hash hash-matches tune_all.priors_file_hash("resnet50").
+- Files affected
+  - UPDATE: artifacts/optuna_thz.db (added study `resnet50_mnist_L3`,
+    gitignored).
+  - NEW: artifacts/best_hparams/resnet50_mnist.json (gitignored).
+  - NEW: logs/stage1_resnet50_mnist_20260513_150818.log (gitignored).
+- Per-PRD acceptance status for US-043 after 4e
+  - [done] Stage 1 trials ≥ 18 — BOTH datasets satisfied (20/20 each).
+  - [done] priors_file_hash round-trip — both winner JSONs.
+  - [pending] Stage 1.5 validated_at_full_convergence + effective_batch_size
+    — BOTH retrains still required (next: 4f cifar10, then 4g mnist).
+- Learnings for next cycles:
+  - Patterns:
+    - Unlike resnet50_cifar10 (trial #0 the anchor draw won), resnet50_mnist
+      Stage 1 winner is trial #11 (head_lr=5.65e-4, backbone_lr=9.42e-4).
+      MNIST proxy budget surfaces a non-anchor winner — TPESampler explores
+      enough at 5 epochs to deviate from priors anchor on the easier task.
+    - Stage 1 anchor draw (trial #0) for resnet50_mnist: val_acc=0.834;
+      best trial #11: val_acc=0.866. Delta 3.2pp — meaningful at proxy
+      budget but Stage 1.5 may re-rank.
+  - Traps:
+    - Trial #11 backbone_lr=9.42e-4 is at the loguniform upper edge of the
+      priors band. Within ±1 decade of paper anchor 1e-4 (the priors high
+      is 1e-3 so 9.42e-4 is in-bounds), but watch for Stage 1.5 instability
+      if the differential-LR ratio collapses below 10x.
+  - Helpful context:
+    - Next: kick off Stage 1.5 (`scripts/validate_top3.py --model resnet50
+      --dataset cifar10`). Reads optuna_thz.db, retrains top-3 by val_acc
+      at production protocol (60ep/patience=10/full data). Writes
+      validated_at_full_convergence: true to the same winner JSON file.
+
+US-043: resnet50_mnist Stage 1 winner staged (best_value=0.8660, trials=20)
+
 - Learnings for next cycles:
   - Patterns:
     - Stage 1 fast tune on the 5070 with the 4a infra (bf16-mixed + TF32 +
