@@ -1569,8 +1569,77 @@ mnist best=0.9190 (trial #2). All PRD acceptance boxes green.
 ---
 
 
+### Iteration 4h — US-044 Stage 1 fast tune executed for densenet121_cifar10
+- What was done
+  - Launched `tune_all.py --n-trials 20 --model densenet121 --dataset cifar10`
+    on the 5070 in the background. Log:
+    logs/stage1_densenet121_cifar10_20260513_181821.log.
+  - 20 trials completed in ~28 min wall-clock (study created 18:18:21,
+    final "OK" line at ~18:46). Throughput on DenseNet121 ~28 min for the
+    20-trial 5ep/2k/1k proxy is consistent with the Iteration 4g advisory
+    (DenseNet121 ~12.5 it/s vs ResNet50 ~18.8 it/s = ~1.4× per-trial cost).
+  - Winner JSON frozen to artifacts/best_hparams/densenet121_cifar10.json:
+    best_value=0.4880, best_params={head_lr=5.61e-4, backbone_lr=7.97e-4,
+    weight_decay=2.91e-4, label_smoothing=0.120, warmup_epochs=0.78},
+    n_trials_completed=20, priors_file_hash=91e35a67... (hash-matches
+    tune_all.priors_file_hash("densenet121")).
+- Files affected
+  - UPDATE: artifacts/optuna_thz.db (new study `densenet121_cifar10_L3`,
+    gitignored).
+  - NEW: artifacts/best_hparams/densenet121_cifar10.json (gitignored;
+    lacks `validated_at_full_convergence` and `effective_batch_size`
+    until Stage 1.5 augments).
+  - NEW: logs/stage1_densenet121_cifar10_20260513_181821.log (gitignored).
+- Verification
+  - Stage 1 trial count: 20 ≥ 18 (acceptance #1 satisfied for this pair).
+  - priors_file_hash round-trip: True (JSON hash == live priors hash).
+  - torch-free pytest: 21 passed in 3.25s — baseline matches Iteration 4g.
+  - py_compile tune_all.py: rc=0 (no source edits this cycle, only data).
+- Per-PRD acceptance status for US-044 after 4h
+  - [partial] Stage 1 trials ≥ 18 — done for cifar10 (20), mnist pending.
+  - [pending] Stage 1.5 winner JSON `validated_at_full_convergence: true`.
+  - [done for cifar10] priors_file_hash round-trip.
+  - [pending] `effective_batch_size` populated (Stage 1.5 probe writes this).
+  - Conclusion: do NOT tick US-044 PRD boxes yet; story is one stage / one
+    dataset closer but not closeable until densenet121_mnist Stage 1
+    + both Stage 1.5 retrains land.
+- Learnings for next cycles:
+  - Patterns:
+    - DenseNet121 Stage 1 winner is trial #? (anchor-adjacent: head_lr
+      5.61e-4 ~= the 5e-4 anchor draw). Same shape as resnet50_cifar10's
+      trial #0 — TPE(seed=42) trial 0 is the anchor draw across studies
+      sharing a priors file.
+    - 5070 DenseNet121 Stage 1 wall-clock ~28 min for 20 trials. Plan
+      ~28 min for densenet121_mnist Stage 1 in the next cycle.
+    - L3 Moderate proxy ceiling at 5 epochs for DenseNet121 cifar10 is
+      ~0.49 val_acc — meaningfully above resnet50_cifar10's proxy ceiling
+      of 0.385 (Iteration 4d). Don't read too much into the gap: full
+      Stage 1.5 convergence resnet50_cifar10 reached 0.5624 (4f); the
+      proxy is fundamentally a rank-not-magnitude signal.
+  - Traps:
+    - DenseNet121 winner backbone_lr=7.97e-4 is at the loguniform upper
+      band (priors high is 1e-3). Differential ratio head/backbone ~= 0.7
+      — already collapsed below the 10x convention. Stage 1.5 may
+      re-rank toward a trial with a healthier differential. Don't
+      freeze this Stage 1 winner directly.
+    - Iteration 4h ran via PowerShell `Start-Process` not `Bash
+      run_in_background`. The PID was 17020 / 23368. The `OK [...]`
+      completion marker landed in the .log file but stderr printed
+      to the .log.err sibling. Future iterations: prefer Bash
+      run_in_background + Monitor for the cleaner stdout-stream
+      polling story.
+  - Helpful context:
+    - Next iteration's single task: `tune_all.py --n-trials 20
+      --model densenet121 --dataset mnist`. Expected wall-clock ~28 min.
+      Resumable via the same Optuna SQLite store. The mnist study name
+      `densenet121_mnist_L3` does not yet exist in optuna_thz.db.
+
+US-044: densenet121_cifar10 Stage 1 winner staged (best_value=0.4880, trials=20)
+---
+
+
 ## US-044: Optuna Pre-Tune — densenet121 × {cifar10, mnist}
-(pending — Stage 1 + Stage 1.5)
+(in progress — cifar10 Stage 1 done @ 4h; mnist Stage 1 + both Stage 1.5 retrains pending)
 
 ## US-045: Optuna Pre-Tune — transnext_small_native × {cifar10, mnist}
 (pending — uses new priors from US-042)
