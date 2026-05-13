@@ -1700,8 +1700,75 @@ US-044: densenet121_mnist Stage 1 winner staged (best_value=0.9040, trials=20)
 ---
 
 
+### Iteration 4j — US-044 Stage 1.5 validate top-3 for densenet121_cifar10
+- What was done
+  - Launched `scripts/validate_top3.py --model densenet121 --dataset cifar10`
+    on the 5070 in the background. Log:
+    logs/validate_top3_densenet121_cifar10_20260513_202219.log.
+  - Three retrains at 60ep / 10000 train / 5000 val / patience=10. Total
+    wall-clock ~60 min (study created 20:22, "OK" line at ~21:22).
+  - DRAMATIC Stage 1.5 re-ranking (fast → full):
+    rank 0 trial #0  fast=0.4880 → full=0.5880
+    rank 1 trial #11 fast=0.4790 → full=0.5966
+    rank 2 trial #10 fast=0.4750 → full=0.6024   ← WINNER
+    Fast rank 3 jumped to full rank 1. The Stage 1 anchor draw (trial #0)
+    is the WORST of the three at full convergence. Same pattern as
+    resnet50_cifar10 (4f); confirms operator decision to gate every
+    pair on Stage 1.5 (PRD §6.2 contract).
+  - Winner JSON overwritten with trial #10 hparams + full validation
+    block: validated_at_full_convergence=true, batch_size=32,
+    effective_batch_size=32, validation_winner_trial=10,
+    validation_results carries all three rank entries.
+- Files affected
+  - UPDATE: artifacts/best_hparams/densenet121_cifar10.json (trial #10
+    hparams + Stage 1.5 metadata).
+  - NEW: artifacts/validation/densenet121_cifar10_rank{0,1,2}.json
+    (gitignored).
+  - NEW: logs/validate_top3_densenet121_cifar10_20260513_202219.log
+    (gitignored).
+- Verification
+  - Winner JSON contains all PRD §6.2 mandated fields: lr_head, lr_backbone
+    (under best_params), weight_decay, label_smoothing, batch_size,
+    effective_batch_size, study_name, best_value, n_trials_completed,
+    priors_file_hash, validated_at_full_convergence: true.
+  - priors_file_hash round-trip: True.
+  - torch-free pytest: 21 passed in 3.30s — baseline holds.
+- Per-PRD acceptance status for US-044 after 4j
+  - [done] Stage 1 trials ≥ 18 (both pairs).
+  - [done for cifar10] Stage 1.5 validated_at_full_convergence + effective_batch_size.
+  - [done] priors_file_hash round-trip (both pairs).
+  - [pending] Stage 1.5 for densenet121_mnist (next iteration's task).
+- Learnings for next cycles:
+  - Patterns:
+    - At full convergence on cifar10 L3 Moderate, densenet121 caps around
+      val_acc=0.6024 — comfortably above resnet50_cifar10's 0.5624 (4f).
+      DenseNet121 beats ResNet50 by ~4pp on combined L3 degradation; this
+      is the headline architectural-effect signal expected in Phase B.
+    - Stage 1.5 re-ranking is now confirmed for BOTH (resnet50, densenet121)
+      cifar10 studies, and in the same direction: fast rank 3 wins at
+      full convergence. The proxy budget (5ep / 2k train) is
+      systematically under-ranking the more conservative LR trials.
+    - Winner trial #10 for densenet121_cifar10 has hparams that differ
+      from the resnet50 trial #2 winner — TPE(seed=42) trial.number=10
+      is a different point than trial.number=2, even on the same priors
+      file. So the "trial #2 winner" recipe from 4g (resnet50 + densenet121
+      Stage 1 mnist) is NOT universal — the full Stage 1.5 picks
+      architecture-tuned hparams.
+  - Traps:
+    - The Stage 1.5 wall-clock budget (~60 min) is at the 1-hour ScheduleWakeup
+      cap. If the next iteration needs longer (e.g. densenet121_mnist Stage
+      1.5 trains all 60 epochs without early-stop), schedule a re-check.
+  - Helpful context:
+    - Next iteration's single task: `scripts/validate_top3.py --model
+      densenet121 --dataset mnist`. Expected wall-clock ~60-70 min.
+      Will close US-044 if successful (mnist is the final leg).
+
+US-044: densenet121_cifar10 winner frozen (best_value=0.6024, trials=20)
+---
+
+
 ## US-044: Optuna Pre-Tune — densenet121 × {cifar10, mnist}
-(in progress — both Stage 1 done; Stage 1.5 cifar10 + mnist retrains pending)
+(in progress — Stage 1.5 cifar10 done @ 4j (winner trial #10, 0.6024); Stage 1.5 mnist pending)
 
 ## US-045: Optuna Pre-Tune — transnext_small_native × {cifar10, mnist}
 (pending — uses new priors from US-042)
