@@ -39,12 +39,12 @@ Post-US-003 a Phase C cell isolates exactly **one** axis. The per-axis accuracy 
 
 ## Code paths
 
-- `level_params(L, axis="blur")` → `{low_res: 224, blur_kernel: 7, blur_sigma: 1.50, noise_std: 0.0, salt_pepper: 0.0, saturation: 1.0}` (example at L=3).
-- `degrade_config_for(level=3, axis="blur", out_size=224)` → `DegradeConfig(low_res=224, blur_kernel=7, blur_sigma=1.50, gaussian_noise_std=0.0, salt_pepper_amount=0.0, saturation=1.0, degradation_type='all')`.
+- `level_params(L, axis="blur")` → `{low_res: 224, blur_kernel: 41, blur_sigma: 8.00, noise_std: 0.0, salt_pepper: 0.0, saturation: 1.0}` (example at L=3, post-2026-05-14 blur rescale).
+- `degrade_config_for(level=3, axis="blur", out_size=224)` → `DegradeConfig(low_res=224, blur_kernel=41, blur_sigma=8.00, gaussian_noise_std=0.0, salt_pepper_amount=0.0, saturation=1.0, degradation_type='all')`.
 - `degrade_image(img, cfg, seed=…)` with the cfg above:
   1. saturation lerp: short-circuits (s == 1.0).
   2. downsample stage: `low_res == out_size == 224` → skip bilinear; single bicubic upsample 32→224 (or 28→224 for MNIST).
-  3. blur: applied (kernel=7, σ=1.50).
+  3. blur: applied (kernel=41, σ=8.00 — see DEGRADATION_LEVELS L3 row).
   4. noise: short-circuits (std == 0.0).
   5. S&P: short-circuits (amount == 0.0).
 

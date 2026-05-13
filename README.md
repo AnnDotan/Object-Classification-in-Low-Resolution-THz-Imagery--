@@ -34,6 +34,42 @@ How robust does image classification remain when visual information is severely 
 
 Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 
+## Campaign Status — RTX 5070 RALPH Loop (branch `5070A`, 2026-05-14)
+
+**186-cell campaign:** Phase A (6) + Phase B (30) + Phase C (150). Three models × two datasets across the 5-level degradation curve. Full PRD: [`PRD.md`](PRD.md).
+
+| Story (new ID) | Legacy ID | Title | Status |
+|---|---|---|---|
+| — | US-040 | State reset (Optuna DB + best_hparams archived; trackers rebuilt) | ✅ closed |
+| — | US-041 | RTX 5070 cu128 bootstrap + bf16 smoke test | ✅ closed |
+| — | US-042 | TransNeXt @ 224×224 un-quarantine | ✅ closed |
+| — | US-043 | `resnet50` × {cifar10, mnist} Optuna tune (Stage 1 + 1.5) | ✅ closed |
+| **US-001** | US-044 | `densenet121` × {cifar10, mnist} Optuna tune | ✅ **closed 2026-05-14** |
+| **US-002** | US-045 | `transnext_base` × {cifar10, mnist} Optuna tune | 🟡 **in flight** (Stage 1 cifar10 running on the 5070; checkpoint dropped 2026-05-13) |
+| **US-003** | (new) | Phase C single-axis correction (inactive axes → identity) | ✅ **closed 2026-05-14** ([`docs/phase_c.md`](docs/phase_c.md)) |
+| US-004 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests | ⏳ pending |
+| US-005…US-007 | US-046 (split) | Phase A execution — 1 story per model (2 cells each) + halt | ⏳ pending |
+| US-008…US-010 | US-046 (split) | Phase B execution — 1 story per model (10 cells each) + halt | ⏳ pending |
+| US-011…US-013 | US-046 (split) | Phase C execution — 1 story per model (50 cells each) + halt | ⏳ pending |
+| US-014 | US-047 | End-of-campaign verification + 3 phase-boundary pushes | ⏳ pending |
+
+### Frozen artifacts (4 of 6 winner JSONs)
+
+| `(model, dataset)` | Winner JSON | best_value | Notes |
+|---|---|---|---|
+| `resnet50 × cifar10` | `artifacts/best_hparams/resnet50_cifar10.json` | 0.5624 | trial #2 (fast-rank-3 → full-rank-1 swap at Stage 1.5) |
+| `resnet50 × mnist` | `artifacts/best_hparams/resnet50_mnist.json` | 0.9190 | trial #2 |
+| `densenet121 × cifar10` | `artifacts/best_hparams/densenet121_cifar10.json` | 0.6024 | trial #10 (fast-rank-3 → full-rank-1 swap) |
+| `densenet121 × mnist` | `artifacts/best_hparams/densenet121_mnist.json` | 0.9192 | trial #2 (no re-ranking — trial #2 won at both fast and full) |
+| `transnext_base × cifar10` | — | — | **pending (US-002 Stage 1 cifar10 running)** |
+| `transnext_base × mnist` | — | — | **pending (US-002 Stage 1.5 mnist queued)** |
+
+### Recent scientific changes
+
+- **2026-05-14 — US-003 (Phase C identity).** Inactive axes in Phase C cells now return to **identity** (no degradation) instead of L1-mild values. Pre-US-003 a "blur at L5" cell was contaminated by L1 noise + S&P + resolution + saturation; post-US-003 each Phase C cell isolates exactly one axis. Rationale + identity-value table: [`docs/phase_c.md`](docs/phase_c.md).
+- **2026-05-14 — Blur kernel/σ rescale (operator-approved).** The pre-2026-05-14 blur values (K=3..13, σ=0.80..2.30) were native-size kernels invisible after the upsample to 224×224. Rescaled to K=13..91, σ=2.5..18 to produce perceptually meaningful blur on 224×224. See the L1..L5 table below ("Degradation Pipeline & Levels") for the current values. `degradation_levels_hash` rotates; cross-batch comparison against pre-2026-05-14 runs involving blur is invalidated. The 4 already-frozen winner JSONs were tuned at old-L3 blur; operator accepted the residual mismatch (re-tune deferred unless Phase B L3 shows systematic underperformance).
+- **2026-05-13 — TransNeXt 224×224 un-quarantine (US-042).** The earlier native-resolution refactor (TransNeXt at 32, MNIST pad-to-32) was rolled back. Every model trains at 224×224 with the same data pipeline; TransNeXt loads its upstream 224-pretrained checkpoint and trains under the same differential-LR full-FT regime as the CNNs.
+
 ## Hardware & OS Prerequisites
 
 | Requirement | Minimum | Recommended |

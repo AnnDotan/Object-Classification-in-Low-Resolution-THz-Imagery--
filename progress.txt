@@ -117,6 +117,8 @@ Cell denominator: 6 + 30 + 150 = **186**.
 - 2026-05-13 — **US-043** resnet50 Optuna tune CLOSED. cifar10 best=0.5624 (trial #2); mnist best=0.8660 + Stage 1.5; both winners `validated_at_full_convergence: true`.
 - 2026-05-13 — **US-044 / US-045 / US-046 / US-047 renumbered to US-001…US-014** with US-003 (Phase C identity) inserted + US-046 split into 10 stories. Authoritative: [PRD.md §8](PRD.md).
 - 2026-05-13 — **US-001 CLOSED** — densenet121 Optuna tune complete. cifar10 winner trial #10 (best_value=0.6024, fast rank 3 → full rank 1 swap). mnist winner trial #2 (best_value=0.9192, no re-ranking — trial #2 wins fast and full). Both JSONs `validated_at_full_convergence: true`, `effective_batch_size=32`, `priors_file_hash` round-trips. 4/6 winner JSONs frozen; transnext_base pair still pending (US-002).
+- 2026-05-14 — **US-003 CLOSED** — Phase C single-axis identity correction. `level_params(level, axis)` now seeds inactive axes from `IDENTITY_VALUES` (was `DEGRADATION_LEVELS[1]`). `_check_phase_c_isolates_single_axis` invariant added in `test_matrix.py`. `degrade.py` short-circuits the downsample stage when `low_res == out_size`. New `docs/phase_c.md`. `degradation_levels_hash` rotates.
+- 2026-05-14 — **Blur axis rescaled** for 224×224 visibility (operator-approved). DEGRADATION_LEVELS blur: K=3..13/σ=0.80..2.30 → K=13..91/σ=2.5..18. Other axes unchanged. Dashboard JSON rebuilt; 60 thumbs re-rendered (30 Phase B + 30 Phase C blur). `degradation_levels_hash` rotates again. 4 existing winner JSONs were tuned at old-L3 blur; residual mismatch operator-accepted (re-tune deferred).
 
 US-001: densenet121_mnist winner frozen (best_value=0.9192, trials=20)
 
