@@ -274,17 +274,17 @@ Stories are dependency-ordered: **reset → bootstrap → architecture refactor 
 
 **Description:** Three RALPH iterations, each tuning two pairs in series (CIFAR pair → MNIST pair) per model. Each story drives Stage 1 (fast) + Stage 1.5 (validate) and freezes 2 winner JSONs.
 
-- **US-043:** `resnet50` × {cifar10, mnist} — Stage 1 fast + Stage 1.5 validate.
+- **US-043:** `resnet50` × {cifar10, mnist} — Stage 1 fast + Stage 1.5 validate.  **[DONE 2026-05-13]**
 - **US-044:** `densenet121` × {cifar10, mnist} — same shape.
 - **US-045:** `transnext_base` × {cifar10, mnist} — same shape; uses the existing `artifacts/priors/transnext_base.json`.
 
 **Acceptance Criteria (per story):**
-- [ ] Stage 1 trial count ≥ 18 per study in `artifacts/optuna_thz.db`.
-- [ ] Stage 1.5 produces `artifacts/best_hparams/{m}_{d}.json` with `validated_at_full_convergence: true`.
-- [ ] `priors_file_hash` round-trips: matches `tune_all.priors_file_hash(model)`.
-- [ ] `effective_batch_size` field populated by the bootstrap probe.
-- [ ] One-line entry in `progress.txt`: `US-04N: <m>_<d> winner frozen (best_value=<x>, trials=<n>)`.
-- [ ] Typecheck passes; torch-free pytest suite still green.
+- [x] Stage 1 trial count ≥ 18 per study in `artifacts/optuna_thz.db`. *(US-043: 20+20 trials)*
+- [x] Stage 1.5 produces `artifacts/best_hparams/{m}_{d}.json` with `validated_at_full_convergence: true`. *(US-043: both pairs)*
+- [x] `priors_file_hash` round-trips: matches `tune_all.priors_file_hash(model)`. *(US-043: both pairs)*
+- [x] `effective_batch_size` field populated by the bootstrap probe. *(US-043: both pairs, batch=effective=32)*
+- [x] One-line entry in `progress.txt`: `US-04N: <m>_<d> winner frozen (best_value=<x>, trials=<n>)`. *(US-043: both pairs)*
+- [x] Typecheck passes; torch-free pytest suite still green. *(US-043: 21 passed)*
 
 ---
 

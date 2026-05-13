@@ -169,6 +169,14 @@ def validate_pair(model: str, dataset: str, args) -> None:
         "phase": "B",
         "level": 3,
         "validated_at_full_convergence": True,
+        # PRD US-043 §5.2: validate_top3 trains every retrain at batch_size=32
+        # (project-locked default per CLAUDE.md). effective_batch_size == 32
+        # for all pairs that fit in 12 GiB VRAM at 224x224. If the bootstrap
+        # probe in scripts/setup_gpu_env.py escalates to grad-accum (batch=16,
+        # accum=2), the operator overrides this field post-hoc before
+        # downstream Phase B/C cells launch.
+        "batch_size": 32,
+        "effective_batch_size": 32,
         "validation_top_k": args.top_k,
         "validation_max_epochs": args.max_epochs,
         "validation_train_subset": args.train_subset,

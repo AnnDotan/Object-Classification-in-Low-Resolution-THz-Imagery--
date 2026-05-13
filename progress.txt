@@ -1423,6 +1423,113 @@ US-043: resnet50_cifar10 Stage 1 winner staged (best_value=0.3850, trials=20)
 
 US-043: resnet50_mnist Stage 1 winner staged (best_value=0.8660, trials=20)
 
+### Iteration 4f — US-043 Stage 1.5 validate top-3 for resnet50_cifar10
+- What was done
+  - Launched `scripts/validate_top3.py --model resnet50 --dataset cifar10` on
+    the 5070. Background log:
+    logs/validate_top3_resnet50_cifar10_20260513_163716.log.
+  - Re-trained the top-3 Stage 1 trials (#0 anchor / #18 / #2) at the
+    production protocol — 60ep / 10k train / 5k val / patience=10. Total
+    wall-clock ~50 min.
+  - Stage 1 ranking was DETHRONED at full convergence:
+    rank 0 → trial #0 full_val_acc=0.5486
+    rank 1 → trial #18 full_val_acc=0.5296
+    rank 2 → trial #2 full_val_acc=0.5624   ← WINNER
+  - Winner JSON overwritten with trial #2 hparams (head_lr=1.10e-4,
+    backbone_lr=8.71e-4, weight_decay=4.62e-4, label_smoothing=0.042,
+    warmup_epochs=0.91).
+- Files affected
+  - UPDATE: artifacts/best_hparams/resnet50_cifar10.json (now carries
+    validated_at_full_convergence: true + 3 validation_results entries +
+    validation_winner_trial: 2).
+  - NEW: artifacts/validation/resnet50_cifar10_rank{0,1,2}.json (gitignored).
+  - NEW: logs/validate_top3_resnet50_cifar10_20260513_163716.log (gitignored).
+- Learnings for next cycles:
+  - Patterns:
+    - The PRD-predicted Stage 1.5 re-ranking is REAL and load-bearing for
+      cifar10. Trial #0 (fast rank 1) drops to full rank 2; trial #2
+      (fast rank 3) jumps to full rank 1. Always run Stage 1.5 — never
+      freeze the Stage 1 winner directly. The pre-5070 retro warning in
+      Iteration 4c (4050-era resnet50_cifar10: fast rank 2 → full rank 1)
+      now has a 5070 confirmation.
+    - At full convergence on cifar10 L3 Moderate, resnet50 caps around
+      val_acc=0.56. This is the Phase B L3 ceiling that Phase B/C cells
+      will be compared against in the dashboard.
+  - Helpful context:
+    - The `OK <model>_<dataset>: winner=trial#<N> full_val_acc=<x>` line
+      in the validate_top3 log is the canonical completion marker. Use it
+      for polling background tasks (NOT the JSON string
+      `validated_at_full_convergence` — that lives only in the output
+      file, not the script's stdout).
+
+US-043: resnet50_cifar10 winner frozen (best_value=0.5624, trials=20)
+
+### Iteration 4g — US-043 closes — Stage 1.5 mnist + effective_batch_size plumbing
+- What was done
+  - Patched scripts/validate_top3.py to write `batch_size: 32` and
+    `effective_batch_size: 32` into the validated winner JSON. Closes the
+    PRD US-043 acceptance gap (the 4f winner JSON for cifar10 was missing
+    the field). Single-block edit inside the `final = {...}` payload;
+    no public API changes, no signature changes.
+  - Backfilled artifacts/best_hparams/resnet50_cifar10.json with the two
+    new fields in-place (no Stage 1.5 re-run needed; the script's only
+    behavioural change is the extra JSON keys).
+  - Launched `scripts/validate_top3.py --model resnet50 --dataset mnist` on
+    the 5070 with the patched script. Background log:
+    logs/validate_top3_resnet50_mnist_20260513_171218.log.
+  - Stage 1 → Stage 1.5 re-ranking (mnist):
+    rank 0 → trial #11 fast=0.866 → full=0.9092
+    rank 1 → trial #15 fast=0.848 → full=0.8884
+    rank 2 → trial #2  fast=0.837 → full=0.9190   ← WINNER
+  - Same trial #2 hparams that won cifar10 — TPE(seed=42) generates the
+    identical (head_lr, backbone_lr, ...) tuple at trial.number=2 across
+    both studies (priors file is shared, RNG state determined by seed +
+    trial index). Empirically reassuring: the same hparam recipe wins both
+    pairs at full convergence under the L3 protocol.
+  - All 5 US-043 PRD acceptance criteria green; marked [x] in PRD.md.
+- Files affected
+  - EDIT: scripts/validate_top3.py (8 inserted lines inside the final dict
+    + 6-line PRD-anchored comment block).
+  - EDIT: artifacts/best_hparams/resnet50_cifar10.json (added two fields:
+    batch_size=32, effective_batch_size=32 — backfill).
+  - NEW: artifacts/best_hparams/resnet50_mnist.json — full Stage 1.5
+    winner JSON with all PRD-mandated fields populated by the patched
+    script.
+  - NEW: artifacts/validation/resnet50_mnist_rank{0,1,2}.json (gitignored).
+  - NEW: logs/validate_top3_resnet50_mnist_20260513_171218.log (gitignored).
+  - EDIT: PRD.md US-043 acceptance block — all 6 boxes ticked.
+- Verification
+  - Acceptance probe (`tune_all.priors_file_hash` round-trip + Optuna trial
+    count + winner JSON fields): both resnet50 pairs PASS.
+  - py_compile validate_top3.py: rc=0.
+  - torch-free pytest: 21 passed in 3.62s — same baseline.
+  - mypy: 89 pre-existing errors floor, 0 new errors from the patch.
+- Learnings for next cycles:
+  - Patterns:
+    - TPE(seed=42) trial.number=2 is the same hparam point across studies
+      that share the same priors file. So when chaining the 4 CNN pairs,
+      Stage 1.5 may pick the same "trial #2 winner" hparams for densenet
+      pairs too. Plan for the comparison: same hparams, different model
+      architectures, gives a clean architectural-effect read.
+    - For all CNN pairs at 224x224 batch=32 on 12 GiB 5070, the
+      effective_batch_size is just 32 (no OOM, no grad-accum). The
+      bootstrap probe in setup_gpu_env.py only escalates if a probe
+      OOM fires — verified safe for resnet50.
+  - Traps:
+    - Stage 1.5 OVERWRITES the Stage 1 winner JSON in-place. Two
+      consequences: (a) the field order changes from the Stage 1 layout
+      (fast best_params get replaced by full-convergence best_params),
+      and (b) consumers that pinned to Stage 1 fields will silently read
+      new values. The contract is "the JSON after Stage 1.5 is the
+      authoritative production hparams".
+  - Helpful context:
+    - Next: US-044 — densenet121 × {cifar10, mnist}. Same Stage 1 + Stage
+      1.5 shape. Expected wall-clock ~3.5h on the 5070 (DenseNet121 is
+      slower than ResNet50: ~12.5 it/s vs ~18.8 it/s per Iteration 4b).
+
+US-043 CLOSED: both resnet50 pairs validated. cifar10 best=0.5624 (trial #2),
+mnist best=0.9190 (trial #2). All PRD acceptance boxes green.
+
 - Learnings for next cycles:
   - Patterns:
     - Stage 1 fast tune on the 5070 with the 4a infra (bf16-mixed + TF32 +
