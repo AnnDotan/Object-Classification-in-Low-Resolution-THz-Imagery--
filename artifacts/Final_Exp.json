@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-13T09:28:06+00:00",
+  "generated_at": "2026-05-13T21:14:45+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -820,12 +820,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -847,12 +847,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -874,12 +874,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -901,12 +901,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -928,12 +928,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -955,12 +955,12 @@
       "level": 1,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 3,
         "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -982,12 +982,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1009,12 +1009,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1036,12 +1036,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1063,12 +1063,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1090,12 +1090,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1117,12 +1117,12 @@
       "level": 1,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1145,11 +1145,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1172,11 +1172,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1199,11 +1199,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1226,11 +1226,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1253,11 +1253,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1280,11 +1280,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1306,12 +1306,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1333,12 +1333,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1360,12 +1360,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1387,12 +1387,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1414,12 +1414,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1441,12 +1441,12 @@
       "level": 1,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.03,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1468,11 +1468,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1495,11 +1495,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1522,11 +1522,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1549,11 +1549,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1576,11 +1576,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1603,11 +1603,11 @@
       "level": 1,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.95
       },
       "status": "Pending",
@@ -1630,12 +1630,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1657,12 +1657,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1684,12 +1684,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1711,12 +1711,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1738,12 +1738,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1765,12 +1765,12 @@
       "level": 2,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 5,
         "blur_sigma": 1.15,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1792,12 +1792,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1819,12 +1819,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1846,12 +1846,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1873,12 +1873,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1900,12 +1900,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1927,12 +1927,12 @@
       "level": 2,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.08,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1955,11 +1955,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -1982,11 +1982,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2009,11 +2009,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2036,11 +2036,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2063,11 +2063,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2090,11 +2090,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 12,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2116,12 +2116,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2143,12 +2143,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2170,12 +2170,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2197,12 +2197,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2224,12 +2224,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2251,12 +2251,12 @@
       "level": 2,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.06,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2278,11 +2278,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2305,11 +2305,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2332,11 +2332,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2359,11 +2359,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2386,11 +2386,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2413,11 +2413,11 @@
       "level": 2,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.65
       },
       "status": "Pending",
@@ -2440,12 +2440,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2467,12 +2467,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2494,12 +2494,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2521,12 +2521,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2548,12 +2548,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2575,12 +2575,12 @@
       "level": 3,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 7,
         "blur_sigma": 1.5,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2602,12 +2602,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2629,12 +2629,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2656,12 +2656,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2683,12 +2683,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2710,12 +2710,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2737,12 +2737,12 @@
       "level": 3,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.12,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2765,11 +2765,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2792,11 +2792,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2819,11 +2819,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2846,11 +2846,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2873,11 +2873,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2900,11 +2900,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 8,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2926,12 +2926,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2953,12 +2953,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -2980,12 +2980,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3007,12 +3007,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3034,12 +3034,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3061,12 +3061,12 @@
       "level": 3,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.1,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3088,11 +3088,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3115,11 +3115,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3142,11 +3142,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3169,11 +3169,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3196,11 +3196,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3223,11 +3223,11 @@
       "level": 3,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.4
       },
       "status": "Pending",
@@ -3250,12 +3250,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3277,12 +3277,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3304,12 +3304,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3331,12 +3331,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3358,12 +3358,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3385,12 +3385,12 @@
       "level": 4,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 9,
         "blur_sigma": 1.85,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3412,12 +3412,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3439,12 +3439,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3466,12 +3466,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3493,12 +3493,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3520,12 +3520,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3547,12 +3547,12 @@
       "level": 4,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.16,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3575,11 +3575,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3602,11 +3602,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3629,11 +3629,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3656,11 +3656,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3683,11 +3683,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3710,11 +3710,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 6,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3736,12 +3736,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3763,12 +3763,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3790,12 +3790,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3817,12 +3817,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3844,12 +3844,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3871,12 +3871,12 @@
       "level": 4,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.14,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -3898,11 +3898,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -3925,11 +3925,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -3952,11 +3952,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -3979,11 +3979,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -4006,11 +4006,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -4033,11 +4033,11 @@
       "level": 4,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.15
       },
       "status": "Pending",
@@ -4060,12 +4060,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4087,12 +4087,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4114,12 +4114,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4141,12 +4141,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4168,12 +4168,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4195,12 +4195,12 @@
       "level": 5,
       "axis": "blur",
       "params": {
-        "low_res": 18,
+        "low_res": 224,
         "blur_kernel": 13,
         "blur_sigma": 2.3,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4222,12 +4222,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4249,12 +4249,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4276,12 +4276,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4303,12 +4303,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4330,12 +4330,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4357,12 +4357,12 @@
       "level": 5,
       "axis": "noise",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
         "noise_std": 0.22,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4385,11 +4385,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4412,11 +4412,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4439,11 +4439,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4466,11 +4466,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4493,11 +4493,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4520,11 +4520,11 @@
       "axis": "resolution",
       "params": {
         "low_res": 3,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
-        "saturation": 0.95
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4546,12 +4546,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4573,12 +4573,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4600,12 +4600,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4627,12 +4627,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4654,12 +4654,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4681,12 +4681,12 @@
       "level": 5,
       "axis": "salt_pepper",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
         "salt_pepper": 0.18,
-        "saturation": 0.95
+        "saturation": 1.0
       },
       "status": "Pending",
       "val_acc": null,
@@ -4708,11 +4708,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
@@ -4735,11 +4735,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
@@ -4762,11 +4762,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
@@ -4789,11 +4789,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
@@ -4816,11 +4816,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
@@ -4843,11 +4843,11 @@
       "level": 5,
       "axis": "saturation",
       "params": {
-        "low_res": 18,
-        "blur_kernel": 3,
-        "blur_sigma": 0.8,
-        "noise_std": 0.04,
-        "salt_pepper": 0.03,
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
         "saturation": 0.0
       },
       "status": "Pending",
