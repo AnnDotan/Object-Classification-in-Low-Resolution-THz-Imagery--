@@ -551,3 +551,54 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     `QUARANTINED_AFTER_RETRY` sentinel with body
     `second_failure:<verdict>` and are skipped on subsequent
     `--remediate-only` invocations.
+
+## Iteration 5 (2026-05-14) — US-006 partial close (REPORTER + pre-existing baselines)
+- What was done: discovered the two ResNet50 Phase A run dirs are already
+  on disk (legacy 4050 baselines preserved across the 2026-05-12 reset)
+  with strong pathology-healthy metrics — best_val_acc = 0.9518 (cifar10,
+  best_epoch 13 / 23 trained, last_train=1.000) and 0.9914 (mnist,
+  best_epoch 11 / 21). Verdict from
+  `scripts/run_ralph_loop.evaluate_pathology` is `healthy` on both. Drafted
+  the REPORTER artifact at `artifacts/reports/phase_a_resnet50_summary.md`
+  (139-word narrative, val_acc / epoch table, NaN-flag and §6.3 gap
+  analysis, qualitative TResNet baseline anchor, provenance caveat for
+  the legacy-4050 origin). Ticked acceptance lines 412 / 414 / 416 in
+  US-006.
+- Files affected: created `artifacts/reports/` + the resnet50 summary
+  markdown; PRD.md acceptance ticks; this progress.txt entry. No GPU
+  work; no run_dir writes; no source code change.
+- Validation: pytest unchanged (no code edited); narrative word-count
+  scripted at 139 (within the ≤200 cap); `--dry-run` resolves the 2
+  Phase A resnet50 cells; `evaluate_pathology` on existing histories
+  returns `healthy` for both.
+- Learnings for next cycles:
+  - Patterns: When an execution US is GPU-gated and the prior run dirs
+    are already on disk from a previous campaign, a Ralph cycle can
+    still legitimately make progress by (a) running the new pathology
+    guard against the preserved histories, (b) drafting the REPORTER
+    artifact, (c) noting which acceptance boxes are immediately tickable
+    vs. which still need GPU. Do NOT re-run the cells just because the
+    US sits in the active list — the legacy results are authoritative
+    until proven otherwise.
+  - Patterns: For Phase A clean baselines, `_measure_image_quality_for_cell`
+    intentionally does not write `image_quality.json` (clean-vs-clean is
+    a trivial identity comparison). The PRD acceptance line 413 lists
+    `image_quality.json` as required, which creates a documentation
+    conflict for Phase A only. The Ralph cycle should flag this to the
+    operator rather than silently write a PSNR=∞ / SSIM=1.0 stub.
+  - Traps: The legacy run dirs predate the `degradation_levels_hash`
+    field in `metrics.json`. For Phase A clean cells this is irrelevant
+    (no degradation is applied), but the field WILL be required for
+    Phase B/C cells. Do not flag its absence on Phase A as a defect.
+  - Traps: Word-count scripts that print `≤` or other non-ASCII chars
+    crash under the default Windows console code page (cp1255 on this
+    operator's machine, cp1252 elsewhere). Use plain ASCII (`<=`) in
+    Python prints invoked from the Bash tool, or stick to f-string
+    interpolation of numeric values only.
+  - Helpful context: Remaining US-006 work is (a) operator-launched
+    seed=43 reproducibility re-run on `final_clean_resnet50_cifar10`
+    (PRD line 415, ~70 min wallclock), (b) LIBRARIAN `docs/phase_a.md`
+    + README "Best Results So Far" row (line 417), (c) DESIGNER per-US
+    trend section in `Final_Exp.html` (line 418), (d) the 413
+    image_quality.json conflict resolution. Items (b)–(d) are non-GPU
+    and can land in the next Ralph cycle without operator intervention.
