@@ -386,17 +386,17 @@ The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt
 **Owner agents:** EXECUTOR (driver), DEBUGGER (hook + log + fix catalog), VALIDATOR (pathology fixture-based test), DATA_ARCHITECT (Phase C gate).
 
 **Acceptance Criteria:**
-- [ ] `python scripts/run_ralph_loop.py --plan final --phase A --dry-run` prints the resolved cell dispatch order and exits 0 without launching `Trainer.fit`.
-- [ ] Pathology guard implements all three §6.3 verdicts. Test fixture in `src/tests/test_ralph_loop.py`:
+- [x] `python scripts/run_ralph_loop.py --plan final --phase A --dry-run` prints the resolved cell dispatch order and exits 0 without launching `Trainer.fit`. *(smoke-tested 2026-05-14 — listed 6 Phase A tags, exit 0)*
+- [x] Pathology guard implements all three §6.3 verdicts. Test fixture in `src/tests/test_ralph_loop.py`:
   - Synthetic `history.json` with NaN loss at epoch 2 → guard returns `failed_convergence`, writes `NEEDS_FULL_FT`.
   - Synthetic history with `train_acc − val_acc = 22pp` at best-epoch → guard returns `overfitting`, writes `NEEDS_FULL_FT`.
-  - Healthy history (converged, gap < 12pp, no late drift) → guard returns `healthy`, no sentinel.
-- [ ] `--remediate-only` consumes `NEEDS_FULL_FT` sentinels, builds the Full-FT config per §6.4 (failed_convergence: `lr_head ÷ 3`, `weight_decay × 1.5`, `label_smoothing += 0.05`; overfitting: `lr_backbone ÷ 2`, `weight_decay × 2`, `dropout += 0.1`), writes `retry_config.json`, dispatches via `run_cell()`. Test fixture verifies the config snapshot round-trips.
-- [ ] DEBUGGER hook: on `Trainer.fit` raising `torch.cuda.OutOfMemoryError`, the driver writes `runs/final/<tag>/debugger.log` with the exception fingerprint and applies the first OOM fix from [`agents/DEBUGGER.md`](agents/DEBUGGER.md) (batch ÷ 2 + grad_accum × 2). Stops after 3 failed fix attempts per cell.
-- [ ] `--skip-existing` reads `runs/final/<tag>/metrics.json.best_val_acc ≥ 0` to skip completed cells; INTERRUPTED cells are re-attempted.
-- [ ] A cell already carrying `QUARANTINED_AFTER_RETRY` is skipped on `--remediate-only` (asserted in test).
-- [ ] `--plan final --mode pilot` rejected via `assert` (CLAUDE.md invariant).
-- [ ] Typecheck passes; new `src/tests/test_ralph_loop.py` green (torch-free fixtures only).
+  - Healthy history (converged, gap < 12pp, no late drift) → guard returns `healthy`, no sentinel. *(`evaluate_pathology` + `run_dispatch` integration covered; 29/29 fixture tests pass)*
+- [x] `--remediate-only` consumes `NEEDS_FULL_FT` sentinels, builds the Full-FT config per §6.4 (failed_convergence: `lr_head ÷ 3`, `weight_decay × 1.5`, `label_smoothing += 0.05`; overfitting: `lr_backbone ÷ 2`, `weight_decay × 2`, `dropout += 0.1`), writes `retry_config.json`, dispatches via `run_cell()`. Test fixture verifies the config snapshot round-trips. *(`build_retry_config` + `write_retry_config` + `read_retry_config`; round-trip test green)*
+- [x] DEBUGGER hook: on `Trainer.fit` raising `torch.cuda.OutOfMemoryError`, the driver writes `runs/final/<tag>/debugger.log` with the exception fingerprint and applies the first OOM fix from [`agents/DEBUGGER.md`](agents/DEBUGGER.md) (batch ÷ 2 + grad_accum × 2). Stops after 3 failed fix attempts per cell. *(`apply_oom_fix` halves batch + doubles grad_accum; `MAX_OOM_ATTEMPTS=3` cap fixture-verified)*
+- [x] `--skip-existing` reads `runs/final/<tag>/metrics.json.best_val_acc ≥ 0` to skip completed cells; INTERRUPTED cells are re-attempted. *(both branches fixture-covered)*
+- [x] A cell already carrying `QUARANTINED_AFTER_RETRY` is skipped on `--remediate-only` (asserted in test). *(`test_remediate_skips_quarantined`)*
+- [x] `--plan final --mode pilot` rejected via `assert` (CLAUDE.md invariant). *(`test_cli_rejects_plan_final_with_mode_pilot` + manual CLI exit=1)*
+- [x] Typecheck passes; new `src/tests/test_ralph_loop.py` green (torch-free fixtures only). *(mypy on scripts/run_ralph_loop.py + src/tests/test_ralph_loop.py: 0 errors in the new files; 90 pre-existing errors in `run_systematic.py` / `src/lightning/` / `src/runner.py` are out of scope. pytest src/tests = 50/50 ✓)*
 
 **Reuses (do not re-implement):** [`src/experiments/cells.py:iter_cells()`](src/experiments/cells.py), `run_systematic.run_cell()`, [`scripts/refresh_trackers.py`](scripts/refresh_trackers.py), `src/lightning/HistoryJSONCallback`, `_measure_image_quality_for_cell`.
 

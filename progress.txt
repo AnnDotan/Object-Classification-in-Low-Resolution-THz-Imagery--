@@ -477,3 +477,77 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     orphaned and harmless; the running process should be left alone unless
     the operator wants to abort it. This iteration deliberately did not
     touch it.
+
+## Iteration 4 (2026-05-14) — US-005 RALPH Loop Driver Framework
+- What was done: built `scripts/run_ralph_loop.py` (516 lines) + torch-free
+  fixture `src/tests/test_ralph_loop.py` (29 tests). The driver wraps
+  `run_systematic.run_cell()` with sequential `iter_cells()` dispatch,
+  pathology guard (PRD §6.3), sentinel I/O (NEEDS_FULL_FT / INTERRUPTED /
+  QUARANTINED_AFTER_RETRY), `--remediate-only` retry under §6.4 Full FT,
+  and a DEBUGGER OOM hook capped at 3 attempts per cell. Torch and
+  Lightning are not imported at module load — `run_cell` and
+  `torch.cuda.OutOfMemoryError` are resolved lazily inside the dispatch
+  helpers and are injectable for unit tests.
+- Files affected: created `scripts/run_ralph_loop.py`, created
+  `src/tests/test_ralph_loop.py`; ticked all 7 acceptance boxes on
+  US-005 in PRD.md (each with a one-line evidence note); this
+  progress.txt entry. No production runs.
+- Validation:
+    - `pytest src/tests/test_ralph_loop.py -q` = 29 passed in 0.08 s ✓
+    - `pytest src/tests -q` (full torch-free baseline) = 50 passed
+      in 3.36 s ✓  (was 21/21 before US-005; 29 new tests added)
+    - `mypy --explicit-package-bases scripts/run_ralph_loop.py
+      src/tests/test_ralph_loop.py` → 0 errors in the new files. The
+      90 pre-existing errors live in `run_systematic.py`,
+      `src/lightning/module.py`, `src/lightning/train.py`,
+      `src/runner.py` and are unrelated to US-005 (consistent with
+      progress.txt line 213 baseline). The driver does not touch any of
+      those files.
+    - Manual CLI smoke:
+        `python scripts/run_ralph_loop.py --plan final --phase A --dry-run`
+        → lists 6 Phase A tags (resnet50/densenet121/transnext_tiny ×
+        cifar10/mnist), exit 0.
+        `python scripts/run_ralph_loop.py --plan final --mode pilot`
+        → AssertionError "--plan final is incompatible with --mode pilot",
+        exit 1.
+- Learnings for next cycles:
+  - Patterns: For new scripts/* entry points the repo convention is to
+    prepend the repo root onto `sys.path` at module top
+    (`_REPO_ROOT = Path(__file__).resolve().parents[1]; sys.path.insert(0, ...)`)
+    before the first `from src...` import. `run_phase_a.py` lines 44-46
+    show the canonical shape; without it, `python scripts/<name>.py`
+    fails with `ModuleNotFoundError: No module named 'src'` even though
+    `pytest` works (pytest auto-rootdirs).
+  - Patterns: Torch-free CLI infrastructure should defer imports of
+    torch / Lightning into the function body that actually needs them
+    (`_resolve_run_cell`, `_resolve_oom_exception`). Combined with
+    injectable parameters on the dispatch functions
+    (`run_cell_fn=None, oom_exception=None`), the same module is
+    both production-runnable and unit-testable without a torch dep.
+  - Traps: mypy chokes when the same source file is reachable via two
+    module names (`run_ralph_loop` and `scripts.run_ralph_loop`).
+    Use `mypy --explicit-package-bases <files>` to avoid the
+    "found twice" error. There is no `__init__.py` under `scripts/` —
+    do NOT add one, the rest of the toolchain treats it as a flat
+    script dir.
+  - Traps: PRD §6.4 step 1 ("lr_backbone = lr_head / 10") composes with
+    §6.3 verdict deltas, and ORDER MATTERS. The driver applies the
+    ratio tighten FIRST, then the verdict-specific deltas; this means
+    the overfitting branch's `lr_backbone ÷ 2` operates on the freshly
+    tightened ratio, not the operator-supplied baseline. Failing to
+    sequence them this way would produce off-by-10× retry LRs.
+  - Traps: For mypy's `except` clause type-narrowing the lazy-loaded
+    exception class must be hinted as `type[BaseException]` — the bare
+    name resolves to `type` and the except clause is rejected as
+    "must be derived from BaseException".
+  - Helpful context: With US-005 closed, the next Ralph cycles can
+    actually dispatch cells — US-006 (Phase A · resnet50) is the first
+    GPU-gated execution US. The driver writes
+    `runs/final/<tag>/NEEDS_FULL_FT` containing the verdict string
+    (`failed_convergence` or `overfitting`) so the second-pass
+    remediate-only mode can read the verdict back without re-running
+    the pathology guard. Cells that succeed on retry have the
+    sentinel removed automatically; cells that fail the retry get a
+    `QUARANTINED_AFTER_RETRY` sentinel with body
+    `second_failure:<verdict>` and are skipped on subsequent
+    `--remediate-only` invocations.
