@@ -318,6 +318,33 @@ def _check_thumbs_dir_back_compat() -> None:
     print("OK [back-compat] -- build_dashboard accepts (and ignores) thumbs_dir kwarg.")
 
 
+def _check_curves_drawer_prefers_inline_history() -> None:
+    """File:// blocks fetch() of local files. The drawer therefore must use
+    `row.history` (embedded by the aggregator) as the primary source and
+    fall back to fetch only when the inline payload is null. This avoids
+    the silent-curve bug the operator reported when the dashboard was
+    opened by double-click."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    # Inline path present.
+    assert "Array.isArray(row.history)" in body, (
+        "JS must check row.history before the fetch fallback"
+    )
+    # The renderCurves call on the inline path must run before the fetch
+    # plumbing — find both, assert ordering.
+    inline_idx = body.find("Array.isArray(row.history)")
+    fetch_idx = body.find("HISTORY_PENDING.set(tag, p);")
+    assert inline_idx > 0 and fetch_idx > 0
+    assert inline_idx < fetch_idx, (
+        "inline path must be evaluated before the fetch fallback in openCurvesDrawer"
+    )
+    print("OK [history-inline-first] -- drawer prefers row.history over fetch.")
+
+
 def _check_image_quality_renders_under_visual_core() -> None:
     """PSNR/SSIM (US-002): the dashboard JS must render a `.visual-core-quality`
     span DIRECTLY under the thumbnail image in `visualCoreHtml(row)`. The CSS
@@ -385,6 +412,7 @@ def main() -> int:
     _check_curves_drawer_lazy_loaded()
     _check_thumbs_dir_back_compat()
     _check_history_fetch_uses_parent_relative_path()
+    _check_curves_drawer_prefers_inline_history()
     _check_image_quality_renders_under_visual_core()
     print("\nAll dashboard scaffold checks passed.")
     return 0

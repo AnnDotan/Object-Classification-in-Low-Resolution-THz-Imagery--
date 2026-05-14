@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-14T19:25:39+00:00",
+  "generated_at": "2026-05-14T19:56:03+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -31,7 +31,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L1_densenet121_mnist",
@@ -62,7 +63,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L1_resnet50_cifar10",
@@ -93,7 +95,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L1_resnet50_mnist",
@@ -124,7 +127,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L1_transnext_tiny_cifar10",
@@ -155,7 +159,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L1_transnext_tiny_mnist",
@@ -186,7 +191,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_densenet121_cifar10",
@@ -217,7 +223,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_densenet121_mnist",
@@ -248,7 +255,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_resnet50_cifar10",
@@ -279,7 +287,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_resnet50_mnist",
@@ -310,7 +319,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_transnext_tiny_cifar10",
@@ -341,7 +351,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L2_transnext_tiny_mnist",
@@ -372,7 +383,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_densenet121_cifar10",
@@ -403,7 +415,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_densenet121_mnist",
@@ -434,7 +447,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_resnet50_cifar10",
@@ -465,7 +479,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_resnet50_mnist",
@@ -496,7 +511,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_transnext_tiny_cifar10",
@@ -527,7 +543,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L3_transnext_tiny_mnist",
@@ -558,7 +575,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_densenet121_cifar10",
@@ -589,7 +607,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_densenet121_mnist",
@@ -620,7 +639,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_resnet50_cifar10",
@@ -651,7 +671,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_resnet50_mnist",
@@ -682,7 +703,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_transnext_tiny_cifar10",
@@ -713,7 +735,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L4_transnext_tiny_mnist",
@@ -744,7 +767,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_densenet121_cifar10",
@@ -775,7 +799,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_densenet121_mnist",
@@ -806,7 +831,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_resnet50_cifar10",
@@ -837,7 +863,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_resnet50_mnist",
@@ -868,7 +895,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_transnext_tiny_cifar10",
@@ -899,7 +927,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_B_L5_transnext_tiny_mnist",
@@ -930,7 +959,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_densenet121_cifar10",
@@ -961,7 +991,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_densenet121_mnist",
@@ -992,7 +1023,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_resnet50_cifar10",
@@ -1023,7 +1055,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_resnet50_mnist",
@@ -1054,7 +1087,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_transnext_tiny_cifar10",
@@ -1085,7 +1119,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_blur_transnext_tiny_mnist",
@@ -1116,7 +1151,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_densenet121_cifar10",
@@ -1147,7 +1183,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_densenet121_mnist",
@@ -1178,7 +1215,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_resnet50_cifar10",
@@ -1209,7 +1247,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_resnet50_mnist",
@@ -1240,7 +1279,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_transnext_tiny_cifar10",
@@ -1271,7 +1311,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_noise_transnext_tiny_mnist",
@@ -1302,7 +1343,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_densenet121_cifar10",
@@ -1333,7 +1375,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_densenet121_mnist",
@@ -1364,7 +1407,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_resnet50_cifar10",
@@ -1395,7 +1439,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_resnet50_mnist",
@@ -1426,7 +1471,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_transnext_tiny_cifar10",
@@ -1457,7 +1503,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_resolution_transnext_tiny_mnist",
@@ -1488,7 +1535,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_densenet121_cifar10",
@@ -1519,7 +1567,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_densenet121_mnist",
@@ -1550,7 +1599,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_resnet50_cifar10",
@@ -1581,7 +1631,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_resnet50_mnist",
@@ -1612,7 +1663,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_transnext_tiny_cifar10",
@@ -1643,7 +1695,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_salt_pepper_transnext_tiny_mnist",
@@ -1674,7 +1727,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_densenet121_cifar10",
@@ -1705,7 +1759,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_densenet121_mnist",
@@ -1736,7 +1791,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_resnet50_cifar10",
@@ -1767,7 +1823,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_resnet50_mnist",
@@ -1798,7 +1855,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_transnext_tiny_cifar10",
@@ -1829,7 +1887,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L1_saturation_transnext_tiny_mnist",
@@ -1860,7 +1919,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_densenet121_cifar10",
@@ -1891,7 +1951,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_densenet121_mnist",
@@ -1922,7 +1983,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_resnet50_cifar10",
@@ -1953,7 +2015,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_resnet50_mnist",
@@ -1984,7 +2047,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_transnext_tiny_cifar10",
@@ -2015,7 +2079,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_blur_transnext_tiny_mnist",
@@ -2046,7 +2111,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_densenet121_cifar10",
@@ -2077,7 +2143,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_densenet121_mnist",
@@ -2108,7 +2175,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_resnet50_cifar10",
@@ -2139,7 +2207,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_resnet50_mnist",
@@ -2170,7 +2239,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_transnext_tiny_cifar10",
@@ -2201,7 +2271,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_noise_transnext_tiny_mnist",
@@ -2232,7 +2303,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_densenet121_cifar10",
@@ -2263,7 +2335,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_densenet121_mnist",
@@ -2294,7 +2367,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_resnet50_cifar10",
@@ -2325,7 +2399,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_resnet50_mnist",
@@ -2356,7 +2431,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_transnext_tiny_cifar10",
@@ -2387,7 +2463,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_resolution_transnext_tiny_mnist",
@@ -2418,7 +2495,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_densenet121_cifar10",
@@ -2449,7 +2527,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_densenet121_mnist",
@@ -2480,7 +2559,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_resnet50_cifar10",
@@ -2511,7 +2591,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_resnet50_mnist",
@@ -2542,7 +2623,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_transnext_tiny_cifar10",
@@ -2573,7 +2655,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_salt_pepper_transnext_tiny_mnist",
@@ -2604,7 +2687,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_densenet121_cifar10",
@@ -2635,7 +2719,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_densenet121_mnist",
@@ -2666,7 +2751,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_resnet50_cifar10",
@@ -2697,7 +2783,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_resnet50_mnist",
@@ -2728,7 +2815,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_transnext_tiny_cifar10",
@@ -2759,7 +2847,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L2_saturation_transnext_tiny_mnist",
@@ -2790,7 +2879,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_densenet121_cifar10",
@@ -2821,7 +2911,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_densenet121_mnist",
@@ -2852,7 +2943,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_resnet50_cifar10",
@@ -2883,7 +2975,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_resnet50_mnist",
@@ -2914,7 +3007,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_transnext_tiny_cifar10",
@@ -2945,7 +3039,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_blur_transnext_tiny_mnist",
@@ -2976,7 +3071,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_densenet121_cifar10",
@@ -3007,7 +3103,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_densenet121_mnist",
@@ -3038,7 +3135,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_resnet50_cifar10",
@@ -3069,7 +3167,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_resnet50_mnist",
@@ -3100,7 +3199,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_transnext_tiny_cifar10",
@@ -3131,7 +3231,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_noise_transnext_tiny_mnist",
@@ -3162,7 +3263,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_densenet121_cifar10",
@@ -3193,7 +3295,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_densenet121_mnist",
@@ -3224,7 +3327,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_resnet50_cifar10",
@@ -3255,7 +3359,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_resnet50_mnist",
@@ -3286,7 +3391,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_transnext_tiny_cifar10",
@@ -3317,7 +3423,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_resolution_transnext_tiny_mnist",
@@ -3348,7 +3455,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_densenet121_cifar10",
@@ -3379,7 +3487,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_densenet121_mnist",
@@ -3410,7 +3519,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_resnet50_cifar10",
@@ -3441,7 +3551,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_resnet50_mnist",
@@ -3472,7 +3583,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_transnext_tiny_cifar10",
@@ -3503,7 +3615,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_salt_pepper_transnext_tiny_mnist",
@@ -3534,7 +3647,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_densenet121_cifar10",
@@ -3565,7 +3679,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_densenet121_mnist",
@@ -3596,7 +3711,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_resnet50_cifar10",
@@ -3627,7 +3743,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_resnet50_mnist",
@@ -3658,7 +3775,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_transnext_tiny_cifar10",
@@ -3689,7 +3807,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L3_saturation_transnext_tiny_mnist",
@@ -3720,7 +3839,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_densenet121_cifar10",
@@ -3751,7 +3871,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_densenet121_mnist",
@@ -3782,7 +3903,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_resnet50_cifar10",
@@ -3813,7 +3935,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_resnet50_mnist",
@@ -3844,7 +3967,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_transnext_tiny_cifar10",
@@ -3875,7 +3999,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_blur_transnext_tiny_mnist",
@@ -3906,7 +4031,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_densenet121_cifar10",
@@ -3937,7 +4063,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_densenet121_mnist",
@@ -3968,7 +4095,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_resnet50_cifar10",
@@ -3999,7 +4127,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_resnet50_mnist",
@@ -4030,7 +4159,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_transnext_tiny_cifar10",
@@ -4061,7 +4191,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_noise_transnext_tiny_mnist",
@@ -4092,7 +4223,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_densenet121_cifar10",
@@ -4123,7 +4255,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_densenet121_mnist",
@@ -4154,7 +4287,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_resnet50_cifar10",
@@ -4185,7 +4319,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_resnet50_mnist",
@@ -4216,7 +4351,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_transnext_tiny_cifar10",
@@ -4247,7 +4383,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_resolution_transnext_tiny_mnist",
@@ -4278,7 +4415,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_densenet121_cifar10",
@@ -4309,7 +4447,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_densenet121_mnist",
@@ -4340,7 +4479,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_resnet50_cifar10",
@@ -4371,7 +4511,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_resnet50_mnist",
@@ -4402,7 +4543,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_transnext_tiny_cifar10",
@@ -4433,7 +4575,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_salt_pepper_transnext_tiny_mnist",
@@ -4464,7 +4607,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_densenet121_cifar10",
@@ -4495,7 +4639,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_densenet121_mnist",
@@ -4526,7 +4671,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_resnet50_cifar10",
@@ -4557,7 +4703,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_resnet50_mnist",
@@ -4588,7 +4735,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_transnext_tiny_cifar10",
@@ -4619,7 +4767,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L4_saturation_transnext_tiny_mnist",
@@ -4650,7 +4799,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_densenet121_cifar10",
@@ -4681,7 +4831,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_densenet121_mnist",
@@ -4712,7 +4863,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_resnet50_cifar10",
@@ -4743,7 +4895,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_resnet50_mnist",
@@ -4774,7 +4927,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_transnext_tiny_cifar10",
@@ -4805,7 +4959,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_blur_transnext_tiny_mnist",
@@ -4836,7 +4991,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_densenet121_cifar10",
@@ -4867,7 +5023,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_densenet121_mnist",
@@ -4898,7 +5055,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_resnet50_cifar10",
@@ -4929,7 +5087,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_resnet50_mnist",
@@ -4960,7 +5119,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_transnext_tiny_cifar10",
@@ -4991,7 +5151,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_noise_transnext_tiny_mnist",
@@ -5022,7 +5183,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_densenet121_cifar10",
@@ -5053,7 +5215,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_densenet121_mnist",
@@ -5084,7 +5247,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_resnet50_cifar10",
@@ -5115,7 +5279,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_resnet50_mnist",
@@ -5146,7 +5311,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_transnext_tiny_cifar10",
@@ -5177,7 +5343,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_resolution_transnext_tiny_mnist",
@@ -5208,7 +5375,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_densenet121_cifar10",
@@ -5239,7 +5407,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_densenet121_mnist",
@@ -5270,7 +5439,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_resnet50_cifar10",
@@ -5301,7 +5471,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_resnet50_mnist",
@@ -5332,7 +5503,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_transnext_tiny_cifar10",
@@ -5363,7 +5535,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_salt_pepper_transnext_tiny_mnist",
@@ -5394,7 +5567,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_densenet121_cifar10",
@@ -5425,7 +5599,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_densenet121_mnist",
@@ -5456,7 +5631,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_resnet50_cifar10",
@@ -5487,7 +5663,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_resnet50_mnist",
@@ -5518,7 +5695,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_transnext_tiny_cifar10",
@@ -5549,7 +5727,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_C_L5_saturation_transnext_tiny_mnist",
@@ -5580,7 +5759,8 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": false,
+      "history": null
     },
     {
       "tag": "final_clean_densenet121_cifar10",
@@ -5611,7 +5791,128 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": true
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 0.7977069020271301,
+          "train_acc": null,
+          "val_acc": 0.8902000188827515
+        },
+        {
+          "epoch": 2,
+          "train_loss": 1.2816559076309204,
+          "val_loss": 0.7030505537986755,
+          "train_acc": 0.704200029373169,
+          "val_acc": 0.920799970626831
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.7479041218757629,
+          "val_loss": 0.6766430139541626,
+          "train_acc": 0.9068999886512756,
+          "val_acc": 0.9323999881744385
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.6257173418998718,
+          "val_loss": 0.6723068952560425,
+          "train_acc": 0.9549000263214111,
+          "val_acc": 0.9344000220298767
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.5718919634819031,
+          "val_loss": 0.6728305220603943,
+          "train_acc": 0.9789000153541565,
+          "val_acc": 0.9348000288009644
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.5530704855918884,
+          "val_loss": 0.6733776926994324,
+          "train_acc": 0.9861000180244446,
+          "val_acc": 0.9336000084877014
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.5450415015220642,
+          "val_loss": 0.6744559407234192,
+          "train_acc": 0.9866999983787537,
+          "val_acc": 0.9355999827384949
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.5319163203239441,
+          "val_loss": 0.6873615980148315,
+          "train_acc": 0.9922000169754028,
+          "val_acc": 0.9283999800682068
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.5264660716056824,
+          "val_loss": 0.6874757409095764,
+          "train_acc": 0.9923999905586243,
+          "val_acc": 0.9326000213623047
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.5247001647949219,
+          "val_loss": 0.699326753616333,
+          "train_acc": 0.9940000176429749,
+          "val_acc": 0.9261999726295471
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.5210263729095459,
+          "val_loss": 0.7058225870132446,
+          "train_acc": 0.9934999942779541,
+          "val_acc": 0.9254000186920166
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.5150706768035889,
+          "val_loss": 0.7022911906242371,
+          "train_acc": 0.9965999722480774,
+          "val_acc": 0.9297999739646912
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.514884889125824,
+          "val_loss": 0.7188513875007629,
+          "train_acc": 0.9958999752998352,
+          "val_acc": 0.921999990940094
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.5154798626899719,
+          "val_loss": 0.7141790390014648,
+          "train_acc": 0.995199978351593,
+          "val_acc": 0.9258000254631042
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.5155975222587585,
+          "val_loss": 0.7160425782203674,
+          "train_acc": 0.9944000244140625,
+          "val_acc": 0.9254000186920166
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.5151626467704773,
+          "val_loss": 0.7146660089492798,
+          "train_acc": 0.9954000115394592,
+          "val_acc": 0.9290000200271606
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.5113083124160767,
+          "val_loss": 0.7172995209693909,
+          "train_acc": 0.9962000250816345,
+          "val_acc": 0.9240000247955322
+        }
+      ]
     },
     {
       "tag": "final_clean_densenet121_mnist",
@@ -5642,7 +5943,212 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": true
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 0.5504661798477173,
+          "train_acc": null,
+          "val_acc": 0.9837999939918518
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.8451207876205444,
+          "val_loss": 0.5314648151397705,
+          "train_acc": 0.8930000066757202,
+          "val_acc": 0.9886000156402588
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.5471718907356262,
+          "val_loss": 0.5259913206100464,
+          "train_acc": 0.9861999750137329,
+          "val_acc": 0.9891999959945679
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.5278582572937012,
+          "val_loss": 0.5298972725868225,
+          "train_acc": 0.9916999936103821,
+          "val_acc": 0.9883999824523926
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.5170013904571533,
+          "val_loss": 0.5361964106559753,
+          "train_acc": 0.995199978351593,
+          "val_acc": 0.9855999946594238
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.5110859870910645,
+          "val_loss": 0.5303369164466858,
+          "train_acc": 0.9972000122070312,
+          "val_acc": 0.9890000224113464
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.5102680921554565,
+          "val_loss": 0.5246018171310425,
+          "train_acc": 0.9973999857902527,
+          "val_acc": 0.9909999966621399
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.5078762173652649,
+          "val_loss": 0.5275788307189941,
+          "train_acc": 0.9979000091552734,
+          "val_acc": 0.9891999959945679
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.5055217742919922,
+          "val_loss": 0.5282964706420898,
+          "train_acc": 0.9983000159263611,
+          "val_acc": 0.9905999898910522
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.5060584545135498,
+          "val_loss": 0.5327187776565552,
+          "train_acc": 0.9984999895095825,
+          "val_acc": 0.9879999756813049
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.5071899890899658,
+          "val_loss": 0.5260135531425476,
+          "train_acc": 0.9979000091552734,
+          "val_acc": 0.9909999966621399
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.5050188302993774,
+          "val_loss": 0.5379029512405396,
+          "train_acc": 0.9987000226974487,
+          "val_acc": 0.9864000082015991
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.5046733617782593,
+          "val_loss": 0.5274487733840942,
+          "train_acc": 0.9988999962806702,
+          "val_acc": 0.989799976348877
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.5065100193023682,
+          "val_loss": 0.5314048528671265,
+          "train_acc": 0.9977999925613403,
+          "val_acc": 0.9879999756813049
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.5045892000198364,
+          "val_loss": 0.5316568613052368,
+          "train_acc": 0.9987999796867371,
+          "val_acc": 0.9882000088691711
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.5076135993003845,
+          "val_loss": 0.526771068572998,
+          "train_acc": 0.9976999759674072,
+          "val_acc": 0.9901999831199646
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.5050813555717468,
+          "val_loss": 0.5227029919624329,
+          "train_acc": 0.9983000159263611,
+          "val_acc": 0.9911999702453613
+        },
+        {
+          "epoch": 18,
+          "train_loss": 0.5031321048736572,
+          "val_loss": 0.5345482230186462,
+          "train_acc": 0.9991999864578247,
+          "val_acc": 0.9878000020980835
+        },
+        {
+          "epoch": 19,
+          "train_loss": 0.5025234818458557,
+          "val_loss": 0.5175862908363342,
+          "train_acc": 0.9991999864578247,
+          "val_acc": 0.9929999709129333
+        },
+        {
+          "epoch": 20,
+          "train_loss": 0.5032224655151367,
+          "val_loss": 0.5214297771453857,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.9922000169754028
+        },
+        {
+          "epoch": 21,
+          "train_loss": 0.5018925666809082,
+          "val_loss": 0.5211241841316223,
+          "train_acc": 0.9995999932289124,
+          "val_acc": 0.9926000237464905
+        },
+        {
+          "epoch": 22,
+          "train_loss": 0.5007155537605286,
+          "val_loss": 0.5262535810470581,
+          "train_acc": 1.0,
+          "val_acc": 0.9901999831199646
+        },
+        {
+          "epoch": 23,
+          "train_loss": 0.5008999705314636,
+          "val_loss": 0.538003146648407,
+          "train_acc": 0.9998999834060669,
+          "val_acc": 0.9855999946594238
+        },
+        {
+          "epoch": 24,
+          "train_loss": 0.5051513314247131,
+          "val_loss": 0.5313913822174072,
+          "train_acc": 0.998199999332428,
+          "val_acc": 0.9890000224113464
+        },
+        {
+          "epoch": 25,
+          "train_loss": 0.5051973462104797,
+          "val_loss": 0.5402186512947083,
+          "train_acc": 0.9980999827384949,
+          "val_acc": 0.9861999750137329
+        },
+        {
+          "epoch": 26,
+          "train_loss": 0.5035509467124939,
+          "val_loss": 0.5317611694335938,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.9883999824523926
+        },
+        {
+          "epoch": 27,
+          "train_loss": 0.5024769306182861,
+          "val_loss": 0.5251539349555969,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9911999702453613
+        },
+        {
+          "epoch": 28,
+          "train_loss": 0.5020217895507812,
+          "val_loss": 0.5247068405151367,
+          "train_acc": 0.9994000196456909,
+          "val_acc": 0.9908000230789185
+        },
+        {
+          "epoch": 29,
+          "train_loss": 0.5010496377944946,
+          "val_loss": 0.5241022706031799,
+          "train_acc": 0.9998999834060669,
+          "val_acc": 0.9909999966621399
+        }
+      ]
     },
     {
       "tag": "final_clean_resnet50_cifar10",
@@ -5673,7 +6179,170 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": true
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 1.9019968509674072,
+          "train_acc": null,
+          "val_acc": 0.7103999853134155
+        },
+        {
+          "epoch": 2,
+          "train_loss": 2.1711678504943848,
+          "val_loss": 0.7934616208076477,
+          "train_acc": 0.43160000443458557,
+          "val_acc": 0.894599974155426
+        },
+        {
+          "epoch": 3,
+          "train_loss": 1.1958307027816772,
+          "val_loss": 0.689453125,
+          "train_acc": 0.8051999807357788,
+          "val_acc": 0.9318000078201294
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.7539175152778625,
+          "val_loss": 0.6594400405883789,
+          "train_acc": 0.9014999866485596,
+          "val_acc": 0.9387999773025513
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.6376059651374817,
+          "val_loss": 0.64155513048172,
+          "train_acc": 0.9483000040054321,
+          "val_acc": 0.946399986743927
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.5899003148078918,
+          "val_loss": 0.6353176236152649,
+          "train_acc": 0.9668999910354614,
+          "val_acc": 0.9452000260353088
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.5599528551101685,
+          "val_loss": 0.6367002129554749,
+          "train_acc": 0.9811000227928162,
+          "val_acc": 0.9466000199317932
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.539871096611023,
+          "val_loss": 0.6374715566635132,
+          "train_acc": 0.9872999787330627,
+          "val_acc": 0.9462000131607056
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.5298568606376648,
+          "val_loss": 0.642870306968689,
+          "train_acc": 0.9911999702453613,
+          "val_acc": 0.9423999786376953
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.5213963389396667,
+          "val_loss": 0.6380214095115662,
+          "train_acc": 0.9945999979972839,
+          "val_acc": 0.9458000063896179
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.5163111686706543,
+          "val_loss": 0.6337876319885254,
+          "train_acc": 0.9962000250816345,
+          "val_acc": 0.9466000199317932
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.5137006044387817,
+          "val_loss": 0.6475790739059448,
+          "train_acc": 0.9973000288009644,
+          "val_acc": 0.9422000050544739
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.5102503299713135,
+          "val_loss": 0.628725528717041,
+          "train_acc": 0.998199999332428,
+          "val_acc": 0.9517999887466431
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.5100700855255127,
+          "val_loss": 0.6348675489425659,
+          "train_acc": 0.9980000257492065,
+          "val_acc": 0.9467999935150146
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.5087276101112366,
+          "val_loss": 0.6312509179115295,
+          "train_acc": 0.9988999962806702,
+          "val_acc": 0.9485999941825867
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.5078306198120117,
+          "val_loss": 0.6350468397140503,
+          "train_acc": 0.998199999332428,
+          "val_acc": 0.9477999806404114
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.5078997015953064,
+          "val_loss": 0.6318324208259583,
+          "train_acc": 0.9980999827384949,
+          "val_acc": 0.9476000070571899
+        },
+        {
+          "epoch": 18,
+          "train_loss": 0.505601167678833,
+          "val_loss": 0.6371947526931763,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.9480000138282776
+        },
+        {
+          "epoch": 19,
+          "train_loss": 0.5053544640541077,
+          "val_loss": 0.6368594765663147,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.949400007724762
+        },
+        {
+          "epoch": 20,
+          "train_loss": 0.5040257573127747,
+          "val_loss": 0.6400709748268127,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9484000205993652
+        },
+        {
+          "epoch": 21,
+          "train_loss": 0.5045566558837891,
+          "val_loss": 0.6443057656288147,
+          "train_acc": 0.9988999962806702,
+          "val_acc": 0.946399986743927
+        },
+        {
+          "epoch": 22,
+          "train_loss": 0.5047558546066284,
+          "val_loss": 0.6417463421821594,
+          "train_acc": 0.9987999796867371,
+          "val_acc": 0.9449999928474426
+        },
+        {
+          "epoch": 23,
+          "train_loss": 0.503429651260376,
+          "val_loss": 0.6410490870475769,
+          "train_acc": 0.9997000098228455,
+          "val_acc": 0.9498000144958496
+        }
+      ]
     },
     {
       "tag": "final_clean_resnet50_mnist",
@@ -5704,13 +6373,300 @@
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": true
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 1.8389225006103516,
+          "train_acc": null,
+          "val_acc": 0.6859999895095825
+        },
+        {
+          "epoch": 2,
+          "train_loss": 2.076871156692505,
+          "val_loss": 0.6619433760643005,
+          "train_acc": 0.421099990606308,
+          "val_acc": 0.9628000259399414
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.9247540831565857,
+          "val_loss": 0.5733792185783386,
+          "train_acc": 0.896399974822998,
+          "val_acc": 0.9814000129699707
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.5725249648094177,
+          "val_loss": 0.5507456064224243,
+          "train_acc": 0.9751999974250793,
+          "val_acc": 0.9850000143051147
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.536751925945282,
+          "val_loss": 0.5381671190261841,
+          "train_acc": 0.9889000058174133,
+          "val_acc": 0.9864000082015991
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.5196887850761414,
+          "val_loss": 0.5280198454856873,
+          "train_acc": 0.9937999844551086,
+          "val_acc": 0.9890000224113464
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.5121517777442932,
+          "val_loss": 0.5262854099273682,
+          "train_acc": 0.9962000250816345,
+          "val_acc": 0.9900000095367432
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.5067881345748901,
+          "val_loss": 0.5266150236129761,
+          "train_acc": 0.9987000226974487,
+          "val_acc": 0.9904000163078308
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.5047744512557983,
+          "val_loss": 0.5311523675918579,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.9890000224113464
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.5041072964668274,
+          "val_loss": 0.5235736966133118,
+          "train_acc": 0.9993000030517578,
+          "val_acc": 0.9909999966621399
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.5032156705856323,
+          "val_loss": 0.5237475037574768,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9914000034332275
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.5027061104774475,
+          "val_loss": 0.5247809290885925,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9905999898910522
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.5020081996917725,
+          "val_loss": 0.5362991094589233,
+          "train_acc": 0.9998999834060669,
+          "val_acc": 0.9865999817848206
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.5020543932914734,
+          "val_loss": 0.5336964130401611,
+          "train_acc": 0.9995999932289124,
+          "val_acc": 0.9873999953269958
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.5023924112319946,
+          "val_loss": 0.5298095345497131,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9883999824523926
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.5022072792053223,
+          "val_loss": 0.5288105010986328,
+          "train_acc": 0.9994999766349792,
+          "val_acc": 0.9887999892234802
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.5012302994728088,
+          "val_loss": 0.5319711565971375,
+          "train_acc": 1.0,
+          "val_acc": 0.9878000020980835
+        },
+        {
+          "epoch": 18,
+          "train_loss": 0.5020497441291809,
+          "val_loss": 0.5271174311637878,
+          "train_acc": 0.9995999932289124,
+          "val_acc": 0.9904000163078308
+        },
+        {
+          "epoch": 19,
+          "train_loss": 0.502260148525238,
+          "val_loss": 0.5367358922958374,
+          "train_acc": 0.9995999932289124,
+          "val_acc": 0.9869999885559082
+        },
+        {
+          "epoch": 20,
+          "train_loss": 0.5013337731361389,
+          "val_loss": 0.531018853187561,
+          "train_acc": 0.9998999834060669,
+          "val_acc": 0.9883999824523926
+        },
+        {
+          "epoch": 21,
+          "train_loss": 0.5008491277694702,
+          "val_loss": 0.5239207148551941,
+          "train_acc": 1.0,
+          "val_acc": 0.9909999966621399
+        }
+      ]
     },
     {
       "tag": "final_clean_transnext_tiny_cifar10",
       "phase": "A",
       "model": "transnext_tiny",
       "dataset": "cifar10",
+      "level": null,
+      "axis": null,
+      "params": {
+        "low_res": 224,
+        "blur_kernel": 1,
+        "blur_sigma": 0.0,
+        "noise_std": 0.0,
+        "salt_pepper": 0.0,
+        "saturation": 1.0
+      },
+      "status": "Complete",
+      "val_acc": 0.9764000177383423,
+      "val_loss": 0.23012644052505493,
+      "epochs_run": 15,
+      "runtime_s": 2297.375,
+      "started_at": "2026-05-14T19:11:38+00:00",
+      "finished_at": "2026-05-14T19:49:55+00:00",
+      "quarantined": false,
+      "quarantine_reason": null,
+      "visual_core": "dashboard_thumbs/final_clean_transnext_tiny_cifar10.png",
+      "psnr_mean": null,
+      "psnr_std": null,
+      "ssim_mean": null,
+      "ssim_std": null,
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 0.16789701581001282,
+          "train_acc": null,
+          "val_acc": 0.9693999886512756
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.2189517766237259,
+          "val_loss": 0.1631089597940445,
+          "train_acc": 0.9563000202178955,
+          "val_acc": 0.9733999967575073
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.09653586149215698,
+          "val_loss": 0.16902148723602295,
+          "train_acc": 0.9912999868392944,
+          "val_acc": 0.973800003528595
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.07415345311164856,
+          "val_loss": 0.1681467443704605,
+          "train_acc": 0.9976999759674072,
+          "val_acc": 0.9760000109672546
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.06994312256574631,
+          "val_loss": 0.17697550356388092,
+          "train_acc": 0.9991000294685364,
+          "val_acc": 0.9764000177383423
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.07052209973335266,
+          "val_loss": 0.17684702575206757,
+          "train_acc": 0.9987999796867371,
+          "val_acc": 0.9753999710083008
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.07022557407617569,
+          "val_loss": 0.2690556049346924,
+          "train_acc": 0.9993000030517578,
+          "val_acc": 0.9656000137329102
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.07362419366836548,
+          "val_loss": 0.1844906210899353,
+          "train_acc": 0.9984999895095825,
+          "val_acc": 0.9746000170707703
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.07431495189666748,
+          "val_loss": 0.2076801061630249,
+          "train_acc": 0.9983999729156494,
+          "val_acc": 0.9714000225067139
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.07524296641349792,
+          "val_loss": 0.19121649861335754,
+          "train_acc": 0.9983000159263611,
+          "val_acc": 0.9764000177383423
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.07465893030166626,
+          "val_loss": 0.20129424333572388,
+          "train_acc": 0.9977999925613403,
+          "val_acc": 0.972000002861023
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.0732688158750534,
+          "val_loss": 0.18933700025081635,
+          "train_acc": 0.9986000061035156,
+          "val_acc": 0.9760000109672546
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.073273666203022,
+          "val_loss": 0.19262464344501495,
+          "train_acc": 0.9983999729156494,
+          "val_acc": 0.9747999906539917
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.06812682002782822,
+          "val_loss": 0.20532268285751343,
+          "train_acc": 0.9997000098228455,
+          "val_acc": 0.9732000231742859
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.06955048441886902,
+          "val_loss": 0.23012644052505493,
+          "train_acc": 0.9995999932289124,
+          "val_acc": 0.9675999879837036
+        }
+      ]
+    },
+    {
+      "tag": "final_clean_transnext_tiny_mnist",
+      "phase": "A",
+      "model": "transnext_tiny",
+      "dataset": "mnist",
       "level": null,
       "axis": null,
       "params": {
@@ -5730,50 +6686,35 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_clean_transnext_tiny_cifar10.png",
-      "psnr_mean": null,
-      "psnr_std": null,
-      "ssim_mean": null,
-      "ssim_std": null,
-      "has_history": true
-    },
-    {
-      "tag": "final_clean_transnext_tiny_mnist",
-      "phase": "A",
-      "model": "transnext_tiny",
-      "dataset": "mnist",
-      "level": null,
-      "axis": null,
-      "params": {
-        "low_res": 224,
-        "blur_kernel": 1,
-        "blur_sigma": 0.0,
-        "noise_std": 0.0,
-        "salt_pepper": 0.0,
-        "saturation": 1.0
-      },
-      "status": "Pending",
-      "val_acc": null,
-      "val_loss": null,
-      "epochs_run": null,
-      "runtime_s": null,
-      "started_at": null,
-      "finished_at": null,
-      "quarantined": false,
-      "quarantine_reason": null,
       "visual_core": "dashboard_thumbs/final_clean_transnext_tiny_mnist.png",
       "psnr_mean": null,
       "psnr_std": null,
       "ssim_mean": null,
       "ssim_std": null,
-      "has_history": false
+      "has_history": true,
+      "history": [
+        {
+          "epoch": 1,
+          "train_loss": null,
+          "val_loss": 0.2461022287607193,
+          "train_acc": null,
+          "val_acc": 0.9557999968528748
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.24904614686965942,
+          "val_loss": 0.1819588989019394,
+          "train_acc": 0.9563999772071838,
+          "val_acc": 0.9751999974250793
+        }
+      ]
     }
   ],
   "counts": {
     "total": 186,
-    "pending": 181,
+    "pending": 180,
     "running": 1,
-    "complete": 4,
+    "complete": 5,
     "failed": 0,
     "deferred": 0
   }

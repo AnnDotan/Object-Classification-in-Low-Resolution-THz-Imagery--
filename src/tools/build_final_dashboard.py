@@ -1145,12 +1145,29 @@ _JS = r"""
             return;
         }
 
+        // INLINE PATH (primary, file://-safe): the aggregator embeds the
+        // history list directly onto the row at build time. Every modern
+        // browser blocks fetch() of file:// cross-origin local files, so
+        // any dashboard opened via double-click MUST use the inline data —
+        // there is no second chance.
+        if (Array.isArray(row.history)) {
+            const doc = { history: row.history };
+            HISTORY_CACHE.set(tag, doc);
+            renderCurves(bodyEl, doc);
+            return;
+        }
+
         // Cached: instant re-render, no network.
         if (HISTORY_CACHE.has(tag)) {
             renderCurves(bodyEl, HISTORY_CACHE.get(tag));
             return;
         }
 
+        // FETCH FALLBACK (HTTP-served dashboards only): used when the
+        // aggregator has not yet been rebuilt since the cell finished
+        // training, so the row.history field is still null. Triggers a
+        // file:// security error in offline mode — that error path is
+        // surfaced to the user in the catch() below.
         bodyEl.innerHTML = '<div class="placeholder">Loading learning curves…</div>';
 
         if (!HISTORY_PENDING.has(tag)) {
@@ -1180,7 +1197,9 @@ _JS = r"""
             .catch(function (err) {
                 if (titleEl.textContent === tag) {
                     bodyEl.innerHTML =
-                        '<div class="placeholder">Failed to load history: ' +
+                        '<div class="placeholder">Curves not yet inlined — rebuild the dashboard (`python scripts/refresh_trackers.py --cell ' +
+                        escapeHtml(tag) +
+                        '`) so the history embeds into Final_Exp.json. File:// blocks fetch() of local files. Underlying error: ' +
                         escapeHtml(err.message) + '</div>';
                 }
             })

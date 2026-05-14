@@ -92,6 +92,32 @@ def _has_history(tag: str, runs_root: Path) -> bool:
     return (runs_root / tag / "history.json").exists()
 
 
+def _read_history(tag: str, runs_root: Path) -> Optional[list]:
+    """Read and return the learning-curve series for `tag` from
+    `runs/final/<tag>/history.json`, or None when the file is missing or
+    unparseable. The aggregator embeds this on the row so the dashboard
+    drawer can render learning curves under `file://` (where fetch() of
+    cross-origin local files is blocked by every modern browser).
+
+    Only the inner list-of-epoch-dicts is returned — the surrounding
+    `{schema_version, tag, history: [...]}` wrapper is shed at this
+    boundary to keep the inline payload as tight as possible.
+    """
+    path = runs_root / tag / "history.json"
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        hist = data.get("history")
+        return hist if isinstance(hist, list) else None
+    return None
+
+
 def _visual_core_for(tag: str, visual_dir: Optional[Path] = None) -> Optional[str]:
     """Return the dashboard-relative PNG path if it exists on disk, else None.
 
@@ -185,6 +211,9 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         "ssim_mean": ssim_mean,
         "ssim_std": ssim_std,
         "has_history": _has_history(meta.tag, runs_root),
+        # Inline learning-curve series — embedded so the drawer renders
+        # under file:// without a fetch(). None on cells with no history.json.
+        "history": _read_history(meta.tag, runs_root),
     }
 
 

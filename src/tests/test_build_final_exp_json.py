@@ -281,6 +281,42 @@ def _check_visual_core_lookup_does_not_open_png() -> None:
     print(f"OK [visual-core-privacy] -- {len(opened)} open() calls, none touched a PNG.")
 
 
+def _check_history_inlined_onto_row() -> None:
+    """The drawer renders learning curves under `file://`, where fetch() of
+    cross-origin local files is blocked by every modern browser. The
+    aggregator therefore must embed the parsed history.json list directly
+    onto the row so the JS can render without a network call.
+    Cells without a history.json keep `history=None` so the inline
+    contract degrades cleanly."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        target_tag = "final_clean_resnet50_cifar10"
+        (runs_root / target_tag).mkdir(parents=True)
+        history_payload = [
+            {"epoch": 1, "train_loss": 1.0, "val_loss": 1.1,
+             "train_acc": 0.42, "val_acc": 0.40},
+            {"epoch": 2, "train_loss": 0.5, "val_loss": 0.6,
+             "train_acc": 0.78, "val_acc": 0.72},
+        ]
+        (runs_root / target_tag / "history.json").write_text(
+            json.dumps({"schema_version": 1, "tag": target_tag,
+                        "history": history_payload}),
+            encoding="utf-8",
+        )
+        from src.tools.build_final_exp_json import build_doc
+        doc = build_doc(runs_root=runs_root)
+
+    target = next(r for r in doc["rows"] if r["tag"] == target_tag)
+    assert target["history"] == history_payload, target.get("history")
+    # All other rows must keep history=None — the inline payload is
+    # bounded by the number of completed cells.
+    nulls = [r for r in doc["rows"]
+             if r["tag"] != target_tag and r["history"] is not None]
+    assert not nulls, f"unexpected non-null history rows: {[r['tag'] for r in nulls[:3]]}"
+    print("OK [history-inlined] -- aggregator embeds history.json list onto the row.")
+
+
 def _check_image_quality_fields_round_trip() -> None:
     """PSNR/SSIM (US-002): aggregator copies `psnr_mean`/`psnr_std`/`ssim_mean`/
     `ssim_std` from `runs/final/<tag>/image_quality.json` onto the row so the
@@ -496,6 +532,7 @@ def main() -> int:
     _check_doc_level_fields()
     _check_rows_sorted_by_tag()
     _check_has_history_field_round_trip()
+    _check_history_inlined_onto_row()
     _check_image_quality_fields_round_trip()
     _check_quarantine_override()
     _check_visual_core_field_round_trip()

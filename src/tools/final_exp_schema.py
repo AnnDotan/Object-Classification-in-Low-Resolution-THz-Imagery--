@@ -83,6 +83,16 @@ class FinalExpRow(TypedDict):
     # whether clicking should attempt the lazy fetch. Aggregator never
     # opens the file; presence is checked via Path.exists().
     has_history: bool
+    # Inline learning-curve series, embedded directly into Final_Exp.json so
+    # the drawer can render under `file://` (where fetch() of cross-origin
+    # local files is blocked by every modern browser). Each entry mirrors
+    # the HistoryJSONCallback schema:
+    #     {"epoch": int, "train_loss": float|None, "val_loss": float|None,
+    #      "train_acc": float|None, "val_acc": float|None}
+    # Null when the cell has no history.json. The dashboard JS prefers
+    # `row.history` if present and falls back to fetch() only when it is
+    # null (HTTP-served live updates).
+    history: list[dict] | None
 
 
 class CountsDict(TypedDict):
