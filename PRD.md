@@ -273,7 +273,7 @@ Activation rules:
 
 ---
 
-### US-002: transnext_tiny Optuna tune (legacy US-045 — retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)
+### US-002: transnext_tiny Optuna tune (legacy US-045 — retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day) — **CLOSED 2026-05-14**
 
 **Description:** Run Stage 1 (20 trials, 5-epoch proxy) + Stage 1.5 (top-3 at 60-epoch production) for `transnext_tiny` × {cifar10, mnist}. Uses `artifacts/priors/transnext_tiny.json`. cifar10 pair first, mnist second.
 
@@ -282,11 +282,11 @@ The variant was swapped twice on 2026-05-14: `transnext_base` (~89M) → `transn
 **Owner agents:** OPTIMIZER (validates priors against `papers/TransNeXt.pdf` if Stage 1 best blows the decade bound), EXECUTOR, VALIDATOR.
 
 **Acceptance Criteria:**
-- [ ] Two winner JSONs: `artifacts/best_hparams/transnext_tiny_cifar10.json`, `…_mnist.json`. Same field set as US-001.
-- [ ] `effective_batch_size` populated by the bootstrap probe. Peak VRAM at batch=32 / 224×224 for TransNeXt-tiny is ~7 GB, so the OOM-fallback (batch=16 + grad_accum=2 → effective_batch_size=32) is very unlikely to fire on the 12 GB RTX 5070; still record whichever path succeeds.
-- [ ] No mid-trial NaN/Inf in the Optuna DB (visible via `optuna.load_study(...).trials`).
-- [ ] `progress.txt`: one line per pair (`US-002: transnext_tiny_<d> winner frozen (best_value=<x>, trials=<n>)`).
-- [ ] Typecheck passes; torch-free pytest green.
+- [x] Two winner JSONs: `artifacts/best_hparams/transnext_tiny_cifar10.json`, `…_mnist.json`. Same field set as US-001. *(cifar10 winner=trial#16 best_value=0.7336 — fast-rank-2→full-rank-1 swap; mnist winner=trial#12 best_value=0.9176 — no re-ranking)*
+- [x] `effective_batch_size` populated by the bootstrap probe. Peak VRAM at batch=32 / 224×224 for TransNeXt-tiny is ~7 GB, so the OOM-fallback (batch=16 + grad_accum=2 → effective_batch_size=32) is very unlikely to fire on the 12 GB RTX 5070; still record whichever path succeeds. *(both pairs: effective_batch_size=32; OOM fallback did not fire)*
+- [x] No mid-trial NaN/Inf in the Optuna DB (visible via `optuna.load_study(...).trials`). *(both studies: 20/20 complete, 0 failed, 0 pruned)*
+- [x] `progress.txt`: one line per pair (`US-002: transnext_tiny_<d> winner frozen (best_value=<x>, trials=<n>)`).
+- [x] Typecheck passes; torch-free pytest green. *(pytest 21/21, mypy clean on cells.py + tune_all.py; pre-existing PyTorch-Lightning Literal-precision typing errors in lightning/* unchanged from baseline)*
 
 **Gate to US-005+:** with US-001 mnist + US-002 both closed (and US-004 already closed), all 6 winner JSONs carry `validated_at_full_convergence: true` and the production runs are unblocked.
 

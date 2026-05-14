@@ -340,6 +340,60 @@ US-016 CLOSED 2026-05-14: TransNeXt small→tiny variant swap landed.
   with the tracker pathspec only — no weight binaries, no per-cell
   artifacts). No git push (deferred to US-015 phase-boundary pushes).
 
+US-002: transnext_tiny_cifar10 winner frozen (best_value=0.7336, trials=20)
+US-002: transnext_tiny_mnist winner frozen (best_value=0.9176, trials=20)
+
+US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
+- Stage 1 cifar10: 20/20 trials in 49 min wallclock (median 2.4 min/trial
+  vs the 57.8 min/trial of the abandoned transnext_small attempt — the
+  24× speedup explains why US-016 was the right call). Fast top-3: #18
+  (0.6610) > #17 (0.6430) > #16 (0.6260). Stage 1 winner JSON written
+  directly by tune_all.py.
+- Stage 1.5 cifar10: 3 trials × 60 epochs × 10K subset × patience=10
+  took 3.5 wallclock-hours. **Fast→full re-ranking event**: trial #16
+  jumped from fast rank 2 (0.6260) to full rank 1 (0.7336) — exactly
+  the pattern Stage 1.5 exists to catch (same shape US-001 saw on
+  densenet121_cifar10 trial #10). Winner: trial #16,
+  full_val_acc=0.7336, hparams head_lr=2.90e-3 / backbone_lr=2.99e-5 /
+  weight_decay=0.346 / label_smoothing=0.0094 / warmup_epochs≈1.
+- Stage 1 mnist: 20/20 trials in 48 min wallclock (same 2.4 min/trial).
+  Fast top-3 clustered tight: #12 (0.9150) ≈ #13 (0.9150) ≈ #14 (0.9140).
+- Stage 1.5 mnist: 3.5 wallclock-hours. **No fast→full re-ranking**:
+  fast-rank-0 trial #12 stayed the winner at full convergence
+  (full_val_acc=0.9176 vs #13's 0.8952 and #14's 0.9086). Winner JSON
+  written.
+- All 6 winner JSONs at artifacts/best_hparams/ now carry
+  `validated_at_full_convergence: True`:
+    resnet50_cifar10:        best_value=0.5624
+    resnet50_mnist:          best_value=0.9190
+    densenet121_cifar10:     best_value=0.6024
+    densenet121_mnist:       best_value=0.9192
+    transnext_tiny_cifar10:  best_value=0.7336  ← highest cifar10 winner
+    transnext_tiny_mnist:    best_value=0.9176
+  **TransNeXt-tiny is the best architecture on cifar10** at our convergence
+  protocol (60ep × 10K × patience=10) despite the smallest param count
+  among the three TransNeXt variants we tried — vindicating the US-016
+  swap further. MNIST winners cluster at 0.917–0.919 across all three
+  models (dataset is too easy to differentiate).
+- effective_batch_size=32 for both tiny pairs (no OOM fallback fired —
+  consistent with the ~7 GB VRAM forecast).
+- priors_file_hash f677da2636a30062dc2c0134a6a6c421018c6998a5f1472b318d62a2fbbfef28
+  round-trips against tune_all.priors_file_hash("transnext_tiny").
+- No mid-trial NaN/Inf in the Optuna DB (`optuna.load_study(...).trials`
+  shows 0 failed / 0 pruned across both studies; 20/20 complete each).
+- progress.txt entries (above), PRD §8 US-002 acceptance boxes ticked.
+- Verification: `python tune_all.py --validate-only` → OK on all 3 priors;
+  pytest src/tests 21/21 ✓; mypy on cells.py clean.
+- US-002 unblocks US-005 (RALPH Loop Driver Framework — pure code, no
+  GPU). Once US-005 lands, US-006…US-014 (Phase A/B/C execution under
+  the 6 frozen winners) can proceed.
+- TIMING UPDATE: actual per-cell production wallclock measured at
+  ~70 min/cell for transnext_tiny at 60ep × 10K × patience=10. Revised
+  project estimate (vs the pre-US-016 worst-case 92–100 days): the full
+  186-cell campaign should fit in ~5–10 GPU-days. This is comfortably
+  inside the 2026-07-26 final deadline (73 days) and likely inside the
+  2026-05-31 poster window (17 days) too.
+
 ## Iteration 2 (2026-05-14) — US-002 Stage 1 cifar10 launched (Ralph cycle)
 - What was done: Operator authorized re-run via "repeat US-002". Launched
   `python tune_all.py --model transnext_small --dataset cifar10 --n-trials 20`

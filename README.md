@@ -45,7 +45,7 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | — | US-042 | TransNeXt @ 224×224 un-quarantine | ✅ closed |
 | — | US-043 | `resnet50` × {cifar10, mnist} Optuna tune (Stage 1 + 1.5) | ✅ closed |
 | **US-001** | US-044 | `densenet121` × {cifar10, mnist} Optuna tune | ✅ **closed 2026-05-14** |
-| **US-002** | US-045 | `transnext_tiny` × {cifar10, mnist} Optuna tune *(retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)* | ⏳ **pending** (priors mirrored to `transnext_tiny.json`; Stage 1 not yet started under the new variant) |
+| **US-002** | US-045 | `transnext_tiny` × {cifar10, mnist} Optuna tune *(retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)* | ✅ **closed 2026-05-14** (cifar10 winner trial #16, best_value=0.7336; mnist winner trial #12, best_value=0.9176; both `validated_at_full_convergence: true`; 24× speedup vs the abandoned small attempt — Stage 1 trial = 2.4 min vs 57.8 min) |
 | **US-003** | (new) | Phase C single-axis correction (inactive axes → identity) | ✅ **closed 2026-05-14** ([`docs/phase_c.md`](docs/phase_c.md)) |
 | **US-004** | (new) | TransNeXt base→small variant swap (in-place repo retargeting; matrix tags, priors, tests, docs) | ✅ **closed 2026-05-14** |
 | US-005 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests | ⏳ pending |
@@ -55,7 +55,7 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | US-015 | US-047 | End-of-campaign verification + 3 phase-boundary pushes | ⏳ pending |
 | **US-016** | (new) | TransNeXt small→tiny variant swap (capacity-match to ResNet50; ~310 GPU-h saved across the 62 TransNeXt rows; sunk: 10 trials of in-flight `transnext_small_cifar10_L3` orphaned in optuna_thz.db) | ✅ **closed 2026-05-14** |
 
-### Frozen artifacts (4 of 6 winner JSONs)
+### Frozen artifacts (6 of 6 winner JSONs)
 
 | `(model, dataset)` | Winner JSON | best_value | Notes |
 |---|---|---|---|
@@ -63,8 +63,8 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | `resnet50 × mnist` | `artifacts/best_hparams/resnet50_mnist.json` | 0.9190 | trial #2 |
 | `densenet121 × cifar10` | `artifacts/best_hparams/densenet121_cifar10.json` | 0.6024 | trial #10 (fast-rank-3 → full-rank-1 swap) |
 | `densenet121 × mnist` | `artifacts/best_hparams/densenet121_mnist.json` | 0.9192 | trial #2 (no re-ranking — trial #2 won at both fast and full) |
-| `transnext_tiny × cifar10` | — | — | **pending (US-002 — retargeted small→tiny by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)** |
-| `transnext_tiny × mnist` | — | — | **pending (US-002 — retargeted small→tiny by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)** |
+| `transnext_tiny × cifar10` | `artifacts/best_hparams/transnext_tiny_cifar10.json` | **0.7336** | trial #16 (fast-rank-2 → full-rank-1 swap at Stage 1.5) — **highest cifar10 winner across the 3 models** |
+| `transnext_tiny × mnist` | `artifacts/best_hparams/transnext_tiny_mnist.json` | 0.9176 | trial #12 (no re-ranking — fast and full both rank #12 first) |
 
 ### Recent scientific changes
 
