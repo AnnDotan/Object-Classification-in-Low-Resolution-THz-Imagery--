@@ -737,3 +737,83 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     (d) the progress.txt closure line + HALT (lines 419-420).
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
+
+## Iteration 8 (2026-05-15) — US-006 DESIGNER pass (Execution US Trend section)
+- What was done: ticked PRD line 418 — the DESIGNER deliverable for US-006.
+  Extended `src/tools/build_final_dashboard.py` with a collapsible
+  `<details class="us-trend-section" open>` between the stats-bar and the
+  tab-bar; populated by a new JS function `renderExecutionUsTrend(rows)`
+  that filters `state.rows` against an `EXECUTION_US_GROUPS` constant
+  (US-006…US-014 → `{phase, model, title}`). Each execution US that has at
+  least one Complete cell emits a card listing its cells (dataset · level
+  · best_val_acc), sorted clean → L1…L5 with dataset as tiebreak. The
+  call is wired into `ingest()` so the section refreshes on every poll
+  cycle. Currently surfaces 2 cards: US-006 (resnet50 phase A — 95.18%
+  / 99.14%) and US-008 (transnext_tiny phase A — 97.64% / 99.24%). The
+  US-007 densenet121 baselines are also Complete so its card shows too
+  (93.56% / 99.30%) — that's expected behavior since the section is
+  monotonic in completion, not in PRD US-closure order.
+- Files affected: modified `src/tools/build_final_dashboard.py` (+ ~95
+  lines: new CSS for `.us-trend-section`/`.us-trend-card`, new HTML
+  scaffold, new `renderExecutionUsTrend` + `renderExecutionUsTrendCard`
+  + `levelSortKey` JS helpers, one new line in `ingest()`); rebuilt
+  `artifacts/Final_Exp.html` (regenerates inline JSON snapshot, no
+  source-data drift); ticked PRD line 418 with inline evidence note;
+  this progress.txt entry. No GPU runs.
+- Validation:
+    - `python -m src.tools.build_final_dashboard` → "shell rendered
+      (A=6, B=30, C=150, total=186)" exit 0. The `python script.py`
+      form fails with `ModuleNotFoundError: No module named 'src'`
+      because the builder does not bootstrap `sys.path` like US-005's
+      driver does — invoke via `python -m` (matches the test fixture
+      in `test_dashboard.py`).
+    - `grep -c "us-trend-section\|renderExecutionUsTrend"` on the
+      built HTML = 17 hits — confirms the section + the JS are inlined.
+    - `python -m pytest src/tests -q` = 50 passed in 3.40 s ✓
+      (torch-free baseline preserved; `test_dashboard.py` covers the
+      dashboard build path and still green).
+    - `python -m mypy --explicit-package-bases src/tools/build_final_dashboard.py`
+      → "Success: no issues found in 1 source file" — no type drift.
+- Learnings for next cycles:
+  - Patterns: For DESIGNER passes that add a new dashboard panel, the
+    cleanest separation is: (a) static HTML scaffold + placeholder in
+    `_html_template`, (b) one CSS block at the bottom of `_CSS`,
+    (c) one render function in `_JS` + one call site in `ingest()`.
+    Keeps the change reviewable, the panel reactive to live polling,
+    and avoids any data-aware logic at template-render time (build
+    stays torch-free and fast).
+  - Patterns: When a panel needs a fixed catalog of execution USs
+    (US-006…US-014 / 9 entries here), define it as a JS constant
+    `EXECUTION_US_GROUPS` inside `_JS` rather than threading it from
+    Python through `_html_template`. The Python side stays
+    data-agnostic and the catalog evolves with the JS the operator
+    sees in browser devtools.
+  - Traps: `python src/tools/build_final_dashboard.py` (direct path
+    form) is rejected by the import system — the module references
+    `from src.experiments.cells import …` at top-level. Use the
+    `python -m src.tools.build_final_dashboard` form, or wire a
+    `sys.path` shim at the file top (US-005 `scripts/run_ralph_loop.py`
+    does this for scripts/* entry points; tools/* entry points have
+    historically been invoked via `-m`). Do NOT add a shim to
+    `build_final_dashboard.py` just to flatten the invocation — it
+    would diverge from the rest of `src/tools/*`.
+  - Traps: The Execution US Trend section is monotonic in
+    *completion*, not in PRD US-closure order. So once a previously
+    legacy-preserved baseline (e.g. US-007 densenet121 Phase A) is
+    Complete in `Final_Exp.json`, its card surfaces even though the
+    US-007 acceptance checklist has not closed. This is the right
+    semantics — the panel shows the campaign's actual progress, not
+    a PRD bookkeeping projection — but a reviewer expecting "only
+    US-006 cells" will see three Phase A cards at this moment. Note
+    is in the PRD line 418 evidence string.
+  - Helpful context: Remaining US-006 work after this iteration is
+    (a) the image_quality.json criterion conflict resolution at PRD
+    line 413 (needs operator decision — relax criterion text vs write
+    a PSNR=∞/SSIM=1.0 stub), (b) the VALIDATOR seed=43 re-run at PRD
+    line 415 (GPU-gated, ~9 min wallclock for resnet50_cifar10),
+    (c) the progress.txt closure line + HALT at PRD lines 419-420.
+    None of these can be ticked from a single non-GPU Ralph cycle.
+    The next non-GPU Ralph cycle could instead start US-007's
+    LIBRARIAN pass (`docs/phase_a.md` DenseNet121 subsection — the
+    stub created in Iteration 7 is the right insertion point) or
+    the US-008 LIBRARIAN/DESIGNER passes (analogous to US-006).

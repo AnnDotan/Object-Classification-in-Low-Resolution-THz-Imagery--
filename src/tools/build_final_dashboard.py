@@ -561,6 +561,73 @@ body {
 }
 .banner.visible { display: block; }
 .banner.warn { border-color: var(--orange); color: var(--orange); }
+
+/* Execution US Trend (US-006 line 418). Renders one card per closed
+   execution US (Phase A: 2 cells; Phase B: 10 cells; Phase C: 50 cells).
+   Each card lists the cells the US executed and their best_val_acc, sorted
+   level → ascending; the card is only emitted if ≥ 1 cell is Complete. */
+.us-trend-section {
+    margin: 0 24px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0;
+}
+.us-trend-section > summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-size: 0.95em;
+    color: var(--text);
+    list-style: none;
+    user-select: none;
+}
+.us-trend-section > summary::-webkit-details-marker { display: none; }
+.us-trend-section > summary::before {
+    content: '▸ ';
+    color: var(--text-dim);
+    display: inline-block;
+    width: 1em;
+    transition: transform 0.15s;
+}
+.us-trend-section[open] > summary::before { content: '▾ '; }
+.us-trend-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 4px 16px 14px;
+}
+.us-trend-card {
+    flex: 1 1 280px;
+    min-width: 260px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.us-trend-card .ut-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.92em;
+    margin-bottom: 2px;
+}
+.us-trend-card .ut-subtitle {
+    color: var(--text-dim);
+    font-size: 0.78em;
+    margin-bottom: 8px;
+}
+.us-trend-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82em;
+}
+.us-trend-card td {
+    padding: 3px 6px;
+    border-bottom: 1px dotted var(--border);
+}
+.us-trend-card tr:last-child td { border-bottom: none; }
+.us-trend-card td.ut-cell-tag { color: var(--text-dim); font-family: monospace; }
+.us-trend-card td.ut-cell-acc { text-align: right; font-variant-numeric: tabular-nums; }
+.us-trend-card .ut-pending { color: var(--text-dim); font-style: italic; font-size: 0.82em; }
 """
 
 # Inline JS: bootstraps from <script id="initial-data"> JSON (works on file://
@@ -897,6 +964,73 @@ _JS = r"""
         });
     }
 
+    // -- Execution US Trend (US-006 line 418) ------------------------------
+    // One card per execution US in EXECUTION_US_GROUPS that has ≥ 1 Complete
+    // cell. Cells inside a card are sorted by level (clean < L1 < … < L5)
+    // and then by dataset. Pending USs are skipped silently so the section
+    // grows monotonically as each phase closes.
+    const EXECUTION_US_GROUPS = [
+        { id: 'US-006', phase: 'A', model: 'resnet50',       title: 'Phase A · resnet50' },
+        { id: 'US-007', phase: 'A', model: 'densenet121',    title: 'Phase A · densenet121' },
+        { id: 'US-008', phase: 'A', model: 'transnext_tiny', title: 'Phase A · transnext_tiny' },
+        { id: 'US-009', phase: 'B', model: 'resnet50',       title: 'Phase B · resnet50' },
+        { id: 'US-010', phase: 'B', model: 'densenet121',    title: 'Phase B · densenet121' },
+        { id: 'US-011', phase: 'B', model: 'transnext_tiny', title: 'Phase B · transnext_tiny' },
+        { id: 'US-012', phase: 'C', model: 'resnet50',       title: 'Phase C · resnet50' },
+        { id: 'US-013', phase: 'C', model: 'densenet121',    title: 'Phase C · densenet121' },
+        { id: 'US-014', phase: 'C', model: 'transnext_tiny', title: 'Phase C · transnext_tiny' }
+    ];
+
+    function levelSortKey(row) {
+        // clean=−1, L1..L5 = 1..5, axis breaks ties alphabetically.
+        const lvl = (row.level === null || row.level === undefined) ? -1 : row.level;
+        const ax = row.axis || '';
+        return lvl * 100 + (ax ? ax.charCodeAt(0) : 0);
+    }
+
+    function renderExecutionUsTrendCard(group, rows) {
+        const cells = rows.filter(function (r) {
+            return r.phase === group.phase
+                && r.model === group.model
+                && r.status === 'Complete';
+        });
+        if (!cells.length) return '';
+        cells.sort(function (a, b) {
+            const k = levelSortKey(a) - levelSortKey(b);
+            if (k !== 0) return k;
+            return a.dataset < b.dataset ? -1 : (a.dataset > b.dataset ? 1 : 0);
+        });
+        const rowsHtml = cells.map(function (r) {
+            const accCls = accClass(r.val_acc);
+            const lvlLabel = (r.level === null || r.level === undefined)
+                ? 'clean'
+                : ('L' + r.level + (r.phase === 'C' && r.axis ? '·' + r.axis : ''));
+            return '<tr>'
+                + '<td class="ut-cell-tag">' + escapeHtml(r.dataset) + '</td>'
+                + '<td>' + escapeHtml(lvlLabel) + '</td>'
+                + '<td class="ut-cell-acc ' + accCls + '">' + fmtAcc(r.val_acc) + '</td>'
+                + '</tr>';
+        }).join('');
+        return '<div class="us-trend-card">'
+            + '<div class="ut-title">' + escapeHtml(group.id) + ' — ' + escapeHtml(group.title) + '</div>'
+            + '<div class="ut-subtitle">' + cells.length + ' complete cell' + (cells.length === 1 ? '' : 's') + '</div>'
+            + '<table><tbody>' + rowsHtml + '</tbody></table>'
+            + '</div>';
+    }
+
+    function renderExecutionUsTrend(rows) {
+        const body = document.getElementById('us-trend-body');
+        if (!body) return;
+        const cards = EXECUTION_US_GROUPS
+            .map(function (g) { return renderExecutionUsTrendCard(g, rows); })
+            .filter(function (h) { return h.length > 0; });
+        if (!cards.length) {
+            body.innerHTML = '<span class="ut-pending">No closed execution US yet.</span>';
+            return;
+        }
+        body.innerHTML = cards.join('');
+    }
+
     function showBanner(msg) {
         const b = document.getElementById('banner');
         if (b) {
@@ -1029,6 +1163,7 @@ _JS = r"""
         state.countsByPhase = recomputeCountsByPhase(doc.rows);
         renderRows(doc.rows);
         renderTabCounts();
+        renderExecutionUsTrend(doc.rows);
         applyActivePhase(state.activePhase);
 
         const gen = document.getElementById('ts-generated');
@@ -1414,6 +1549,18 @@ def _html_template(initial_doc_json: str) -> str:
   <div class="stat-card"><div class="stat-value deferred"  id="stat-deferred">—</div> <div class="stat-label">Deferred</div></div>
   <div class="stat-card"><div class="stat-value"           id="stat-all">—</div>      <div class="stat-label">All Cells</div></div>
 </div>
+
+<!-- Execution US Trend — DESIGNER, US-006 line 418.
+     Populated by JS (renderExecutionUsTrend) from the loaded doc; cards
+     for execution USs (US-006…US-014) that have at least one Complete
+     cell appear here. Pending USs are silently skipped so the section
+     grows monotonically as each phase closes. -->
+<details class="us-trend-section" id="us-trend-section" open>
+  <summary>Execution US Trend</summary>
+  <div class="us-trend-body" id="us-trend-body">
+    <span class="ut-pending">No closed execution US yet.</span>
+  </div>
+</details>
 
 <div class="tab-bar" role="tablist">
   <button type="button" class="tab-btn" data-phase="A" role="tab">Phase A<span class="tab-count" id="tab-count-A">{EXPECTED_COUNTS['A']}</span></button>
