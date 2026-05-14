@@ -414,7 +414,7 @@ The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt
 - [x] Pathology guard verdict for both cells: `healthy`. *(`evaluate_pathology` from `scripts/run_ralph_loop.py` returns `healthy` on the legacy histories: best_val_acc 0.9518 / 0.9914, gap < 12 pp, no NaN.)*
 - [ ] VALIDATOR re-runs `final_clean_resnet50_cifar10` with seed=43 in a side dir; best_val_acc within ±0.5pp of seed=42.
 - [x] REPORTER `artifacts/reports/phase_a_resnet50_summary.md`: (a) val_acc + PSNR + SSIM table for both cells, (b) gap to paper baseline (TResNet paper), (c) NaN/divergence flags, (d) ≤200-word narrative. *(written 2026-05-14; narrative = 139 words; PSNR/SSIM marked N/A with justification; TResNet baseline anchored qualitatively against the ImageNet-pretrained CIFAR-10 fine-tuning band of 96–97 % at 224 input.)*
-- [ ] LIBRARIAN updates `docs/phase_a.md` "ResNet50" subsection + README "Best Results So Far" row.
+- [x] LIBRARIAN updates `docs/phase_a.md` "ResNet50" subsection + README "Best Results So Far" row. *(Iteration 7, 2026-05-15 — `docs/phase_a.md` created with a ResNet50 subsection citing best_val_acc 0.9518 / 0.9914, hparams, pathology=healthy; README "Best Results So Far" section added under Campaign Status with the ResNet50 row.)*
 - [ ] DESIGNER adds an "Execution US Trend" section to `Final_Exp.html` for the 2 ResNet50 rows.
 - [ ] `progress.txt`: `US-006 CLOSED: resnet50 Phase A — cifar10=<acc>, mnist=<acc>; awaiting operator approval to proceed to US-007.`
 - [ ] **HALT** — do not start US-007 without explicit operator approval.

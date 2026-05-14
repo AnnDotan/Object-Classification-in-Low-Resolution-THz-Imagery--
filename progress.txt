@@ -681,3 +681,59 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     decision (PRD line 413). The next GPU cycle is the seed=43
     VALIDATOR re-run for the three Phase A models. Then US-009
     (Phase B · resnet50, 10 cells) is the first Phase B execution US.
+
+## Iteration 7 (2026-05-15) — US-006 LIBRARIAN pass (docs/phase_a.md + README Best Results)
+- What was done: ticked PRD line 417 — the LIBRARIAN deliverable for US-006.
+  Created `docs/phase_a.md` (new file, 60 lines) with a header section, a
+  detailed ResNet50 subsection (best_val_acc 0.9518 cifar10 / 0.9914 mnist
+  from the legacy 4050 box preserved across the 2026-05-12 reset; runtimes
+  8.7 m / 7.4 m sourced from `Final_Exp.json` runtime_s fields; hparam set
+  from `PHASE_A_FROZEN_HPARAMS`; pathology=healthy on both), a stub
+  DenseNet121 subsection (US-007 pending), a populated TransNeXt-tiny
+  subsection mirroring the US-008 PARTIAL summary, and a cross-model
+  snapshot table. README.md gained a new "Best Results So Far (Phase A
+  clean baselines)" section under Campaign Status, currently with the
+  ResNet50 row only — DenseNet121 / TransNeXt-tiny rows queued for
+  US-007 / US-008 closure.
+- Files affected: created `docs/phase_a.md`; modified `README.md`
+  (1 new section inserted before "Recent scientific changes"); modified
+  `PRD.md` (line 417 ticked with an inline evidence note); this
+  progress.txt entry. No source code change; no GPU runs; no
+  acceptance criterion downstream of US-006 is touched.
+- Validation: `pytest src/tests -q` = 50 passed in 3.39 s ✓ (torch-free
+  baseline preserved). No mypy run because no source files moved.
+- Learnings for next cycles:
+  - Patterns: LIBRARIAN passes that build per-phase docs from already-
+    completed cells (Phase A baselines preserved across the reset) only
+    need data from `artifacts/Final_Exp.json` + the per-model REPORTER
+    summaries — no GPU, no new dispatch. Read `Final_Exp.json` directly
+    for `val_acc`, `epochs_run`, `runtime_s`; the REPORTER markdown is
+    the source of truth for hparams / narrative / paper-baseline anchor.
+  - Patterns: When the PRD asks for a single-model subsection in a doc
+    that doesn't exist yet, create the doc with all three sections
+    skeletoned — the upcoming US-007 / US-008 LIBRARIAN passes will
+    only need to swap stubs for live rows rather than re-edit the
+    structure. Marked the docs/phase_a.md DenseNet121 subsection as
+    "pending closure" to signal that US-007 still needs to fill it in.
+  - Traps: README had no "Best Results So Far" section yet — the PRD
+    line 417 phrasing "README "Best Results So Far" row" implies the
+    section already exists. Verified via `grep -n "Best Results"` (no
+    hits) before adding the section; do not assume PRD phrasing
+    documents present-tense reality.
+  - Traps: The "Frozen artifacts (6 of 6 winner JSONs)" table in the
+    README looks superficially like a "best results" section but it
+    tracks Optuna Stage 1.5 `best_value` (10K-train × 60ep × L3
+    degraded, the tune objective), NOT Phase A clean accuracy. Don't
+    conflate the two — `transnext_tiny_cifar10` shows 0.7336 in the
+    frozen-artifacts row (L3 degraded) but 0.9764 in the new Best
+    Results row (Phase A clean). Both are correct measurements; they
+    just answer different questions.
+  - Helpful context: Remaining US-006 work after this iteration is
+    (a) DESIGNER per-US trend section in `Final_Exp.html` (line 418,
+    non-GPU — DESIGNER agent extends `build_final_dashboard.py`),
+    (b) the image_quality.json criterion conflict resolution at line
+    413 (needs operator decision), (c) the VALIDATOR seed=43 re-run
+    (line 415, GPU-gated, ~9 min wallclock for resnet50_cifar10),
+    (d) the progress.txt closure line + HALT (lines 419-420).
+    None of (a)-(d) can be marked from a single Ralph cycle alone
+    except (a). The next non-GPU Ralph cycle should target (a).

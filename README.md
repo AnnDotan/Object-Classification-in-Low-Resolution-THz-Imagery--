@@ -66,6 +66,16 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | `transnext_tiny × cifar10` | `artifacts/best_hparams/transnext_tiny_cifar10.json` | **0.7336** | trial #16 (fast-rank-2 → full-rank-1 swap at Stage 1.5) — **highest cifar10 winner across the 3 models** |
 | `transnext_tiny × mnist` | `artifacts/best_hparams/transnext_tiny_mnist.json` | 0.9176 | trial #12 (no re-ranking — fast and full both rank #12 first) |
 
+### Best Results So Far (Phase A clean baselines)
+
+Per-model upper bound at 224×224 under the convergence-first protocol (60 ep / patience 10 / bf16 / AdamW + cosine). All cells `healthy` per the §6.3 pathology guard. Detailed write-ups: [`docs/phase_a.md`](docs/phase_a.md) and `artifacts/reports/phase_a_<model>_summary.md`.
+
+| Model | CIFAR-10 best_val_acc | MNIST best_val_acc | Story |
+|---|---:|---:|---|
+| `resnet50` | 0.9518 | 0.9914 | US-006 |
+
+Rows for `densenet121` (US-007) and `transnext_tiny` (US-008) will be added as their stories close.
+
 ### Recent scientific changes
 
 - **2026-05-14 — US-003 (Phase C identity).** Inactive axes in Phase C cells now return to **identity** (no degradation) instead of L1-mild values. Pre-US-003 a "blur at L5" cell was contaminated by L1 noise + S&P + resolution + saturation; post-US-003 each Phase C cell isolates exactly one axis. Rationale + identity-value table: [`docs/phase_c.md`](docs/phase_c.md).
