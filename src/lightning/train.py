@@ -200,8 +200,18 @@ def run_experiment(
     # US-043: auto-pick num_workers on CUDA (operator mandate: high throughput,
     # >=90% GPU utilization on the 32->224 bicubic upsample). On CPU, keep 0
     # for test determinism + Windows fork safety.
+    #
+    # 2026-05-14: Windows DataLoader workers use the spawn start method, which
+    # pickles the entire dataset + transforms through a 32-bit pipe. With the
+    # TransNeXt-tiny model + swattention transforms the payload exceeds the
+    # pipe limit and the child process exits with
+    # `_pickle.UnpicklingError: pickle data was truncated`, which Lightning
+    # surfaces as `OSError [Errno 22]` from the parent. Force single-process
+    # loading on Windows to dodge that path entirely — the throughput hit is
+    # bounded because the bicubic upsample is CPU-light at 32->224.
+    import sys as _sys
     if num_workers is None:
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and not _sys.platform.startswith("win"):
             import os
             cpu_count = os.cpu_count() or 4
             num_workers = min(max(cpu_count // 2, 2), 8)
