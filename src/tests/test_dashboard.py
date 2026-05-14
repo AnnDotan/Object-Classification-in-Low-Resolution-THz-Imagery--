@@ -318,6 +318,30 @@ def _check_thumbs_dir_back_compat() -> None:
     print("OK [back-compat] -- build_dashboard accepts (and ignores) thumbs_dir kwarg.")
 
 
+def _check_history_fetch_uses_parent_relative_path() -> None:
+    """The dashboard HTML lives at artifacts/Final_Exp.html and the run dirs
+    at <repo>/runs/final/<tag>/. The lazy history fetch URL must therefore
+    walk UP one level out of artifacts/ before descending into runs/final/,
+    otherwise the browser resolves it as artifacts/runs/final/<tag>/ and
+    silently 404s — which is exactly the bug that hid all learning curves
+    from the Phase A resnet50 + densenet121 rows."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    # The corrected URL must be parent-relative.
+    assert "'../runs/final/'" in body, (
+        "history fetch URL must be parent-relative; got something else"
+    )
+    # The buggy in-place form must NOT appear anywhere in the JS.
+    assert "'./runs/final/'" not in body, (
+        "stale ./runs/final/ URL still present — dashboard at artifacts/ will 404"
+    )
+    print("OK [history-url] -- learning-curve fetch uses ../runs/final/<tag>/.")
+
+
 def main() -> int:
     _check_summary_shape()
     _check_static_scaffold()
@@ -332,6 +356,7 @@ def main() -> int:
     _check_visual_core_column_renders()
     _check_curves_drawer_lazy_loaded()
     _check_thumbs_dir_back_compat()
+    _check_history_fetch_uses_parent_relative_path()
     print("\nAll dashboard scaffold checks passed.")
     return 0
 

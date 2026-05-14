@@ -12,6 +12,8 @@ import json
 import math
 import os
 import tempfile
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -67,6 +69,24 @@ class LegacyJSONMetricsCallback(pl.Callback):
         self._last_train_loss = float("nan")
         self._last_val_loss = float("nan")
         self._epochs_run = 0
+        # Dashboard fields populated by on_train_start / on_train_end.
+        self._started_monotonic: Optional[float] = None
+        self._started_at: Optional[str] = None
+        self._finished_at: Optional[str] = None
+        self._runtime_s: Optional[float] = None
+
+    @staticmethod
+    def _utc_isoformat() -> str:
+        # ISO-8601, UTC, second precision — round-trips through json + the
+        # final_exp_schema str field with no parsing on the dashboard side.
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+    def on_train_start(self, trainer: pl.Trainer, _pl_module) -> None:
+        # Lightning's sanity-check validation runs BEFORE on_train_start
+        # so this is the right hook to anchor wall-clock start.
+        if self._started_monotonic is None:
+            self._started_monotonic = time.monotonic()
+            self._started_at = self._utc_isoformat()
 
     def on_validation_epoch_end(self, trainer: pl.Trainer, _pl_module) -> None:
         if trainer.sanity_checking:
@@ -106,6 +126,12 @@ class LegacyJSONMetricsCallback(pl.Callback):
 
     def on_train_end(self, trainer: pl.Trainer, _pl_module) -> None:
         wandb_run_id, wandb_entity, wandb_project = self._extract_wandb_ids(trainer)
+        # Wallclock: if on_train_start fired, runtime_s = monotonic delta; if
+        # the run aborted before on_train_start (unlikely under PL), the field
+        # stays null and the dashboard renders "—".
+        if self._started_monotonic is not None:
+            self._runtime_s = float(time.monotonic() - self._started_monotonic)
+            self._finished_at = self._utc_isoformat()
         payload = {
             "best_val_acc": self._best_val_acc,
             "best_epoch": self._best_epoch,
@@ -118,6 +144,11 @@ class LegacyJSONMetricsCallback(pl.Callback):
             "wandb_run_id": wandb_run_id,
             "wandb_entity": wandb_entity,
             "wandb_project": wandb_project,
+            # Dashboard runtime/timing fields — always written (null when
+            # train start never fired). Consumed by build_final_exp_json.py.
+            "runtime_s": self._runtime_s,
+            "started_at": self._started_at,
+            "finished_at": self._finished_at,
         }
         with open(self.json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)

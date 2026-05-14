@@ -77,10 +77,12 @@ _CSS = r"""
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html {
-    /* Account for sticky tab-bar (~58px) + sticky thead (~38px) when
-       a row is scrolled-into-view via anchor/scrollIntoView. Without
-       this, the targeted row lands underneath the floating header. */
-    scroll-padding-top: 120px;
+    /* 2026-05-13 v3: dropped sticky thead entirely after two failed
+       offset attempts (76px → 96px both still clipped rows under scroll).
+       Sticky table headers in a page-level scroll context always overlap
+       body rows once they scroll past — the only way to *not* overlap is
+       to not be sticky. The tab-bar remains sticky for phase navigation;
+       the column-header row now scrolls away with the body. */
 }
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
@@ -185,7 +187,11 @@ body {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 6px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
+    /* Pin tab-bar height so the sticky thead offset below (top:96px)
+       is deterministic across browsers / zoom levels. */
+    min-height: 64px;
+    box-sizing: border-box;
 }
 .tab-btn {
     flex: 1;
@@ -256,29 +262,22 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
-    position: sticky;
-    /* Tab-bar height (~58px) + 18px margin-bottom = ~76px. Previous
-       56px caused the sticky thead to float into the tab-bar gutter
-       and visually clip the first <tr>. */
-    top: 76px;
-    z-index: 3;
+    /* NOT sticky — see comment on `html` above. Sticky thead was
+       clipping the first body row under scroll. */
     user-select: none;
     white-space: nowrap;
 }
-/* Push the first body row clear of the sticky thead when scrolled
-   to. Without this, row 0 lands under the floating header bar. */
-.exp-table tbody tr.exp-row:first-of-type td { padding-top: 14px; }
-.exp-table tbody tr.exp-row { scroll-margin-top: 120px; }
 .exp-table th:hover {
     color: var(--text);
     background: var(--surface2);
 }
 .exp-table td {
-    padding: 9px 14px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
-    font-size: 0.86em;
+    font-size: 0.92em;
     vertical-align: middle;
 }
+.exp-table tbody tr.exp-row { min-height: 140px; }
 .exp-table tr.exp-row:hover { background: var(--accent-dim); }
 .exp-table tr.exp-row.pending td { opacity: 0.55; }
 .exp-table tr.exp-row.complete td { opacity: 1; }
@@ -300,11 +299,13 @@ body {
 .exp-table .acc-cell.acc-mid { color: var(--orange); }
 .exp-table .acc-cell.acc-low { color: var(--red); }
 
-/* Visual Core thumbnail (US-017) — Original|Degraded side-by-side preview. */
+/* Visual Core thumbnail (US-017) — Original|Degraded side-by-side preview.
+   Source PNG is 224x448 (2:1), so 240x120 here is a clean 1.07x downscale
+   that keeps both halves clearly inspectable in-row. */
 .visual-core-thumb {
     display: block;
-    width: 96px;
-    height: 48px;
+    width: 240px;
+    height: 120px;
     object-fit: cover;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -312,14 +313,31 @@ body {
 }
 .visual-core-missing {
     display: inline-block;
-    width: 96px;
+    width: 240px;
+    height: 120px;
     color: var(--text-dim);
-    font-size: 0.78em;
+    font-size: 0.82em;
     text-align: center;
     border: 1px dashed var(--border);
     border-radius: 4px;
-    padding: 14px 0;
+    padding: 48px 0;
+    box-sizing: border-box;
 }
+
+/* Inline degradation-parameter strip (re-fix 2026-05-13). Shows all six
+   degradation values per row at a glance — replaces the level-badge
+   tooltip as the primary surface (the tooltip stays for power users). */
+.deg-params {
+    font-family: 'Consolas', 'Monaco', ui-monospace, monospace;
+    font-size: 0.82em;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--text);
+}
+.deg-params .deg-line { display: block; }
+.deg-params .lbl { color: var(--text-dim); margin-right: 3px; }
+.deg-params .sep { color: var(--text-dim); margin: 0 6px; }
+.deg-params.clean { color: var(--text-dim); font-style: italic; }
 
 /* Status pill */
 .status-pill {
@@ -607,6 +625,36 @@ _JS = r"""
                '" title="' + tip + '">' + label + caption + '</span>';
     }
 
+    function paramsHtml(row) {
+        // Re-fix 2026-05-13: render all six degradation values inline
+        // (was tooltip-only). Two-line compact strip; Phase A clean rows
+        // show "— clean —".
+        if (row.level === null || row.level === undefined) {
+            return '<span class="deg-params clean">— clean —</span>';
+        }
+        const p = row.params || {};
+        const sep = '<span class="sep">·</span>';
+        const line1 = (
+            '<span class="lbl">res</span>' + p.low_res +
+            sep +
+            '<span class="lbl">blur</span>' + p.blur_kernel + '×' + p.blur_kernel +
+            ' σ' + (p.blur_sigma !== undefined ? p.blur_sigma.toFixed(2) : '?') +
+            sep +
+            '<span class="lbl">noise</span>' + p.noise_std.toFixed(2)
+        );
+        const line2 = (
+            '<span class="lbl">S&amp;P</span>' + p.salt_pepper.toFixed(2) +
+            sep +
+            '<span class="lbl">sat</span>' + p.saturation.toFixed(2)
+        );
+        return (
+            '<span class="deg-params">' +
+              '<span class="deg-line">' + line1 + '</span>' +
+              '<span class="deg-line">' + line2 + '</span>' +
+            '</span>'
+        );
+    }
+
     function visualCoreHtml(row) {
         // US-017: lazy-loaded side-by-side Original|Degraded preview.
         // Renders a tooltip placeholder when the PNG is not yet on disk.
@@ -669,6 +717,7 @@ _JS = r"""
                 '<td>' + escapeHtml(row.dataset) + '</td>' +
                 '<td>' + escapeHtml(row.phase) + '</td>' +
                 '<td>' + levelBadgeHtml(row) + '</td>' +
+                '<td>' + paramsHtml(row) + '</td>' +
                 '<td>' + visualCoreHtml(row) + '</td>' +
                 '<td>' + statusPillHtml(row.status, row) + '</td>' +
                 '<td class="num-cell acc-cell ' + accClass(row.val_acc) + '">' +
@@ -717,8 +766,6 @@ _JS = r"""
         setStat('stat-complete', c.complete !== undefined ? c.complete : '—');
         setStat('stat-failed',   c.failed !== undefined ? c.failed : '—');
         setStat('stat-deferred', c.deferred !== undefined ? c.deferred : '—');
-        setStat('stat-best',     c.best_val_acc === null || c.best_val_acc === undefined
-                                  ? '—' : fmtAcc(c.best_val_acc));
         // Global "All 186" indicator
         const all = state.rows.length;
         setStat('stat-all', all);
@@ -1041,7 +1088,10 @@ _JS = r"""
         bodyEl.innerHTML = '<div class="placeholder">Loading learning curves…</div>';
 
         if (!HISTORY_PENDING.has(tag)) {
-            const url = './runs/final/' + tag + '/history.json?t=' + Date.now();
+            // The dashboard HTML lives at artifacts/Final_Exp.html and the run
+            // dirs at <repo>/runs/final/<tag>/. Relative URL goes UP one level
+            // out of artifacts/ before descending into runs/final/.
+            const url = '../runs/final/' + tag + '/history.json?t=' + Date.now();
             const p = fetch(url, { cache: 'no-store' })
                 .then(function (r) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1277,7 +1327,6 @@ def _html_template(initial_doc_json: str) -> str:
   <div class="stat-card"><div class="stat-value complete"  id="stat-complete">—</div> <div class="stat-label">Complete</div></div>
   <div class="stat-card"><div class="stat-value failed"    id="stat-failed">—</div>   <div class="stat-label">Failed</div></div>
   <div class="stat-card"><div class="stat-value deferred"  id="stat-deferred">—</div> <div class="stat-label">Deferred</div></div>
-  <div class="stat-card"><div class="stat-value"           id="stat-best">—</div>     <div class="stat-label">Best val_acc</div></div>
   <div class="stat-card"><div class="stat-value"           id="stat-all">—</div>      <div class="stat-label">All Cells</div></div>
 </div>
 
@@ -1309,6 +1358,7 @@ def _html_template(initial_doc_json: str) -> str:
         <th>Dataset</th>
         <th>Phase</th>
         <th>Level</th>
+        <th>Degradation</th>
         <th>Visual</th>
         <th>Status</th>
         <th>val_acc</th>

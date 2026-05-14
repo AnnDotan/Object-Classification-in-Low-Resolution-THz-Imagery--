@@ -63,6 +63,10 @@ _REQUIRED_KEYS = (
     "best_val_acc", "best_epoch", "last_val_acc", "last_train_acc",
     "last_val_loss", "last_train_loss", "epochs_run",
     "wandb_run_id", "wandb_entity", "wandb_project",
+    # Dashboard-driven timing fields. The callback must always write all
+    # three keys — null is acceptable, omission is not (the dashboard's
+    # tag-keyed lookup is stable on schema).
+    "runtime_s", "started_at", "finished_at",
 )
 
 
