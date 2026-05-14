@@ -602,3 +602,82 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     trend section in `Final_Exp.html` (line 418), (d) the 413
     image_quality.json conflict resolution. Items (b)–(d) are non-GPU
     and can land in the next Ralph cycle without operator intervention.
+
+## Iteration 6 (2026-05-14 → 2026-05-15) — TransNeXt-tiny Phase A executed (US-008 partial)
+- What was done: ran both Phase A transnext_tiny cells end-to-end on the
+  RTX 5070 via the US-005 driver:
+    final_clean_transnext_tiny_cifar10: best_val_acc=0.9764 @ epoch 5,
+      epochs_run=15 (early-stop @ patience 10), runtime=2297 s (38.3 m),
+      Stage 1.5 winner hparams loaded by run_systematic (head_lr=2.90e-3,
+      backbone_lr=2.99e-5, wd=0.346, ls=0.009, warmup≈1).
+    final_clean_transnext_tiny_mnist: best_val_acc=0.9924 @ epoch 25,
+      epochs_run=35 (early-stop), runtime=5378 s (89.6 m).
+  Total pair wallclock 2 h 8 m. Both cells pathology-healthy via
+  scripts.run_ralph_loop.evaluate_pathology (gap < 12 pp, no NaN at
+  epoch ≥ 2, val above 1.3× random). Final_Exp.json incrementally
+  patched for both tags (refresh_trackers --cell); status=Complete on
+  both. REPORTER summary written at
+  artifacts/reports/phase_a_transnext_tiny_summary.md (154 words,
+  cross-model comparison + paper-baseline anchor). US-008 acceptance
+  boxes 412 / 413 / 414 / 416 ticked; 415 (seed=43), 417 (LIBRARIAN
+  docs), 418 (DESIGNER trend), 419 (progress.txt close), 420 (HALT)
+  remain.
+- Files affected (across this iteration + the parallel dashboard work):
+  artifacts/reports/phase_a_transnext_tiny_summary.md (new),
+  PRD.md (US-008 acceptance criteria + PARTIAL marker added; previously
+  the US was a one-liner pointing at US-006 for shape), progress.txt
+  (this entry). On disk only: runs/final/final_clean_transnext_tiny_*
+  (gitignored; metrics.json + history.json + best.pt + Lightning CSV).
+- Cross-model headline (Phase A clean, best_val_acc):
+    CIFAR-10:  resnet50 0.9518 < densenet121 0.9356 < transnext_tiny 0.9764
+               (transnext_tiny tops by +2.46 pp over resnet50 and +4.08
+               pp over densenet121).
+    MNIST:     resnet50 0.9914, densenet121 0.9930, transnext_tiny 0.9924
+               — all three cluster within 0.16 pp; dataset saturates and
+               does not differentiate models.
+- Validation: pytest src/tests = 50/50 ✓ through every commit this
+  session; pathology guard returns `healthy` on both new histories;
+  Final_Exp.json carries inline history for 6 complete cells totalling
+  ~143 epochs (4 legacy + 2 new) — the drawer renders them under
+  file:// without a fetch.
+- Learnings for next cycles:
+  - Patterns: First operator-launched GPU dispatch via the US-005
+    driver worked cleanly once two Windows-specific fixes were in:
+    (a) `num_workers=0` on Windows (feedback_windows_dataloader.md),
+    (b) `LegacyJSONMetricsCallback` writes wallclock fields
+    (on_train_start / on_train_end deltas). Both fixes shipped earlier
+    this session (commits 974543b and 0e5fada respectively) — any
+    future Phase B/C launch on this box should "just work".
+  - Patterns: For run_ralph_loop dispatches of multiple cells in one
+    shot, the driver iterates cifar10 → mnist within `--phase A
+    --model X --skip-existing`; cifar10 finishes first, the
+    incremental tracker refresh writes its metrics.json, and the mnist
+    cell takes over the GPU. No coordination needed between the two.
+  - Traps: Lightning's first val epoch records val metrics BEFORE the
+    first train_loss is logged, so history.json's epoch 1 has
+    `train_loss=null` / `train_acc=null`. This is NOT NaN/divergence —
+    it's the sanity-check vs first-train-epoch ordering. The §6.3
+    pathology guard correctly only checks NaN at epoch ≥ 2 to dodge
+    this.
+  - Traps: cifar10 plateaued FAST (epoch 5 best, train_acc=0.9997 by
+    epoch 4) and the remaining 10 patience-buffer epochs added no new
+    information — TransNeXt-tiny + ImageNet-pretrained is heavily
+    over-parameterized for clean cifar10 at 10K train. We may want to
+    reduce patience to 5 for Phase A clean cells in a future operator
+    pass; do NOT change it for Phase B/C where degradation slows
+    convergence meaningfully.
+  - Traps: The dashboard learning-curve drawer initially looked
+    broken even after the URL fix because the operator opens the file
+    via double-click (file://), which blocks fetch() of cross-origin
+    local files regardless of whether the URL is right. The real fix
+    is inline embedding of the history list onto the row in
+    Final_Exp.json — see commit 86f8657. Any future "drawer is
+    empty" report from the operator means the dashboard was opened
+    before the post-cell refresh_trackers; rebuilding fixes it.
+  - Helpful context: The next non-GPU Ralph cycle should: (a) LIBRARIAN
+    pass updating docs/phase_a.md + README "Best Results So Far"
+    rows for all three models, (b) DESIGNER pass adding the per-US
+    trend strip to Final_Exp.html, (c) image_quality.json contract
+    decision (PRD line 413). The next GPU cycle is the seed=43
+    VALIDATOR re-run for the three Phase A models. Then US-009
+    (Phase B · resnet50, 10 cells) is the first Phase B execution US.
