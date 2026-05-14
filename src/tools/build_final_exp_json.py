@@ -35,6 +35,7 @@ from src.experiments.run_status import (
     QUARANTINE_REASON,
     detect_status,
     is_quarantined,
+    read_image_quality,
     read_metrics,
 )
 from src.tools.final_exp_schema import (
@@ -142,6 +143,25 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
     if quarantined:
         status = "Deferred"
 
+    # PSNR/SSIM (US-002): sourced from runs/final/<tag>/image_quality.json so
+    # the dashboard can render them under the Visual Core thumbnail. Null on
+    # Phase A clean cells (the measurement step is skipped — clean-vs-clean
+    # is identity) and on any cell whose run dir hasn't been measured yet.
+    iq = read_image_quality(meta.tag, runs_root)
+    psnr_mean: Optional[float] = None
+    psnr_std: Optional[float] = None
+    ssim_mean: Optional[float] = None
+    ssim_std: Optional[float] = None
+    if iq is not None:
+        v = iq.get("psnr_mean")
+        psnr_mean = float(v) if isinstance(v, (int, float)) else None
+        v = iq.get("psnr_std")
+        psnr_std = float(v) if isinstance(v, (int, float)) else None
+        v = iq.get("ssim_mean")
+        ssim_mean = float(v) if isinstance(v, (int, float)) else None
+        v = iq.get("ssim_std")
+        ssim_std = float(v) if isinstance(v, (int, float)) else None
+
     return {
         "tag": meta.tag,
         "phase": meta.phase,  # type: ignore[typeddict-item]
@@ -160,6 +180,10 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         "quarantined": quarantined,
         "quarantine_reason": quarantine_reason,
         "visual_core": _visual_core_for(meta.tag),
+        "psnr_mean": psnr_mean,
+        "psnr_std": psnr_std,
+        "ssim_mean": ssim_mean,
+        "ssim_std": ssim_std,
         "has_history": _has_history(meta.tag, runs_root),
     }
 

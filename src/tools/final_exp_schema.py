@@ -68,6 +68,16 @@ class FinalExpRow(TypedDict):
     # `src/tools/render_cell_thumbs.py`. None when the PNG is missing
     # (e.g. before the renderer has run, or in a torch-free environment).
     visual_core: str | None
+    # PSNR/SSIM of the degraded sample vs the clean original, sourced from
+    # `runs/final/<tag>/image_quality.json` (US-002). The aggregator copies
+    # these onto the row so the dashboard can render them directly under
+    # the Visual Core thumbnail. Null for Phase A clean baselines (where
+    # the comparison is trivially identity) and for any cell whose
+    # measurement step has not run yet.
+    psnr_mean: float | None
+    psnr_std: float | None
+    ssim_mean: float | None
+    ssim_std: float | None
     # US-018: True iff `runs/final/<tag>/history.json` exists. The dashboard
     # uses this to decide whether to render a 📈 indicator on the row and
     # whether clicking should attempt the lazy fetch. Aggregator never

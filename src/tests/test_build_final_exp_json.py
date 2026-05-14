@@ -281,6 +281,44 @@ def _check_visual_core_lookup_does_not_open_png() -> None:
     print(f"OK [visual-core-privacy] -- {len(opened)} open() calls, none touched a PNG.")
 
 
+def _check_image_quality_fields_round_trip() -> None:
+    """PSNR/SSIM (US-002): aggregator copies `psnr_mean`/`psnr_std`/`ssim_mean`/
+    `ssim_std` from `runs/final/<tag>/image_quality.json` onto the row so the
+    dashboard can render them under the Visual Core thumbnail. Cells without
+    an image_quality.json get null on all four fields."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        # Plant an image_quality.json for one Phase B cell.
+        target_tag = "final_B_L3_resnet50_cifar10"
+        (runs_root / target_tag).mkdir(parents=True)
+        (runs_root / target_tag / "image_quality.json").write_text(
+            json.dumps({
+                "psnr_mean": 17.42, "psnr_std": 0.61,
+                "ssim_mean": 0.4123, "ssim_std": 0.0287,
+                "n_samples": 64,
+            }),
+            encoding="utf-8",
+        )
+        from src.tools.build_final_exp_json import build_doc
+        doc = build_doc(runs_root=runs_root)
+
+    target = next(r for r in doc["rows"] if r["tag"] == target_tag)
+    assert target["psnr_mean"] == 17.42, target.get("psnr_mean")
+    assert target["psnr_std"] == 0.61, target.get("psnr_std")
+    assert abs(target["ssim_mean"] - 0.4123) < 1e-9, target.get("ssim_mean")
+    assert abs(target["ssim_std"] - 0.0287) < 1e-9, target.get("ssim_std")
+
+    others = [r for r in doc["rows"] if r["tag"] != target_tag]
+    bad = [r for r in others
+           if r["psnr_mean"] is not None or r["psnr_std"] is not None
+           or r["ssim_mean"] is not None or r["ssim_std"] is not None]
+    assert not bad, (
+        f"unexpected non-null PSNR/SSIM rows: {[r['tag'] for r in bad[:3]]}"
+    )
+    print("OK [image-quality] -- aggregator copies PSNR/SSIM from image_quality.json onto rows.")
+
+
 def _check_has_history_field_round_trip() -> None:
     """US-018: aggregator sets `has_history=True` iff `runs/final/<tag>/history.json`
     exists, using `Path.exists()` only (no `open()`). Missing -> False."""
@@ -458,6 +496,7 @@ def main() -> int:
     _check_doc_level_fields()
     _check_rows_sorted_by_tag()
     _check_has_history_field_round_trip()
+    _check_image_quality_fields_round_trip()
     _check_quarantine_override()
     _check_visual_core_field_round_trip()
     _check_visual_core_lookup_does_not_open_png()

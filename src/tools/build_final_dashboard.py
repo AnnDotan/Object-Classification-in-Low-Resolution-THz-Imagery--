@@ -323,6 +323,23 @@ body {
     padding: 48px 0;
     box-sizing: border-box;
 }
+/* PSNR/SSIM strip rendered under the Visual Core thumbnail (US-002).
+   Shows degradation quality of the right (degraded) half vs the left
+   (original). Phase A clean cells skip the measurement (clean-vs-clean
+   is identity) and render a dim '—' instead. */
+.visual-core-quality {
+    display: block;
+    margin-top: 4px;
+    width: 240px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.78em;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+}
+.visual-core-quality .vq-label { color: var(--text-dim); }
+.visual-core-quality .vq-value { color: var(--text); }
+.visual-core-quality .vq-sep { color: var(--border); margin: 0 6px; }
 
 /* Inline degradation-parameter strip (re-fix 2026-05-13). Shows all six
    degradation values per row at a glance — replaces the level-badge
@@ -655,15 +672,64 @@ _JS = r"""
         );
     }
 
-    function visualCoreHtml(row) {
-        // US-017: lazy-loaded side-by-side Original|Degraded preview.
-        // Renders a tooltip placeholder when the PNG is not yet on disk.
-        if (!row.visual_core) {
-            return '<span class="visual-core-missing" title="Visual Core PNG not yet rendered — run scripts/refresh_trackers.py">—</span>';
+    function imageQualityHtml(row) {
+        // PSNR/SSIM line shown under the Visual Core thumbnail. Reads
+        // psnr_mean / psnr_std / ssim_mean / ssim_std from the row schema
+        // (populated from runs/final/<tag>/image_quality.json). Phase A
+        // clean baselines skip the measurement (clean-vs-clean is identity)
+        // and render a dim placeholder so the row height stays uniform.
+        const phaseAClean = (row.phase === 'A');
+        const hasPSNR = typeof row.psnr_mean === 'number';
+        const hasSSIM = typeof row.ssim_mean === 'number';
+        if (phaseAClean && !hasPSNR && !hasSSIM) {
+            return '<span class="visual-core-quality" title="Phase A is a clean baseline — PSNR/SSIM not measured (identity comparison)">' +
+                   '<span class="vq-label">PSNR</span> <span class="vq-value">—</span>' +
+                   '<span class="vq-sep">|</span>' +
+                   '<span class="vq-label">SSIM</span> <span class="vq-value">—</span>' +
+                   '</span>';
         }
+        if (!hasPSNR && !hasSSIM) {
+            return '<span class="visual-core-quality" title="Run scripts/refresh_trackers.py --cell '+ row.tag +' to populate PSNR/SSIM">' +
+                   '<span class="vq-label">PSNR</span> <span class="vq-value">—</span>' +
+                   '<span class="vq-sep">|</span>' +
+                   '<span class="vq-label">SSIM</span> <span class="vq-value">—</span>' +
+                   '</span>';
+        }
+        let psnrText = '—';
+        if (hasPSNR) {
+            psnrText = row.psnr_mean.toFixed(2);
+            if (typeof row.psnr_std === 'number') {
+                psnrText += '±' + row.psnr_std.toFixed(2);
+            }
+            psnrText += ' dB';
+        }
+        let ssimText = '—';
+        if (hasSSIM) {
+            ssimText = row.ssim_mean.toFixed(3);
+            if (typeof row.ssim_std === 'number') {
+                ssimText += '±' + row.ssim_std.toFixed(3);
+            }
+        }
+        const tooltip = 'Image quality of the degraded sample vs the clean original (image_quality.json).';
+        return '<span class="visual-core-quality" title="' + tooltip + '">' +
+               '<span class="vq-label">PSNR</span> <span class="vq-value">' + psnrText + '</span>' +
+               '<span class="vq-sep">|</span>' +
+               '<span class="vq-label">SSIM</span> <span class="vq-value">' + ssimText + '</span>' +
+               '</span>';
+    }
+
+    function visualCoreHtml(row) {
+        // US-017: lazy-loaded side-by-side Original|Degraded preview, plus a
+        // PSNR/SSIM strip rendered directly underneath (US-002).
         const alt = 'Original | Degraded preview for ' + row.tag;
-        return '<img class="visual-core-thumb" loading="lazy" decoding="async" ' +
-               'src="' + row.visual_core + '" alt="' + alt + '" title="' + alt + '">';
+        let img;
+        if (!row.visual_core) {
+            img = '<span class="visual-core-missing" title="Visual Core PNG not yet rendered — run scripts/refresh_trackers.py">—</span>';
+        } else {
+            img = '<img class="visual-core-thumb" loading="lazy" decoding="async" ' +
+                  'src="' + row.visual_core + '" alt="' + alt + '" title="' + alt + '">';
+        }
+        return img + imageQualityHtml(row);
     }
 
     function historyIndicatorHtml(row) {

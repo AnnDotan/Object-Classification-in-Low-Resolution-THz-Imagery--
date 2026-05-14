@@ -318,6 +318,34 @@ def _check_thumbs_dir_back_compat() -> None:
     print("OK [back-compat] -- build_dashboard accepts (and ignores) thumbs_dir kwarg.")
 
 
+def _check_image_quality_renders_under_visual_core() -> None:
+    """PSNR/SSIM (US-002): the dashboard JS must render a `.visual-core-quality`
+    span DIRECTLY under the thumbnail image in `visualCoreHtml(row)`. The CSS
+    must declare `.visual-core-quality` so the strip aligns under the 240px
+    thumb. Phase A gets a dim placeholder; Phase B/C reads from row.psnr_mean /
+    row.ssim_mean."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert "imageQualityHtml" in body, (
+        "JS must define imageQualityHtml renderer for PSNR/SSIM"
+    )
+    # visualCoreHtml must compose imageQualityHtml so the strip lands under
+    # the thumb in the same <td> cell.
+    assert "img + imageQualityHtml(row)" in body, (
+        "visualCoreHtml must concatenate the thumb + PSNR/SSIM strip"
+    )
+    # Schema fields referenced by the JS.
+    for field in ("psnr_mean", "psnr_std", "ssim_mean", "ssim_std"):
+        assert "row." + field in body, f"JS must read row.{field}"
+    # CSS class for the strip is present.
+    assert ".visual-core-quality" in body, "missing .visual-core-quality CSS"
+    print("OK [image-quality-strip] -- PSNR/SSIM rendered under Visual Core thumb.")
+
+
 def _check_history_fetch_uses_parent_relative_path() -> None:
     """The dashboard HTML lives at artifacts/Final_Exp.html and the run dirs
     at <repo>/runs/final/<tag>/. The lazy history fetch URL must therefore
@@ -357,6 +385,7 @@ def main() -> int:
     _check_curves_drawer_lazy_loaded()
     _check_thumbs_dir_back_compat()
     _check_history_fetch_uses_parent_relative_path()
+    _check_image_quality_renders_under_visual_core()
     print("\nAll dashboard scaffold checks passed.")
     return 0
 
