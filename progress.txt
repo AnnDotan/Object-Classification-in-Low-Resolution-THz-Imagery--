@@ -431,3 +431,49 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     then repeat the pair for `--dataset mnist`. Only after both winner JSONs
     exist with `validated_at_full_convergence: true` can US-002 boxes be
     ticked and a commit prepared.
+
+## Iteration 3 (2026-05-14) — US-004 acceptance bookkeeping (Ralph cycle)
+- What was done: ticked the four trailing acceptance checkboxes on US-004
+  (PRD lines 373-376). US-004's title has been "**CLOSED 2026-05-14**" since
+  the base→small swap landed, and progress.txt line 189 et seq. records the
+  closure narrative, but four boxes had been left unticked. The work behind
+  each box was verified before ticking:
+    373 — Final_Exp.md regenerated with 62 TransNeXt rows: confirmed present
+          at the repo root (`grep -c transnext Final_Exp.md` = 64). Rows
+          currently show `transnext_tiny` tags because US-016 rotated them
+          again the same day; the line 373 box is marked with a supersession
+          note pointing at US-016 rather than re-running update_final_exp.py.
+    374 — `artifacts/weights/transnext_small_224_1k.pth` still on disk
+          (199,287,035 bytes, May 14 00:49). US-016 explicitly left it there
+          (dispatch reads `transnext_tiny_224_1k.pth` now).
+    375 — `pytest src/tests` = 21 passed in 3.49s ✓.
+    376 — Progress.txt line 189 "US-004 CLOSED 2026-05-14" matches the
+          required entry shape.
+- Files affected: PRD.md only (4 checkboxes ticked + 4 inline supersession
+  notes). progress.txt receives this iteration entry. No source code change.
+- Validation: pytest 21/21 ✓ (re-run this cycle); mypy not re-run because no
+  source files moved; PRD checkbox audit shows the next unchecked actionable
+  item is now US-005 (RALPH Loop Driver Framework), with line 328
+  (NOTEBOOKLM_SYNC re-upload) remaining deferred until an MCP path opens up.
+- Learnings for next cycles:
+  - Patterns: When a US is marked CLOSED in its title but trailing
+    acceptance boxes remain unticked because a same-day successor US
+    superseded one or two artifacts, the right Ralph move is to tick with
+    an inline supersession note rather than re-running the now-stale
+    regeneration command. The supersession note preserves auditability and
+    avoids spurious file rewrites that would invalidate hashes.
+  - Traps: The PRD says line 373 requires `transnext_small` tags in
+    Final_Exp.md, but the live file shows `transnext_tiny` because US-016
+    closed afterward on the same day. Do NOT re-run update_final_exp.py to
+    revert the tags — that would un-do US-016. Reading the PRD line in
+    isolation without checking US-016's closure log would push toward that
+    mistake.
+  - Helpful context: Iteration 2's background tune
+    (`tune_all.py --model transnext_small --dataset cifar10 --n-trials 20`,
+    logging to `artifacts/tune_logs/us002_transnext_small_cifar10_stage1.log`)
+    is targeting the retired `transnext_small` variant — US-002's
+    acceptance was already met with `transnext_tiny` per progress.txt
+    line 346 et seq. The transnext_small study row in optuna_thz.db is
+    orphaned and harmless; the running process should be left alone unless
+    the operator wants to abort it. This iteration deliberately did not
+    touch it.
