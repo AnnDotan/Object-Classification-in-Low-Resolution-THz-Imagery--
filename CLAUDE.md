@@ -18,7 +18,7 @@ Evaluate deep-learning robustness under severe visual degradation — low resolu
 |---|---|---|---|
 | **ResNet50** | 224×224 | Differential-LR full FT (ImageNet pretrain) | TResNet / EfficientNetV2 |
 | **DenseNet121** | 224×224 | Differential-LR full FT (ImageNet pretrain) | DenseNet paper |
-| **TransNeXt (base)** | **224×224** | **Full FT** with differential LR (head 5e-4 / backbone 5e-5); `pretrain_size=224` matches the upstream checkpoint. | TransNeXt §A.3 |
+| **TransNeXt (tiny)** | **224×224** | **Full FT** with differential LR (head 5e-4 / backbone 5e-5); `pretrain_size=224` matches the upstream checkpoint. Swapped from `transnext_small` by US-016 on 2026-05-14 (~28M vs ~50M params; tighter capacity-match to ResNet50 ~25M and ~310 GPU-h saved across the 62 TransNeXt rows vs small). Predecessor swap from `transnext_base` (US-004, same day) preserved in history. | TransNeXt §A.3 |
 
 All three models share the same input resolution. CIFAR-10 (32) and MNIST (28) inputs are upsampled to 224 by the data pipeline before reaching any model. This preserves the ImageNet-pretrained receptive-field hierarchy for the CNNs and matches the TransNeXt paper's 224 training distribution end-to-end.
 
@@ -76,7 +76,7 @@ Phase C single-axis isolation (US-003, 2026-05-14): named axis at level L, every
 | **`torch.compile`** | `none` (all models) | TransNeXt's `attention_native` path is not Inductor-graph-capturable and the CNN compile path is unvalidated |
 | Seed | 42 (workers=True) | reproducibility lock |
 
-TransNeXt full-FT priors (used when `artifacts/best_hparams/transnext_base_{dataset}.json` is absent) live in [`run_systematic.py`](run_systematic.py) `V3_TRANSNEXT_FT_PRIORS`. CNN priors for Phase A continue to live in `PHASE_A_FROZEN_HPARAMS`; Phase B/C cells without an Optuna JSON are a hard error.
+TransNeXt full-FT priors (used when `artifacts/best_hparams/transnext_tiny_{dataset}.json` is absent) live in [`run_systematic.py`](run_systematic.py) `V3_TRANSNEXT_FT_PRIORS`. CNN priors for Phase A continue to live in `PHASE_A_FROZEN_HPARAMS`; Phase B/C cells without an Optuna JSON are a hard error.
 
 `--mode pilot` (5 epochs / patience 2) is for smoke tests **only**. `run_all_phases.py --plan final --mode pilot` is rejected with an assertion.
 

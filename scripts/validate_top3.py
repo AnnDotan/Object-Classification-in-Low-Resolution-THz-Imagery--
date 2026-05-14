@@ -43,16 +43,16 @@ if str(REPO_ROOT) not in sys.path:
 DEFAULT_PAIRS = [
     ("resnet50",      "cifar10"),
     ("densenet121",   "cifar10"),
-    ("transnext_base","cifar10"),
+    ("transnext_tiny","cifar10"),
     ("resnet50",      "mnist"),
     ("densenet121",   "mnist"),
-    ("transnext_base","mnist"),
+    ("transnext_tiny","mnist"),
 ]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--model", choices=("resnet50", "densenet121", "transnext_base"),
+    parser.add_argument("--model", choices=("resnet50", "densenet121", "transnext_tiny"),
                         default=None, help="Restrict to one model (default: all).")
     parser.add_argument("--dataset", choices=("cifar10", "mnist"),
                         default=None, help="Restrict to one dataset.")
@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.model:
         pairs = [(args.model, d) for d in ("cifar10", "mnist")]
     elif args.dataset:
-        pairs = [(m, args.dataset) for m in ("resnet50", "densenet121", "transnext_base")]
+        pairs = [(m, args.dataset) for m in ("resnet50", "densenet121", "transnext_tiny")]
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     args.cache_dir.mkdir(parents=True, exist_ok=True)

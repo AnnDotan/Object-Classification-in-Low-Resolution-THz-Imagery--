@@ -14,7 +14,7 @@ cd "$REPO_ROOT"
 
 # Paths that MUST be ignored (binary / regenerated outputs).
 declare -a SHOULD_IGNORE=(
-  "artifacts/weights/transnext_base_224_1k.pth"
+  "artifacts/weights/transnext_tiny_224_1k.pth"
   "artifacts/weights/anything.pt"
   "artifacts/optuna_thz.db"
   "artifacts/dashboard_thumbs/final_clean_resnet50_cifar10.png"
@@ -34,7 +34,7 @@ declare -a SHOULD_TRACK=(
   "artifacts/priors/_schema.json"
   "artifacts/priors/resnet50.json"
   "artifacts/priors/densenet121.json"
-  "artifacts/priors/transnext_base.json"
+  "artifacts/priors/transnext_tiny.json"
 )
 
 failures=0

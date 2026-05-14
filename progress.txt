@@ -185,3 +185,195 @@ US-001: densenet121_mnist winner frozen (best_value=0.9192, trials=20)
 - Recommendation: switch to **US-003** (Phase C identity rewrite — pure
   code/data, no GPU/weights needed) in parallel while operator resolves
   the weights. US-003 is independent of US-002 per PRD §10.
+
+US-004 CLOSED 2026-05-14: TransNeXt base→small variant swap landed.
+- src/experiments/cells.py MODELS tuple: transnext_base → transnext_small.
+- tune_all.py SUPPORTED_MODELS, run_all_phases.py --model help, scripts/validate_top3.py
+  DEFAULT_PAIRS+choices, scripts/update_final_exp.py docstring (and stale post-US-042
+  TransNeXt-quarantine paragraph dropped), src/tests/test_matrix.py canonical-tag
+  fixtures, src/tests/test_ignores.py + scripts/check_ignores.sh example paths,
+  artifacts/priors/_schema.json description, artifacts/priors/PRIORS_SOURCES.md,
+  CLAUDE.md Models row, README.md (campaign-status table, frozen-artifacts,
+  pre-fetch instructions, Troubleshooting, model table), docs/runbooks/
+  PHASE_B_EXECUTION.md cautionary note.
+- artifacts/priors/transnext_small.json created (mirrors git-resident
+  transnext_base.json verbatim; "model": "transnext_small"; band identical —
+  priors are paper-derived, not architecture-derived).
+- artifacts/weights/transnext_small_224_1k.pth pre-staged (199,287,035 bytes).
+- Final_Exp.md + Final_Exp.json + Final_Exp.html regenerated; 62 TransNeXt rows
+  rotate to transnext_small tags; total still 186; statuses still Pending.
+- PRD.md renumbered: 15 active USs (US-001..US-015). US-002 retargeted in place
+  (transnext_base → transnext_small Optuna tune); new US-004 inserted (variant
+  swap, CLOSED); old US-004..US-014 shifted to US-005..US-015. §5.2/§5.3/§6.2/
+  §8.bis/§8.5/§10/§11/§12 updated; D8 added.
+- Tests: pytest src/tests = 21 passed; tune_all.py --validate-only OK on all 3
+  priors (resnet50, densenet121, transnext_small); test_quarantine_transnext
+  10/10 pass; dry-run resolves final_clean_transnext_small_cifar10 cleanly.
+- Mypy on full tree fails with pre-existing duplicate-module errors in vendored
+  transnext_official tree — unrelated to swap.
+- 27 transnext_base mentions remain repo-wide; all classified as deliberate
+  (vendored upstream, dispatch sets accepting either variant, archived PRDs,
+  swap-attribution prose, negative-test fixtures). No commit. No git push.
+
+## Iteration 1 (2026-05-14) — US-002 readiness check (Ralph cycle)
+- What was done: Verified US-002 (transnext_small Optuna tune) is now unblocked.
+  The stale "US-002 BLOCKED 2026-05-13" entry above pre-dates US-004's base→small
+  swap. Confirmed:
+    - `artifacts/weights/transnext_small_224_1k.pth` present (199,287,035 bytes,
+      real checkpoint — not the 136-byte placeholder).
+    - `python tune_all.py --validate-only` → "All 3 priors files valid."
+      (resnet50, densenet121, transnext_small all OK).
+    - `tune_all.py --model transnext_small` and `validate_top3.py --model
+      transnext_small` both accept the new model name via SUPPORTED_MODELS /
+      DEFAULT_PAIRS (US-004 work).
+- Files affected: progress.txt only (this entry). No code change. No commit.
+- Validation: US-002 acceptance criteria require two winner JSONs at
+  `artifacts/best_hparams/transnext_small_{cifar10,mnist}.json` with
+  `validated_at_full_convergence: true`. Neither exists. Cannot satisfy in a
+  single Ralph cycle — Stage 1 (20 trials × 5 epochs × 2 datasets) +
+  Stage 1.5 (top-3 × 60 epochs × 2 datasets) is a multi-hour-to-multi-day
+  GPU run. NOT marking US-002 boxes; NOT committing.
+- Learnings for next cycles:
+  - Patterns: When the first unchecked PRD task is an Optuna tune (US-001 /
+    US-002), it requires operator-launched multi-hour GPU execution via
+    `python tune_all.py --model <m> --dataset <d>` (Stage 1) then
+    `python scripts/validate_top3.py --model <m> --dataset <d>` (Stage 1.5).
+    A Ralph cycle alone cannot complete it; only the winner-JSON-exists
+    validation can.
+  - Traps: The legacy "US-002 BLOCKED" entry (2026-05-13) is stale once
+    US-004 closed — do not re-cite it as a current blocker. The 136-byte
+    `transnext_micro_224_1k.pth` placeholder no longer applies (US-004
+    deleted the base file and pre-staged the real small checkpoint).
+  - Helpful context: To dispatch US-002 the operator needs (per `tune_all.py
+    --help`): `python tune_all.py --model transnext_small --dataset cifar10
+    --n-trials 20`, then `--dataset mnist`, then `python scripts/validate_top3.py
+    --model transnext_small --dataset cifar10` + `--dataset mnist`. Resume on
+    crash via `artifacts/optuna_thz.db` (already 192,512 bytes — has prior
+    studies). Acceptance also requires `effective_batch_size`, `priors_file_hash`,
+    `n_trials_completed ≥ 18`, `validated_at_full_convergence: true` per US-001
+    field set.
+  - Alternate Ralph path: If operator does not want to launch the multi-hour
+    GPU tune yet, US-005 (RALPH Loop Driver Framework — pure code/tests, no
+    GPU) is the next non-GPU-gated task and US-005 is not blocked on US-002.
+
+US-016 CLOSED 2026-05-14: TransNeXt small→tiny variant swap landed.
+- Operator decision (this session, after the cifar10 Stage 1 anchor data
+  point of 57.8 min/trial for transnext_small projected the 186-cell
+  campaign past the 2026-07-26 final deadline at the pessimistic end):
+  swap canonical TransNeXt variant from `transnext_small` (~50M params,
+  ~9 GB peak VRAM) to `transnext_tiny` (~28M params, ~7 GB peak) for
+  tighter capacity-match to ResNet50 (~25M) and ~310 GPU-h savings
+  across the 62 TransNeXt rows.
+- Variant swap mirrors the US-004 base→small pattern from earlier the
+  same day (config + tests + docs only; no GPU cells re-run; no winner
+  JSON invalidated because no transnext_* winner existed yet).
+- Sunk cost accepted: the in-flight `transnext_small_cifar10_L3` Optuna
+  study was halted via TaskStop at trial #10 (10/20 complete, best #0
+  val_acc=0.6150 — fast proxy). The orphaned study stays in
+  `artifacts/optuna_thz.db` as historical data; the new
+  `transnext_tiny_cifar10_L3` study is independent.
+- src/experiments/cells.py MODELS tuple: transnext_small → transnext_tiny.
+- tune_all.py SUPPORTED_MODELS, scripts/validate_top3.py DEFAULT_PAIRS +
+  --model choices, src/tests/test_matrix.py canonical-tag fixtures,
+  src/tests/test_quarantine_transnext.py SUPPORTED_MODELS assertion,
+  src/tests/test_ignores.py + scripts/check_ignores.sh example paths,
+  src/tests/test_priors.py docstring, src/tests/test_update_final_exp.py
+  fixture tag, src/tests/test_tune_studies.py load_priors call,
+  src/tests/test_reset_state.py priors fixture,
+  src/tests/test_build_final_exp_json.py tag regex + fixture,
+  src/tests/test_dashboard.py canonical-models list,
+  src/tests/test_phase_a_gate.py unknown-pair list,
+  scripts/update_final_exp.py header narrative.
+- artifacts/priors/transnext_tiny.json created (content-mirror of the
+  now-retired transnext_small.json; "model": "transnext_tiny"; band
+  identical — priors are paper-derived, not architecture-derived;
+  documents the swap in the `notes` field and pins
+  embed_dims=[72,144,288,576], depths=[2,2,15,2] ~28M).
+- artifacts/weights/transnext_tiny_224_1k.pth pre-staged via
+  `python scripts/fetch_transnext_weights.py --sizes tiny`
+  (113,221,596 bytes; ~57% of small's 199 MB, matching the param ratio).
+  The retired transnext_small_224_1k.pth stays on disk (dispatch path
+  only loads what MODELS references; no cleanup needed).
+- Final_Exp.md + Final_Exp.json + Final_Exp.html regenerated:
+  62 TransNeXt rows now show transnext_tiny tags; total still 186;
+  4 prior Phase A CNN completions (resnet50/densenet121 × cifar10/mnist)
+  preserved; 182 pending.
+- CLAUDE.md Models row + Optuna priors path,
+  README.md (campaign-status table — added US-016 closure row,
+    frozen-artifacts table, pre-fetch instructions / Bash + PowerShell,
+    Troubleshooting symptom-text + env-var name, model table),
+  artifacts/priors/PRIORS_SOURCES.md file-index + heading +
+    swap-attribution paragraph,
+  docs/runbooks/PHASE_B_EXECUTION.md "Commands you should NOT run"
+    extended to cover both retired variants.
+- PRD.md updated: §5.2 batch table row, §5.3 canonical variant text +
+  un-quarantine acceptance, §6.2 "6 pairs" line, §8.bis renumbering
+  paragraph + table (added US-016 row + updated US-008/011/014 model
+  names + retitled US-002), US-002 body + acceptance criteria,
+  US-008/011/014 titles + dispatch flag, §10 risk row (TransNeXt OOM
+  likelihood Very Low under tiny), §12 dependency diagram (US-004 → US-016
+  → US-002 chain + downstream Phase-A/B/C transnext_tiny rows),
+  §11 REPORTER summary docs path; D9 decision added; new US-016
+  section inserted after US-015 with all 14 acceptance criteria ticked.
+- Verification: pytest 21/21 ✓ (test_backfill_history_json,
+  test_quarantine_transnext, test_update_final_exp);
+  `python tune_all.py --validate-only` → "All 3 priors files valid"
+  (resnet50, densenet121, transnext_tiny); mypy on
+  src/experiments/cells.py = "Success: no issues found"; mypy on
+  validate_top3.py = 4 pre-existing errors at lines 121/144/261
+  (Trial.value typing + Lightning precision Literal — not touched by
+  swap and consistent with progress.txt line 213 baseline);
+  `iter_cells()` returns 186 cells = 62 resnet50 + 62 densenet121 +
+  62 transnext_tiny; first tag `final_clean_transnext_tiny_cifar10`,
+  last `final_C_L5_salt_pepper_transnext_tiny_mnist`.
+- The 27 transnext_small references that remain repo-wide are
+  classified deliberate: vendored upstream (transnext_official/**),
+  dispatch sets accepting any of micro/tiny/small/base
+  (transnext_wrapper.py, transnext_weights.py, lightning/module.py
+  TRANSNEXT_NAMES, runner.py TRANSNEXT_NAMES), archived PRDs
+  (docs/prds/archive/**, notebooklm_sync logs), historical
+  swap-attribution prose (US-004 acceptance section preserved
+  verbatim; README "Recent scientific changes"; CLAUDE.md Models
+  row swap history; D8 decision in PRD §12), and the orphaned
+  Optuna study `transnext_small_cifar10_L3` in optuna_thz.db.
+- No commit yet (this Ralph cycle covers the swap; commit happens next
+  with the tracker pathspec only — no weight binaries, no per-cell
+  artifacts). No git push (deferred to US-015 phase-boundary pushes).
+
+## Iteration 2 (2026-05-14) — US-002 Stage 1 cifar10 launched (Ralph cycle)
+- What was done: Operator authorized re-run via "repeat US-002". Launched
+  `python tune_all.py --model transnext_small --dataset cifar10 --n-trials 20`
+  in background; logging to `artifacts/tune_logs/us002_transnext_small_cifar10_stage1.log`.
+  First-50-line smoke-check at t+~10s confirms healthy startup:
+    [I 2026-05-14 01:37:08,831] A new study created in RDB with name: transnext_small_cifar10_L3
+    Seed set to 42
+    Using bfloat16 Automatic Mixed Precision (AMP)
+    GPU available: True (cuda), used: True
+    LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+  No "Pretrained TransNeXt weights missing" error this time — the US-004 swap
+  to transnext_small + the 199 MB pre-staged checkpoint resolve the 2026-05-13
+  block. Bootstrap probe and trial dispatch proceeding normally.
+- Files affected: `artifacts/optuna_thz.db` (new study row,
+  `transnext_small_cifar10_L3`); `artifacts/tune_logs/us002_transnext_small_cifar10_stage1.log`
+  (new). No source code change. No commit.
+- Validation: US-002 acceptance still requires both winner JSONs at
+  `artifacts/best_hparams/transnext_small_{cifar10,mnist}.json`. cifar10
+  Stage 1 will need ~hours; Stage 1.5 (top-3 × 60 epochs) needs more; mnist
+  pair is still queued. NOT marking US-002 complete; NOT committing.
+- Learnings for next cycles:
+  - Patterns: Background `python tune_all.py --model transnext_small --dataset <d>
+    --n-trials 20` with stdout/stderr redirected to `artifacts/tune_logs/<run>.log`
+    is the safe dispatch shape — gives the operator a tailable progress trail
+    without blocking a Ralph cycle.
+  - Traps: The "Checkpoint directory ... exists and is not empty" warning at
+    Lightning startup is benign — it refers to the legacy `checkpoints/` dir
+    and does not block the new study. Do not mistake it for a real failure.
+    Also: `triton not found` flop_counter warning is cosmetic on Windows
+    Blackwell; flop counting is not used by the tune.
+  - Helpful context: Next Ralph cycle should `tail -n 60` the log to check
+    trial progress; when Stage 1 cifar10 finishes (study has ≥ 18 completed
+    trials in `artifacts/optuna_thz.db`), launch Stage 1.5 via
+    `python scripts/validate_top3.py --model transnext_small --dataset cifar10`,
+    then repeat the pair for `--dataset mnist`. Only after both winner JSONs
+    exist with `validated_at_full_convergence: true` can US-002 boxes be
+    ticked and a commit prepared.

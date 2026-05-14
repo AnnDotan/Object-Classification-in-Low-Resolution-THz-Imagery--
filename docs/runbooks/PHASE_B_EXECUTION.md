@@ -195,7 +195,7 @@ The tracker-sync script only stages `Final_Exp.md`, `artifacts/Final_Exp.json`, 
 
 ## Commands you should NOT run
 
-- `python tune_all.py --n-trials 20 --model transnext_base` — bypasses the US-014 quarantine. Only use when MASTER explicitly reactivates TransNeXt with a hardware tier upgrade.
+- `python tune_all.py --n-trials 20 --model transnext_base` or `--model transnext_small` — neither is the canonical TransNeXt variant any more. Base was swapped to `transnext_small` by US-004 on 2026-05-14; small was swapped to `transnext_tiny` by US-016 on the same day. Use `--model transnext_tiny` for the campaign sweep; `--model transnext_small` and `--model transnext_base` are now ad-hoc smoke-test paths only (and `tune_all.py SUPPORTED_MODELS` no longer lists them — the dispatch will reject these names at the CLI).
 - `python run_all_phases.py --plan final --mode pilot` — rejected by assertion (CLAUDE.md "quality over speed").
 - `git add runs/`, `git push runs/` — weight privacy violation; `runs/final/**` is gitignored + claudeignored on purpose.
 - `python run_all_phases.py --plan final --phase B --skip-existing` **before Stage 1.5 has produced validated winners** — Phase B's `_load_hparams_for_cell` would consume the fast-tune winners (5-ep / 2k subset proxy), violating the convergence-first protocol. Always check `validated_at_full_convergence` is `true` first.

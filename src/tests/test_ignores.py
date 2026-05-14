@@ -19,7 +19,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 # Hypothetical paths under each excluded category. They don't need to
 # exist on disk — git check-ignore evaluates patterns, not filesystem.
 SHOULD_IGNORE = [
-    "artifacts/weights/transnext_base_224_1k.pth",
+    "artifacts/weights/transnext_tiny_224_1k.pth",
     "artifacts/weights/foo.pt",
     "artifacts/optuna_thz.db",
     "artifacts/dashboard_thumbs/final_clean_resnet50_cifar10.png",
@@ -37,7 +37,7 @@ SHOULD_TRACK = [
     "artifacts/priors/_schema.json",
     "artifacts/priors/resnet50.json",
     "artifacts/priors/densenet121.json",
-    "artifacts/priors/transnext_base.json",
+    "artifacts/priors/transnext_tiny.json",
     # US-016: SYNCHRONIZER commits artifacts/Final_Exp.html at every phase
     # boundary so the remote always reflects the latest campaign snapshot.
     # It IS the canonical Gold Standard dashboard — must be tracked.

@@ -148,7 +148,7 @@ def _check_chip_filter_groups_present() -> None:
     for facet in ("model", "dataset", "status", "axis"):
         assert f'data-chip-group="{facet}"' in body, f"missing chip group {facet}"
     expected_values = (
-        "resnet50", "densenet121", "transnext_base",
+        "resnet50", "densenet121", "transnext_tiny",
         "cifar10", "mnist",
         "Pending", "Running", "Complete", "Failed", "Deferred",
         "resolution", "blur", "noise", "saturation", "salt_pepper",

@@ -101,11 +101,11 @@ def _check_tag_format_examples() -> None:
     by_tag = cells_by_tag()
     for tag in (
         "final_clean_resnet50_cifar10",
-        "final_clean_transnext_base_mnist",
+        "final_clean_transnext_tiny_mnist",
         "final_B_L3_densenet121_cifar10",
-        "final_B_L5_transnext_base_mnist",
+        "final_B_L5_transnext_tiny_mnist",
         "final_C_L4_noise_resnet50_cifar10",
-        "final_C_L1_saturation_transnext_base_mnist",
+        "final_C_L1_saturation_transnext_tiny_mnist",
     ):
         assert tag in by_tag, f"missing canonical tag: {tag}"
     print(f"OK [format] — canonical tag examples all resolve.")

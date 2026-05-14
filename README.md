@@ -20,7 +20,7 @@ How robust does image classification remain when visual information is severely 
 | Offline PSNR/SSIM script — [`src/tools/measure_image_quality.py`](src/tools/measure_image_quality.py) | ✅ live (US-002) |
 | Per-model paper-anchored priors — [`artifacts/priors/*.json`](artifacts/priors/) | ✅ live (US-003) |
 | `tune_all.py` priors loader + Optuna study runner | ✅ live (US-004 + US-005) |
-| TransNeXt `base` + full-FT mode + auto-download | ✅ live (US-006) |
+| TransNeXt `small` + full-FT mode + auto-download (swapped from `base` by US-004 on 2026-05-14) | ✅ live (US-006) |
 | `--cell-tag` matrix consumer in [`run_systematic.py`](run_systematic.py) | ✅ live (US-008) |
 | `--plan final` orchestration in [`run_all_phases.py`](run_all_phases.py) | ✅ live (US-009) |
 | Pre-rendered Original-vs-Degraded thumbs — [`src/tools/render_cell_thumbs.py`](src/tools/render_cell_thumbs.py) | ✅ live (US-010) |
@@ -45,13 +45,15 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | — | US-042 | TransNeXt @ 224×224 un-quarantine | ✅ closed |
 | — | US-043 | `resnet50` × {cifar10, mnist} Optuna tune (Stage 1 + 1.5) | ✅ closed |
 | **US-001** | US-044 | `densenet121` × {cifar10, mnist} Optuna tune | ✅ **closed 2026-05-14** |
-| **US-002** | US-045 | `transnext_base` × {cifar10, mnist} Optuna tune | 🟡 **in flight** (Stage 1 cifar10 running on the 5070; checkpoint dropped 2026-05-13) |
+| **US-002** | US-045 | `transnext_tiny` × {cifar10, mnist} Optuna tune *(retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)* | ⏳ **pending** (priors mirrored to `transnext_tiny.json`; Stage 1 not yet started under the new variant) |
 | **US-003** | (new) | Phase C single-axis correction (inactive axes → identity) | ✅ **closed 2026-05-14** ([`docs/phase_c.md`](docs/phase_c.md)) |
-| US-004 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests | ⏳ pending |
-| US-005…US-007 | US-046 (split) | Phase A execution — 1 story per model (2 cells each) + halt | ⏳ pending |
-| US-008…US-010 | US-046 (split) | Phase B execution — 1 story per model (10 cells each) + halt | ⏳ pending |
-| US-011…US-013 | US-046 (split) | Phase C execution — 1 story per model (50 cells each) + halt | ⏳ pending |
-| US-014 | US-047 | End-of-campaign verification + 3 phase-boundary pushes | ⏳ pending |
+| **US-004** | (new) | TransNeXt base→small variant swap (in-place repo retargeting; matrix tags, priors, tests, docs) | ✅ **closed 2026-05-14** |
+| US-005 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests | ⏳ pending |
+| US-006…US-008 | US-046 (split) | Phase A execution — 1 story per model (2 cells each) + halt | ⏳ pending |
+| US-009…US-011 | US-046 (split) | Phase B execution — 1 story per model (10 cells each) + halt | ⏳ pending |
+| US-012…US-014 | US-046 (split) | Phase C execution — 1 story per model (50 cells each) + halt | ⏳ pending |
+| US-015 | US-047 | End-of-campaign verification + 3 phase-boundary pushes | ⏳ pending |
+| **US-016** | (new) | TransNeXt small→tiny variant swap (capacity-match to ResNet50; ~310 GPU-h saved across the 62 TransNeXt rows; sunk: 10 trials of in-flight `transnext_small_cifar10_L3` orphaned in optuna_thz.db) | ✅ **closed 2026-05-14** |
 
 ### Frozen artifacts (4 of 6 winner JSONs)
 
@@ -61,8 +63,8 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | `resnet50 × mnist` | `artifacts/best_hparams/resnet50_mnist.json` | 0.9190 | trial #2 |
 | `densenet121 × cifar10` | `artifacts/best_hparams/densenet121_cifar10.json` | 0.6024 | trial #10 (fast-rank-3 → full-rank-1 swap) |
 | `densenet121 × mnist` | `artifacts/best_hparams/densenet121_mnist.json` | 0.9192 | trial #2 (no re-ranking — trial #2 won at both fast and full) |
-| `transnext_base × cifar10` | — | — | **pending (US-002 Stage 1 cifar10 running)** |
-| `transnext_base × mnist` | — | — | **pending (US-002 Stage 1.5 mnist queued)** |
+| `transnext_tiny × cifar10` | — | — | **pending (US-002 — retargeted small→tiny by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)** |
+| `transnext_tiny × mnist` | — | — | **pending (US-002 — retargeted small→tiny by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)** |
 
 ### Recent scientific changes
 
@@ -147,25 +149,25 @@ python -c "from torchvision import datasets; datasets.CIFAR10('./data', train=Tr
 .\venv\Scripts\python.exe -c "from torchvision import datasets; datasets.CIFAR10('./data', train=True, download=True); datasets.MNIST('./data', train=True, download=True)"
 ```
 
-TransNeXt-Base ImageNet-1K weights auto-download to `artifacts/weights/transnext_base_224_1k.pth` on first training run. To pre-fetch them upfront (recommended — surfaces network problems before Phase A starts and avoids latency on the first epoch):
+TransNeXt-Tiny ImageNet-1K weights auto-download to `artifacts/weights/transnext_tiny_224_1k.pth` on first training run. To pre-fetch them upfront (recommended — surfaces network problems before Phase A starts and avoids latency on the first epoch):
 
 **Bash:**
 ```bash
-python scripts/fetch_transnext_weights.py                  # base only (campaign default)
+python scripts/fetch_transnext_weights.py --sizes tiny     # campaign default (post-US-016)
 python scripts/fetch_transnext_weights.py --all            # every size
 ```
 
 **PowerShell:**
 ```powershell
-.\venv\Scripts\python.exe scripts\fetch_transnext_weights.py
+.\venv\Scripts\python.exe scripts\fetch_transnext_weights.py --sizes tiny
 .\venv\Scripts\python.exe scripts\fetch_transnext_weights.py --all
 ```
 
-Files smaller than 1 MiB (Git-LFS pointers, partial downloads, accidental placeholders) are detected and re-downloaded automatically. Override the source URL via the `THZ_TRANSNEXT_BASE_URL` env var (or `THZ_TRANSNEXT_<SIZE>_URL` for any size) if the default GitHub release URL is unreachable; if both fail the training script raises `FileNotFoundError` with a manual-download instruction.
+Files smaller than 1 MiB (Git-LFS pointers, partial downloads, accidental placeholders) are detected and re-downloaded automatically. Override the source URL via the `THZ_TRANSNEXT_TINY_URL` env var (or `THZ_TRANSNEXT_<SIZE>_URL` for any size) if the default GitHub release URL is unreachable; if both fail the training script raises `FileNotFoundError` with a manual-download instruction.
 
 ## Step 2 — Optuna Pre-Tuning (~20 GPU-hours)
 
-Tune hyperparameters on Phase B L3 Moderate for each `(model, dataset)` pair, then freeze them for the 186-cell sweep. Search space is **anchored on paper-derived priors** (`artifacts/priors/{resnet50,densenet121,transnext_base}.json`) — every range is held to ≤ 1 decade around the paper anchor.
+Tune hyperparameters on Phase B L3 Moderate for each `(model, dataset)` pair, then freeze them for the 186-cell sweep. Search space is **anchored on paper-derived priors** (`artifacts/priors/{resnet50,densenet121,transnext_tiny}.json`) — every range is held to ≤ 1 decade around the paper anchor.
 
 **Bash:**
 ```bash
@@ -306,7 +308,7 @@ Phase C (single-axis isolation) sweeps one axis through L1→L5 with every other
 |---|---|---|---|
 | **ResNet50** | residual CNN | differential LR fine-tuning (head 1e-3, backbone 1e-4) | TResNet (Ridnik et al., 2020) |
 | **DenseNet121** | densely-connected CNN | differential LR fine-tuning | DenseNet (Huang et al., 2017) |
-| **TransNeXt-Base** (default size for the 186-cell campaign per US-006) | aggregated-attention ViT | full fine-tuning (no frozen backbone) — `--transnext_size base --transnext_mode ft` | TransNeXt (Shi, 2024) §A.3 |
+| **TransNeXt-Tiny** (default size for the 186-cell campaign; swapped from `small` by US-016 on 2026-05-14 — predecessor base→small swap was US-004 same day) | aggregated-attention ViT | full fine-tuning (no frozen backbone) — `--transnext_size tiny --transnext_mode ft` | TransNeXt (Shi, 2024) §A.3 |
 
 ## The 186-cell Matrix
 
@@ -361,8 +363,8 @@ python -m src.tests.test_ignores                       # cross-platform variant
 |---|---|---|
 | `import torch` fails | venv not activated | activate `venv/` (note: NOT `.venv/`); see Step 0 |
 | `FileNotFoundError: missing best_hparams: artifacts/best_hparams/<m>_<d>.json` | tuning never ran for this `(model, dataset)` | `python tune_all.py --n-trials 20 --model M --dataset D` (or `--tune-first` on `run_all_phases.py`) |
-| `FileNotFoundError: Pretrained TransNeXt weights missing: artifacts/weights/transnext_base_224_1k.pth` | auto-download URL unreachable | set `THZ_TRANSNEXT_BASE_URL` to a working mirror, or manually drop the file at the printed path |
-| OOM on TransNeXt-Base | batch 32 too large for 8 GB VRAM | `--batch-size 16` or fall back to `--transnext_size small` |
+| `FileNotFoundError: Pretrained TransNeXt weights missing: artifacts/weights/transnext_tiny_224_1k.pth` | auto-download URL unreachable | set `THZ_TRANSNEXT_TINY_URL` to a working mirror, or manually drop the file at the printed path |
+| OOM on TransNeXt-Tiny | batch 32 too large for available VRAM (unexpected — tiny peaks at ~7 GB on the 12 GB RTX 5070) | `--batch-size 16` (with grad-accum 2 to preserve effective batch 32) or fall back to `--transnext_size micro` |
 | `--plan final --mode pilot` rejected with `AssertionError` | guardrail prevents short-training contamination | drop `--mode pilot`, or run pilot via `--plan legacy` |
 | Optuna trial pruned | normal pruner behavior | no action — trial state still recorded in `artifacts/optuna_thz.db` |
 | Determinism test fails (MSE > 0) | data pipeline mutation broke seed-per-index contract | revert recent changes to `src/data/datasets.py` or `src/data/degrade.py` |

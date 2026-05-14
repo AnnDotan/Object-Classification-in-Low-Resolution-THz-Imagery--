@@ -16,7 +16,7 @@ from typing import Iterator, NamedTuple, Optional
 from src.data.degradation_levels import AXES
 
 
-MODELS: tuple[str, ...] = ("resnet50", "densenet121", "transnext_base")
+MODELS: tuple[str, ...] = ("resnet50", "densenet121", "transnext_tiny")
 DATASETS: tuple[str, ...] = ("cifar10", "mnist")
 LEVELS: tuple[int, ...] = (1, 2, 3, 4, 5)
 

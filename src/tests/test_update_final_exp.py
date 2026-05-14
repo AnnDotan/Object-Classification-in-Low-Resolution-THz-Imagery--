@@ -121,7 +121,7 @@ def test_traceback_without_metrics_marks_failed():
 def test_render_is_idempotent():
     with tempfile.TemporaryDirectory() as td:
         runs_root = Path(td) / "runs" / "final"
-        cell_dir = runs_root / "final_clean_transnext_base_mnist"
+        cell_dir = runs_root / "final_clean_transnext_tiny_mnist"
         cell_dir.mkdir(parents=True)
         (cell_dir / "metrics.json").write_text(
             json.dumps({"best_val_acc": 0.99}), encoding="utf-8",

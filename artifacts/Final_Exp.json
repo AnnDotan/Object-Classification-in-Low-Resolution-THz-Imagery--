@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-13T21:28:06+00:00",
+  "generated_at": "2026-05-14T08:49:26+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -111,9 +111,9 @@
       "has_history": false
     },
     {
-      "tag": "final_B_L1_transnext_base_cifar10",
+      "tag": "final_B_L1_transnext_tiny_cifar10",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": null,
@@ -134,13 +134,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L1_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_B_L1_transnext_base_mnist",
+      "tag": "final_B_L1_transnext_tiny_mnist",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": null,
@@ -161,7 +161,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L1_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -273,9 +273,9 @@
       "has_history": false
     },
     {
-      "tag": "final_B_L2_transnext_base_cifar10",
+      "tag": "final_B_L2_transnext_tiny_cifar10",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": null,
@@ -296,13 +296,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L2_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_B_L2_transnext_base_mnist",
+      "tag": "final_B_L2_transnext_tiny_mnist",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": null,
@@ -323,7 +323,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L2_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -435,9 +435,9 @@
       "has_history": false
     },
     {
-      "tag": "final_B_L3_transnext_base_cifar10",
+      "tag": "final_B_L3_transnext_tiny_cifar10",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": null,
@@ -458,13 +458,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L3_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_B_L3_transnext_base_mnist",
+      "tag": "final_B_L3_transnext_tiny_mnist",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": null,
@@ -485,7 +485,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L3_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -597,9 +597,9 @@
       "has_history": false
     },
     {
-      "tag": "final_B_L4_transnext_base_cifar10",
+      "tag": "final_B_L4_transnext_tiny_cifar10",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": null,
@@ -620,13 +620,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L4_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_B_L4_transnext_base_mnist",
+      "tag": "final_B_L4_transnext_tiny_mnist",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": null,
@@ -647,7 +647,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L4_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -759,9 +759,9 @@
       "has_history": false
     },
     {
-      "tag": "final_B_L5_transnext_base_cifar10",
+      "tag": "final_B_L5_transnext_tiny_cifar10",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": null,
@@ -782,13 +782,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L5_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_B_L5_transnext_base_mnist",
+      "tag": "final_B_L5_transnext_tiny_mnist",
       "phase": "B",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": null,
@@ -809,7 +809,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_B_L5_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -921,9 +921,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L1_blur_transnext_base_cifar10",
+      "tag": "final_C_L1_blur_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": "blur",
@@ -944,13 +944,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_blur_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L1_blur_transnext_base_mnist",
+      "tag": "final_C_L1_blur_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": "blur",
@@ -971,7 +971,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_blur_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1083,9 +1083,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L1_noise_transnext_base_cifar10",
+      "tag": "final_C_L1_noise_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": "noise",
@@ -1106,13 +1106,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_noise_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L1_noise_transnext_base_mnist",
+      "tag": "final_C_L1_noise_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": "noise",
@@ -1133,7 +1133,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_noise_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1245,9 +1245,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L1_resolution_transnext_base_cifar10",
+      "tag": "final_C_L1_resolution_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": "resolution",
@@ -1268,13 +1268,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_resolution_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L1_resolution_transnext_base_mnist",
+      "tag": "final_C_L1_resolution_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": "resolution",
@@ -1295,7 +1295,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_resolution_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1407,9 +1407,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L1_salt_pepper_transnext_base_cifar10",
+      "tag": "final_C_L1_salt_pepper_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": "salt_pepper",
@@ -1430,13 +1430,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L1_salt_pepper_transnext_base_mnist",
+      "tag": "final_C_L1_salt_pepper_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": "salt_pepper",
@@ -1457,7 +1457,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_salt_pepper_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1569,9 +1569,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L1_saturation_transnext_base_cifar10",
+      "tag": "final_C_L1_saturation_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 1,
       "axis": "saturation",
@@ -1592,13 +1592,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_saturation_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L1_saturation_transnext_base_mnist",
+      "tag": "final_C_L1_saturation_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 1,
       "axis": "saturation",
@@ -1619,7 +1619,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L1_saturation_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1731,9 +1731,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L2_blur_transnext_base_cifar10",
+      "tag": "final_C_L2_blur_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": "blur",
@@ -1754,13 +1754,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_blur_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L2_blur_transnext_base_mnist",
+      "tag": "final_C_L2_blur_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": "blur",
@@ -1781,7 +1781,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_blur_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -1893,9 +1893,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L2_noise_transnext_base_cifar10",
+      "tag": "final_C_L2_noise_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": "noise",
@@ -1916,13 +1916,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_noise_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L2_noise_transnext_base_mnist",
+      "tag": "final_C_L2_noise_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": "noise",
@@ -1943,7 +1943,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_noise_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2055,9 +2055,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L2_resolution_transnext_base_cifar10",
+      "tag": "final_C_L2_resolution_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": "resolution",
@@ -2078,13 +2078,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_resolution_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L2_resolution_transnext_base_mnist",
+      "tag": "final_C_L2_resolution_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": "resolution",
@@ -2105,7 +2105,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_resolution_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2217,9 +2217,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L2_salt_pepper_transnext_base_cifar10",
+      "tag": "final_C_L2_salt_pepper_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": "salt_pepper",
@@ -2240,13 +2240,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L2_salt_pepper_transnext_base_mnist",
+      "tag": "final_C_L2_salt_pepper_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": "salt_pepper",
@@ -2267,7 +2267,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_salt_pepper_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2379,9 +2379,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L2_saturation_transnext_base_cifar10",
+      "tag": "final_C_L2_saturation_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 2,
       "axis": "saturation",
@@ -2402,13 +2402,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_saturation_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L2_saturation_transnext_base_mnist",
+      "tag": "final_C_L2_saturation_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 2,
       "axis": "saturation",
@@ -2429,7 +2429,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L2_saturation_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2541,9 +2541,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L3_blur_transnext_base_cifar10",
+      "tag": "final_C_L3_blur_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": "blur",
@@ -2564,13 +2564,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_blur_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L3_blur_transnext_base_mnist",
+      "tag": "final_C_L3_blur_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": "blur",
@@ -2591,7 +2591,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_blur_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2703,9 +2703,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L3_noise_transnext_base_cifar10",
+      "tag": "final_C_L3_noise_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": "noise",
@@ -2726,13 +2726,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_noise_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L3_noise_transnext_base_mnist",
+      "tag": "final_C_L3_noise_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": "noise",
@@ -2753,7 +2753,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_noise_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -2865,9 +2865,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L3_resolution_transnext_base_cifar10",
+      "tag": "final_C_L3_resolution_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": "resolution",
@@ -2888,13 +2888,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_resolution_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L3_resolution_transnext_base_mnist",
+      "tag": "final_C_L3_resolution_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": "resolution",
@@ -2915,7 +2915,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_resolution_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3027,9 +3027,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L3_salt_pepper_transnext_base_cifar10",
+      "tag": "final_C_L3_salt_pepper_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": "salt_pepper",
@@ -3050,13 +3050,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L3_salt_pepper_transnext_base_mnist",
+      "tag": "final_C_L3_salt_pepper_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": "salt_pepper",
@@ -3077,7 +3077,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_salt_pepper_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3189,9 +3189,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L3_saturation_transnext_base_cifar10",
+      "tag": "final_C_L3_saturation_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 3,
       "axis": "saturation",
@@ -3212,13 +3212,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_saturation_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L3_saturation_transnext_base_mnist",
+      "tag": "final_C_L3_saturation_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 3,
       "axis": "saturation",
@@ -3239,7 +3239,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L3_saturation_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3351,9 +3351,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L4_blur_transnext_base_cifar10",
+      "tag": "final_C_L4_blur_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": "blur",
@@ -3374,13 +3374,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_blur_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L4_blur_transnext_base_mnist",
+      "tag": "final_C_L4_blur_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": "blur",
@@ -3401,7 +3401,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_blur_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3513,9 +3513,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L4_noise_transnext_base_cifar10",
+      "tag": "final_C_L4_noise_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": "noise",
@@ -3536,13 +3536,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_noise_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L4_noise_transnext_base_mnist",
+      "tag": "final_C_L4_noise_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": "noise",
@@ -3563,7 +3563,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_noise_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3675,9 +3675,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L4_resolution_transnext_base_cifar10",
+      "tag": "final_C_L4_resolution_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": "resolution",
@@ -3698,13 +3698,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_resolution_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L4_resolution_transnext_base_mnist",
+      "tag": "final_C_L4_resolution_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": "resolution",
@@ -3725,7 +3725,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_resolution_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3837,9 +3837,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L4_salt_pepper_transnext_base_cifar10",
+      "tag": "final_C_L4_salt_pepper_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": "salt_pepper",
@@ -3860,13 +3860,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L4_salt_pepper_transnext_base_mnist",
+      "tag": "final_C_L4_salt_pepper_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": "salt_pepper",
@@ -3887,7 +3887,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_salt_pepper_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -3999,9 +3999,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L4_saturation_transnext_base_cifar10",
+      "tag": "final_C_L4_saturation_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 4,
       "axis": "saturation",
@@ -4022,13 +4022,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_saturation_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L4_saturation_transnext_base_mnist",
+      "tag": "final_C_L4_saturation_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 4,
       "axis": "saturation",
@@ -4049,7 +4049,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L4_saturation_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4161,9 +4161,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L5_blur_transnext_base_cifar10",
+      "tag": "final_C_L5_blur_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": "blur",
@@ -4184,13 +4184,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_blur_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L5_blur_transnext_base_mnist",
+      "tag": "final_C_L5_blur_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": "blur",
@@ -4211,7 +4211,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_blur_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4323,9 +4323,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L5_noise_transnext_base_cifar10",
+      "tag": "final_C_L5_noise_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": "noise",
@@ -4346,13 +4346,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_noise_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L5_noise_transnext_base_mnist",
+      "tag": "final_C_L5_noise_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": "noise",
@@ -4373,7 +4373,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_noise_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4485,9 +4485,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L5_resolution_transnext_base_cifar10",
+      "tag": "final_C_L5_resolution_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": "resolution",
@@ -4508,13 +4508,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_resolution_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L5_resolution_transnext_base_mnist",
+      "tag": "final_C_L5_resolution_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": "resolution",
@@ -4535,7 +4535,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_resolution_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4647,9 +4647,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L5_salt_pepper_transnext_base_cifar10",
+      "tag": "final_C_L5_salt_pepper_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": "salt_pepper",
@@ -4670,13 +4670,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L5_salt_pepper_transnext_base_mnist",
+      "tag": "final_C_L5_salt_pepper_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": "salt_pepper",
@@ -4697,7 +4697,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_salt_pepper_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4809,9 +4809,9 @@
       "has_history": false
     },
     {
-      "tag": "final_C_L5_saturation_transnext_base_cifar10",
+      "tag": "final_C_L5_saturation_transnext_tiny_cifar10",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": 5,
       "axis": "saturation",
@@ -4832,13 +4832,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_saturation_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_C_L5_saturation_transnext_base_mnist",
+      "tag": "final_C_L5_saturation_transnext_tiny_mnist",
       "phase": "C",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": 5,
       "axis": "saturation",
@@ -4859,7 +4859,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_C_L5_saturation_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     },
     {
@@ -4971,9 +4971,9 @@
       "has_history": true
     },
     {
-      "tag": "final_clean_transnext_base_cifar10",
+      "tag": "final_clean_transnext_tiny_cifar10",
       "phase": "A",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "cifar10",
       "level": null,
       "axis": null,
@@ -4994,13 +4994,13 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_clean_transnext_base_cifar10.png",
+      "visual_core": null,
       "has_history": false
     },
     {
-      "tag": "final_clean_transnext_base_mnist",
+      "tag": "final_clean_transnext_tiny_mnist",
       "phase": "A",
-      "model": "transnext_base",
+      "model": "transnext_tiny",
       "dataset": "mnist",
       "level": null,
       "axis": null,
@@ -5021,7 +5021,7 @@
       "finished_at": null,
       "quarantined": false,
       "quarantine_reason": null,
-      "visual_core": "dashboard_thumbs/final_clean_transnext_base_mnist.png",
+      "visual_core": null,
       "has_history": false
     }
   ],

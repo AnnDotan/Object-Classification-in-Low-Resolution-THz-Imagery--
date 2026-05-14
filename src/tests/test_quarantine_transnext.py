@@ -59,9 +59,9 @@ def test_is_quarantined_returns_false_after_v3_lift():
     return False for every input (callers that still invoke it just see "no
     quarantine" instead of having to be re-plumbed).
     """
-    assert is_quarantined("transnext_base") is False
+    assert is_quarantined("transnext_tiny") is False
     assert is_quarantined("transnext_micro") is False
-    assert is_quarantined("transnext_small") is False
+    assert is_quarantined("transnext_tiny") is False
     assert is_quarantined("TransNeXt_Base") is False
     assert is_quarantined("resnet50") is False
     assert is_quarantined("densenet121") is False
@@ -75,10 +75,10 @@ def test_find_quarantine_dirs_picks_transnext_and_v2_siblings():
         runs_root.mkdir(parents=True)
         # Plant a mix of CNN, TransNeXt, and __v2 dirs.
         wanted = [
-            "final_clean_transnext_base_cifar10",
-            "final_clean_transnext_base_mnist",
-            "final_clean_transnext_base_cifar10__v2",
-            "final_B_L3_transnext_base_mnist",
+            "final_clean_transnext_tiny_cifar10",
+            "final_clean_transnext_tiny_mnist",
+            "final_clean_transnext_tiny_cifar10__v2",
+            "final_B_L3_transnext_tiny_mnist",
         ]
         unwanted = [
             "final_clean_resnet50_cifar10",
@@ -96,7 +96,7 @@ def test_dry_run_does_not_remove_anything():
     with tempfile.TemporaryDirectory() as td:
         runs_root = Path(td) / "runs" / "final"
         runs_root.mkdir(parents=True)
-        d = runs_root / "final_clean_transnext_base_cifar10"
+        d = runs_root / "final_clean_transnext_tiny_cifar10"
         d.mkdir()
         (d / "log.txt").write_text("epoch 0\n", encoding="utf-8")
 
@@ -111,8 +111,8 @@ def test_quarantine_removes_dirs_and_skips_refresh():
         runs_root = Path(td) / "runs" / "final"
         runs_root.mkdir(parents=True)
         keep = runs_root / "final_clean_resnet50_cifar10"
-        kill1 = runs_root / "final_clean_transnext_base_cifar10"
-        kill2 = runs_root / "final_clean_transnext_base_mnist__v2"
+        kill1 = runs_root / "final_clean_transnext_tiny_cifar10"
+        kill2 = runs_root / "final_clean_transnext_tiny_mnist__v2"
         for p in (keep, kill1, kill2):
             p.mkdir()
             (p / "log.txt").write_text("placeholder\n", encoding="utf-8")
@@ -139,7 +139,7 @@ def test_quarantine_never_opens_weight_files():
     with tempfile.TemporaryDirectory() as td:
         runs_root = Path(td) / "runs" / "final"
         runs_root.mkdir(parents=True)
-        d = runs_root / "final_clean_transnext_base_cifar10"
+        d = runs_root / "final_clean_transnext_tiny_cifar10"
         d.mkdir()
         # Decoy weight files that the quarantine script must not read.
         (d / "model.ckpt").write_bytes(b"\x00" * 16)
@@ -227,15 +227,15 @@ def test_v3_lift_tune_all_includes_transnext_by_default():
     try:
         rc = ta.main(["--n-trials", "1", "--dataset", "cifar10"])
         assert rc == 0
-        assert "transnext_base" in captured["models"], (
-            f"V3 lift broken: transnext_base missing from default tune sweep; "
+        assert "transnext_tiny" in captured["models"], (
+            f"V3 lift broken: transnext_tiny missing from default tune sweep; "
             f"got {captured['models']}"
         )
-        # Explicit --model transnext_base still works (operator intent path).
+        # Explicit --model transnext_tiny still works (operator intent path).
         captured.clear()
-        rc = ta.main(["--n-trials", "1", "--model", "transnext_base", "--dataset", "cifar10"])
+        rc = ta.main(["--n-trials", "1", "--model", "transnext_tiny", "--dataset", "cifar10"])
         assert rc == 0
-        assert captured["models"] == ["transnext_base"], captured["models"]
+        assert captured["models"] == ["transnext_tiny"], captured["models"]
     finally:
         _sys.modules.pop("src.tune_hyperparams", None)
 
@@ -253,13 +253,13 @@ def test_v3_lift_run_all_phases_no_longer_filters_quarantine():
 
 
 def test_run_all_phases_dry_run_resolves_transnext_cell():
-    """`--plan final --phase A --model transnext_base --dataset cifar10
+    """`--plan final --phase A --model transnext_tiny --dataset cifar10
     --dry-run` exits 0 and prints the resolved CellSpec."""
     import run_all_phases
 
     rc = run_all_phases.run_final_plan(
         phase="A",
-        model="transnext_base",
+        model="transnext_tiny",
         dataset="cifar10",
         dry_run=True,
         run_cell_fn=lambda *a, **kw: (_ for _ in ()).throw(

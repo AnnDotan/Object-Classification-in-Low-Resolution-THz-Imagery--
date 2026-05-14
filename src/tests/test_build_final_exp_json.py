@@ -203,7 +203,7 @@ def _check_rows_sorted_by_tag() -> None:
     tags = [r["tag"] for r in doc["rows"]]
     assert tags == sorted(tags), "rows are not sorted by tag"
     # Sanity: tag prefixes match the canonical scheme.
-    pat = re.compile(r"^final_(clean|B_L\d|C_L\d_[a-z_]+)_(resnet50|densenet121|transnext_base)_(cifar10|mnist)$")
+    pat = re.compile(r"^final_(clean|B_L\d|C_L\d_[a-z_]+)_(resnet50|densenet121|transnext_tiny)_(cifar10|mnist)$")
     bad = [t for t in tags if not pat.match(t)]
     assert not bad, f"non-canonical tags: {bad[:5]}"
     print(f"OK [sort] -- 186 rows sorted by tag; first={tags[0]}, last={tags[-1]}.")
@@ -314,7 +314,7 @@ def _check_quarantine_override() -> None:
         # Stage a "Complete" metrics.json under a TransNeXt tag — simulating
         # a leftover from before the quarantine. The aggregator must still
         # render Deferred and must not surface val_acc as if active.
-        tag = "final_clean_transnext_base_cifar10"
+        tag = "final_clean_transnext_tiny_cifar10"
         (runs_root / tag).mkdir(parents=True)
         (runs_root / tag / "metrics.json").write_text(
             json.dumps({"best_val_acc": 0.99, "epochs_run": 60}), encoding="utf-8",

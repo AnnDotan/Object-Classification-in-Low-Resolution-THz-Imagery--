@@ -81,7 +81,7 @@ def _check_above_paper_is_green() -> None:
 
 def _check_unknown_pair_raises() -> None:
     """TransNeXt pairs are intentionally not in PAPER_BASELINES (deferred per PRD)."""
-    for pair in [("transnext_small", "cifar10"), ("transnext_base", "mnist"),
+    for pair in [("transnext_tiny", "cifar10"), ("transnext_base", "mnist"),
                  ("resnet50", "imagenet"), ("vit_b16", "cifar10")]:
         try:
             evaluate_gate(*pair, 0.5)

@@ -118,7 +118,7 @@ def _check_study_resumes_from_storage() -> None:
 
 def _check_param_distribution_routing() -> None:
     """Spot-check: priors with loguniform are passed log=True to suggest_float."""
-    priors = load_priors("transnext_base")
+    priors = load_priors("transnext_tiny")
     sampler = optuna.samplers.TPESampler(seed=0)
     study = optuna.create_study(direction="maximize", sampler=sampler)
     trial = study.ask()

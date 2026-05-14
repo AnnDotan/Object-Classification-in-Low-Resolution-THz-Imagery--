@@ -81,7 +81,7 @@ def _stage_workspace(ws: Path) -> dict:
     priors.mkdir()
     (priors / "resnet50.json").write_text('{"head_lr": {"low": 1e-4}}', encoding="utf-8")
     (priors / "densenet121.json").write_text('{"head_lr": {"low": 1e-4}}', encoding="utf-8")
-    (priors / "transnext_base.json").write_text('{"head_lr": {"low": 1e-4}}', encoding="utf-8")
+    (priors / "transnext_tiny.json").write_text('{"head_lr": {"low": 1e-4}}', encoding="utf-8")
     (priors / "_schema.json").write_text("{}", encoding="utf-8")
     (priors / "PRIORS_SOURCES.md").write_text("# sources\n", encoding="utf-8")
 

@@ -1,6 +1,6 @@
 {
-  "model": "transnext_base",
-  "notes": "Full fine-tuning (not LP) per US-006. TransNeXt §A.3 specifies AdamW + cosine, weight decay 5e-2, label smoothing 0.0 for LP. For full FT we keep WD anchor 5e-2 and let the search relax LS in [0, 0.1]. Backbone LR is much smaller than head LR because the backbone is pretrained.",
+  "model": "transnext_tiny",
+  "notes": "Full fine-tuning (not LP). TransNeXt §A.3 specifies AdamW + cosine, weight decay 5e-2, label smoothing 0.0 for LP. For full FT we keep WD anchor 5e-2 and let the search relax LS in [0, 0.1]. Backbone LR is much smaller than head LR because the backbone is pretrained. Mirrors the (now-retired) transnext_small prior; the swap small→tiny (US-016, 2026-05-14) keeps LR/WD/warmup decade bounds intact since they are paper-derived, not architecture-derived. transnext_tiny architecture: embed_dims=[72,144,288,576], depths=[2,2,15,2] (~28M params; capacity-match to ResNet50 ~25M).",
   "hparams": {
     "head_lr": {
       "distribution": "loguniform",

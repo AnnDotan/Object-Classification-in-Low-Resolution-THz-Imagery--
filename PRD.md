@@ -80,9 +80,9 @@ Optuna DB and pre-5070 `best_hparams/*.json` archived to `*.pre-5070.bak` / `_ar
 |---|---|---|
 | ResNet50 | 32 | 16 |
 | DenseNet121 | 32 | 16 |
-| TransNeXt-base | 32 | 16 |
+| TransNeXt-tiny  | 32 | 16 |
 
-Batch 32 is the project's locked default per CLAUDE.md. If a `(model, dataset)` pair OOMs at 32, the bootstrap probe in [`scripts/setup_gpu_env.py`](scripts/setup_gpu_env.py) re-tries at 16 with grad-accum 2 so the effective batch stays 32. The winning batch is frozen into `artifacts/best_hparams/{m}_{d}.json` under `effective_batch_size`. Subsequent cells of the same `(model, dataset)` pair don't re-probe.
+Batch 32 is the project's locked default per CLAUDE.md. If a `(model, dataset)` pair OOMs at 32, the bootstrap probe in [`scripts/setup_gpu_env.py`](scripts/setup_gpu_env.py) re-tries at 16 with grad-accum 2 so the effective batch stays 32. The winning batch is frozen into `artifacts/best_hparams/{m}_{d}.json` under `effective_batch_size`. Subsequent cells of the same `(model, dataset)` pair don't re-probe. Peak VRAM for TransNeXt-tiny at batch 32 / 224×224 is ~7 GB (vs ~9 GB for the retired `transnext_small` and ~11 GB for `transnext_base`), so the OOM-fallback path is very unlikely to fire on the 12 GB RTX 5070.
 
 ### 5.3 TransNeXt 224×224 — Un-quarantine (replaces the V3 native plan)
 
@@ -95,11 +95,11 @@ The vendored upstream TransNeXt assumes a 224×224 input with `patch_size=4`. Th
 | `transnext_small` | 224 | 4 | [72, 144, 288, 576] | [5, 5, 22, 5] | ~50 M | ~9 GB |
 | `transnext_base`  | 224 | 4 | [96, 192, 384, 768] | [5, 5, 23, 5] | ~89 M | ~11 GB |
 
-`transnext_base` is the canonical campaign variant. The matrix's `MODELS` tuple in [`src/experiments/cells.py`](src/experiments/cells.py) is `("resnet50", "densenet121", "transnext_base")`. Other sizes are reachable via the wrapper for ad-hoc smoke tests but are not part of the 186-cell denominator.
+`transnext_tiny` is the canonical campaign variant (swapped from `transnext_small` by US-016 on 2026-05-14 for tighter capacity match to ResNet50 ~25M and ~310 GPU-h saved across the 62 TransNeXt rows vs small — see §12 D9; predecessor base→small swap was US-004 same day, see §12 D8). The matrix's `MODELS` tuple in [`src/experiments/cells.py`](src/experiments/cells.py) is `("resnet50", "densenet121", "transnext_tiny")`. Other sizes (`micro`, `small`, `base`) are reachable via the wrapper for ad-hoc smoke tests but are not part of the 186-cell denominator.
 
-Implementation lives in [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py). The wrapper's `_TRANSNEXT_SPECS` dict carries only the four upstream architecture rows — no `_native` aliases, no `default_*` overrides. The training mode is **full-FT with differential LR** (head 5e-4, backbone 5e-5), matching the CNN convention and the CLAUDE.md training table.
+Implementation lives in [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py). The wrapper's `_TRANSNEXT_SPECS` dict carries all four upstream architecture rows (micro / tiny / small / base) — no `_native` aliases, no `default_*` overrides. The training mode is **full-FT with differential LR** (head 5e-4, backbone 5e-5), matching the CNN convention and the CLAUDE.md training table.
 
-Acceptance for the un-quarantine: [`src/tests/test_quarantine_transnext.py`](src/tests/test_quarantine_transnext.py) asserts (a) `is_quarantined` is a permanent no-op, (b) `iter_cells()` dispatches all 186 (62 TransNeXt + 124 CNN), (c) `tune_all`'s default sweep includes `transnext_base`, (d) `run_final_plan --dry-run --model transnext_base` resolves a 224-shape CellSpec.
+Acceptance for the un-quarantine: [`src/tests/test_quarantine_transnext.py`](src/tests/test_quarantine_transnext.py) asserts (a) `is_quarantined` is a permanent no-op, (b) `iter_cells()` dispatches all 186 (62 TransNeXt + 124 CNN), (c) `tune_all`'s default sweep includes `transnext_tiny`, (d) `run_final_plan --dry-run --model transnext_tiny` resolves a 224-shape CellSpec.
 
 ---
 
@@ -136,7 +136,7 @@ Per pair:
 - **Stage 1 — Fast Rank.** 20 Optuna trials at proxy budget (5 epochs, 2k train / 1k val subsets). Pruner: median pruner with patience 2. Cost ≈ 90 GPU-min on the 5070.
 - **Stage 1.5 — Top-3 Validate.** [`scripts/validate_top3.py`](scripts/validate_top3.py) pulls the top 3 trials by Stage-1 val_acc and re-trains each at the production protocol (60 epochs, patience 10, full train/val). The best-by-converged-val_acc wins and is frozen with `validated_at_full_convergence: true`. Cost ≈ 180 GPU-min per pair.
 
-Coverage: **6 pairs** (resnet50, densenet121, transnext_base) × (cifar10, mnist) = 6 winner JSONs at `artifacts/best_hparams/{m}_{d}.json`.
+Coverage: **6 pairs** (resnet50, densenet121, transnext_tiny) × (cifar10, mnist) = 6 winner JSONs at `artifacts/best_hparams/{m}_{d}.json`.
 
 Acceptance: every JSON includes `lr_head`, `lr_backbone`, `weight_decay`, `label_smoothing`, `batch_size`, `effective_batch_size`, `study_name`, `best_value`, `n_trials_completed` ≥ 18, `priors_file_hash`, `validated_at_full_convergence: true`.
 
@@ -200,26 +200,28 @@ Numbering: legacy US-040…US-043 (DONE/CLOSED 2026-05-12 ⇒ 2026-05-13) are li
 
 ---
 
-## 8.bis Renumbering (2026-05-13)
+## 8.bis Renumbering (2026-05-13, extended 2026-05-14, US-016 added same day)
 
-The remaining 4 open stories (legacy US-044…US-047) are **renumbered to a fresh US-001…US-014 series** that splits the RALPH execution by phase × model, inserts a Phase C scientific correction (US-003), and integrates all 12 sub-agents from [`agents/`](agents/). Legacy IDs in the dependency diagram (§10) and commit history are preserved for traceability; the new IDs are authoritative for all tracker rows and commit messages from 2026-05-13 onward.
+The remaining 4 open stories (legacy US-044…US-047) were **renumbered to a fresh US-001…US-014 series** on 2026-05-13. On 2026-05-14 a new **US-004 (TransNeXt base→small variant swap)** was inserted (all subsequent stories shifted forward by one to US-001…US-015). Later the same day a follow-up **US-016 (TransNeXt small→tiny variant swap)** was appended after the in-flight `transnext_small_cifar10_L3` Stage 1 anchor data point showed 57.8 min/trial, prompting a tighter capacity match to ResNet50 ~25M. US-002 was retargeted in-place twice in one day: first `transnext_base` → `transnext_small` (US-004), then `transnext_small` → `transnext_tiny` (US-016). Legacy IDs in the dependency diagram (§10) and commit history are preserved for traceability; the new IDs are authoritative for all tracker rows and commit messages from 2026-05-13 onward.
 
 | New | Legacy | Title |
 |---|---|---|
 | US-001 | US-044 | Close densenet121 Optuna tune (Stage 1.5 mnist remaining) |
-| US-002 | US-045 | transnext_base Optuna tune (cifar10 + mnist) |
+| US-002 | US-045 | **transnext_tiny** Optuna tune (cifar10 + mnist) — *retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day* |
 | US-003 | (new) | Phase C single-axis correction — inactive axes → identity (0/no-op) |
-| US-004 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests |
-| US-005 | US-046 (split) | Phase A execution — resnet50 × {cifar10, mnist} (2 cells) + analysis halt |
-| US-006 | US-046 (split) | Phase A execution — densenet121 × {cifar10, mnist} (2 cells) + halt |
-| US-007 | US-046 (split) | Phase A execution — transnext_base × {cifar10, mnist} (2 cells) + halt |
-| US-008 | US-046 (split) | Phase B execution — resnet50 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-009 | US-046 (split) | Phase B execution — densenet121 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-010 | US-046 (split) | Phase B execution — transnext_base × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-011 | US-046 (split) | Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-012 | US-046 (split) | Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-013 | US-046 (split) | Phase C execution — transnext_base × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-014 | US-047 | End-of-Campaign verification + 3 phase-boundary pushes (Phase A / B / C) |
+| US-004 | (new 2026-05-14) | TransNeXt **base→small variant swap** (in-place repo retargeting: matrix tags, priors, tests, docs) |
+| US-005 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests |
+| US-006 | US-046 (split) | Phase A execution — resnet50 × {cifar10, mnist} (2 cells) + analysis halt |
+| US-007 | US-046 (split) | Phase A execution — densenet121 × {cifar10, mnist} (2 cells) + halt |
+| US-008 | US-046 (split) | Phase A execution — transnext_tiny × {cifar10, mnist} (2 cells) + halt |
+| US-009 | US-046 (split) | Phase B execution — resnet50 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
+| US-010 | US-046 (split) | Phase B execution — densenet121 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
+| US-011 | US-046 (split) | Phase B execution — transnext_tiny × L1…L5 × {cifar10, mnist} (10 cells) + halt |
+| US-012 | US-046 (split) | Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
+| US-013 | US-046 (split) | Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
+| US-014 | US-046 (split) | Phase C execution — transnext_tiny × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
+| US-015 | US-047 | End-of-Campaign verification + 3 phase-boundary pushes (Phase A / B / C) |
+| US-016 | (new 2026-05-14) | TransNeXt **small→tiny variant swap** (in-place repo retargeting: matrix tags, priors, tests, docs) |
 
 Cell-denominator unchanged: 6 + 30 + 150 = 186.
 
@@ -234,15 +236,16 @@ Every open story carries a fixed contract over the 12 agent specs in [`agents/`]
 | US-001 | approve | — | tune | run | triage | sign-off | — | — | — | — | — | — |
 | US-002 | approve | — | tune | run | triage | sign-off | — | — | — | — | — | — |
 | US-003 | approve | **owns** | — | — | — | gate | — | docs | — | sources | dashboard tag rename | — |
-| US-004 | approve | gate Phase C | — | **owns driver** | hook + log | pathology fixture | — | — | — | — | — | — |
-| US-005…US-013 | approve | — | — | **owns runs** | first-responder | sign-off | **summary doc** | **docs/<phase>.md** | — | sources | dashboard graph | — |
-| US-014 | approve | — | — | — | — | final reproducibility | — | final docs | **3 pushes** | sources | — | leak audit |
+| US-004 | approve | **owns matrix** | validates priors decade-bound | — | — | dry-run + test_quarantine | — | CLAUDE.md + README | — | sources | dashboard model-tag refresh | — |
+| US-005 | approve | gate Phase C | — | **owns driver** | hook + log | pathology fixture | — | — | — | — | — | — |
+| US-006…US-014 | approve | — | — | **owns runs** | first-responder | sign-off | **summary doc** | **docs/<phase>.md** | — | sources | dashboard graph | — |
+| US-015 | approve | — | — | — | — | final reproducibility | — | final docs | **3 pushes** | sources | — | leak audit |
 
 Activation rules:
 
 - **MASTER**: Plan-Mode review at the start of every US; arbitrates DEBUGGER ↔ OPTIMIZER conflicts; signs off on LIBRARIAN doc changes.
-- **DATA_ARCHITECT**: owns `src/data/`. Primary deliverable on US-003. Re-validates the determinism gate after US-003 lands.
-- **OPTIMIZER**: re-reads `papers/` if a Stage 1.5 winner blows the decade bound on US-001/US-002.
+- **DATA_ARCHITECT**: owns `src/data/` and `src/experiments/`. Primary deliverable on US-003 (Phase C single-axis correction) and US-004 (TransNeXt base→small swap — owns the `MODELS` tuple in [`cells.py`](src/experiments/cells.py)). Re-validates the determinism gate after US-003 lands.
+- **OPTIMIZER**: re-reads `papers/` if a Stage 1.5 winner blows the decade bound on US-001/US-002. Validates the `transnext_small.json` priors mirror on US-004 (every distribution must still hit the decade bound — same band as the retired `transnext_base.json` since priors are paper-derived, not architecture-derived).
 - **EXECUTOR**: exclusive holder of `python scripts/run_ralph_loop.py …` invocations. Never edits source.
 - **DEBUGGER**: hooked into the driver via `on_cell_failure(tag, traceback) → runs/final/<tag>/debugger.log`. 3-attempt cap per cell.
 - **VALIDATOR**: runs determinism gate + reproducibility re-runs; gates promotion to "Complete".
@@ -270,20 +273,22 @@ Activation rules:
 
 ---
 
-### US-002: transnext_base Optuna tune (legacy US-045)
+### US-002: transnext_tiny Optuna tune (legacy US-045 — retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day)
 
-**Description:** Run Stage 1 (20 trials, 5-epoch proxy) + Stage 1.5 (top-3 at 60-epoch production) for `transnext_base` × {cifar10, mnist}. Uses `artifacts/priors/transnext_base.json`. cifar10 pair first, mnist second.
+**Description:** Run Stage 1 (20 trials, 5-epoch proxy) + Stage 1.5 (top-3 at 60-epoch production) for `transnext_tiny` × {cifar10, mnist}. Uses `artifacts/priors/transnext_tiny.json`. cifar10 pair first, mnist second.
+
+The variant was swapped twice on 2026-05-14: `transnext_base` (~89M) → `transnext_small` (~50M) by US-004 for capacity match to ResNet50 / DenseNet121 and dataset size; then `transnext_small` → `transnext_tiny` (~28M) by US-016 for an even tighter capacity match to ResNet50 (~25M) and ~310 GPU-h savings across the 62 TransNeXt rows of the 186-cell campaign. The pre-swap in-flight `transnext_small_cifar10_L3` Stage 1 study (10/20 trials, best=0.6150) was halted; the orphaned study stays in `artifacts/optuna_thz.db` as historical data (no cleanup). Priors band is unchanged across both swaps — `transnext_tiny.json` is a content-mirror of the retired `transnext_small.json` with `"model": "transnext_tiny"` — since LR / WD / warmup decade bounds are paper-derived, not architecture-derived.
 
 **Owner agents:** OPTIMIZER (validates priors against `papers/TransNeXt.pdf` if Stage 1 best blows the decade bound), EXECUTOR, VALIDATOR.
 
 **Acceptance Criteria:**
-- [ ] Two winner JSONs: `artifacts/best_hparams/transnext_base_cifar10.json`, `…_mnist.json`. Same field set as US-001.
-- [ ] `effective_batch_size` populated by the bootstrap probe. If batch=32 OOMs at 224×224 for TransNeXt-base, fallback batch=16 + grad_accum=2 → effective_batch_size=32.
+- [ ] Two winner JSONs: `artifacts/best_hparams/transnext_tiny_cifar10.json`, `…_mnist.json`. Same field set as US-001.
+- [ ] `effective_batch_size` populated by the bootstrap probe. Peak VRAM at batch=32 / 224×224 for TransNeXt-tiny is ~7 GB, so the OOM-fallback (batch=16 + grad_accum=2 → effective_batch_size=32) is very unlikely to fire on the 12 GB RTX 5070; still record whichever path succeeds.
 - [ ] No mid-trial NaN/Inf in the Optuna DB (visible via `optuna.load_study(...).trials`).
-- [ ] `progress.txt`: one line per pair (`US-002: transnext_base_<d> winner frozen (best_value=<x>, trials=<n>)`).
+- [ ] `progress.txt`: one line per pair (`US-002: transnext_tiny_<d> winner frozen (best_value=<x>, trials=<n>)`).
 - [ ] Typecheck passes; torch-free pytest green.
 
-**Gate to US-004+:** with US-001 mnist + US-002 both closed, all 6 winner JSONs carry `validated_at_full_convergence: true` and the production runs are unblocked.
+**Gate to US-005+:** with US-001 mnist + US-002 both closed (and US-004 already closed), all 6 winner JSONs carry `validated_at_full_convergence: true` and the production runs are unblocked.
 
 ---
 
@@ -325,7 +330,56 @@ Activation rules:
 
 ---
 
-### US-004: RALPH Loop Driver Framework (legacy US-046 — infra only)
+### US-004: TransNeXt base→small variant swap (new 2026-05-14) — **CLOSED 2026-05-14**
+
+**Description:** Repo-wide retargeting of the canonical TransNeXt variant from `transnext_base` (~89M params) to `transnext_small` (~50M params). Motivation: capacity-match to ResNet50 (~25M) / DenseNet121 (~8M) — the prior `_base` choice was over-parameterized for CIFAR-10 / MNIST (10K train × 10 classes), and `_small` strengthens the fair-comparison invariant rather than weakening it. Secondary wins: ~40% fewer params → faster per-cell wall time (frees days of GPU time before the 2026-05-31 poster deadline) and ~9 GB peak VRAM at batch 32 / 224×224 (vs ~11 GB for base) so the OOM-fallback path is unlikely to fire on the 12 GB RTX 5070.
+
+The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt rows in the matrix stay in the 186 denominator; their tags rotate from `…transnext_base…` to `…transnext_small…`. No prior TransNeXt cell results are invalidated (none ran). US-002 is retargeted in-place by this story (new title: `transnext_small Optuna tune`).
+
+**Owner agents:** DATA_ARCHITECT (owns `MODELS` tuple in [`cells.py`](src/experiments/cells.py)), OPTIMIZER (priors mirror + decade-bound re-validation), VALIDATOR (test_quarantine_transnext + dry-run the matrix), LIBRARIAN (CLAUDE.md + README + PRIORS_SOURCES.md sync), SYNCHRONIZER (no push here — tracker pushes deferred to US-015).
+
+**Files modified:**
+- [`src/experiments/cells.py`](src/experiments/cells.py) — `MODELS` tuple: `transnext_base` → `transnext_small`.
+- [`tune_all.py`](tune_all.py) — `SUPPORTED_MODELS`: `transnext_base` → `transnext_small`.
+- [`run_all_phases.py`](run_all_phases.py) — `--model` help-text example.
+- `artifacts/priors/transnext_small.json` (new) — mirror of git-resident `transnext_base.json` (the on-disk base file was deleted by operator pre-swap); same paper-derived decade bounds; `"model": "transnext_small"` + a `notes` line documenting the swap rationale and the depth difference (small: `depths=[5,5,22,5]`; base: `depths=[5,5,23,5]`).
+- [`scripts/validate_top3.py`](scripts/validate_top3.py) — `DEFAULT_PAIRS`, `--model choices`.
+- [`scripts/update_final_exp.py`](scripts/update_final_exp.py) — docstring + Final_Exp.md template (also strips the stale post-US-042 "TransNeXt is quarantined" paragraph that was already false; legacy `QUARANTINE_REASON` constant retained for per-cell defensive use).
+- [`src/tests/test_matrix.py`](src/tests/test_matrix.py) — canonical-tag fixtures.
+- [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) — example paths point at the new on-disk priors / weight filenames.
+- [`artifacts/priors/PRIORS_SOURCES.md`](artifacts/priors/PRIORS_SOURCES.md) — file-index + paper-attribution table.
+- [`CLAUDE.md`](CLAUDE.md) — Models table row + Optuna priors path reference.
+- [`README.md`](README.md) — campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting row, model-enumeration table.
+- [`PRD.md`](PRD.md) — §5.2, §5.3, §6.2, §8.bis, §8.5, US-002 retarget, this US-004 insertion, §10 dep map, §11 DoD, §12 D8.
+
+**Files NOT touched (deliberate):**
+- [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py) `_TRANSNEXT_SPECS` — keeps all four upstream rows (`micro / tiny / small / base`); the dispatch supports any of them. Only the matrix selects which is canonical.
+- [`src/models/transnext_weights.py`](src/models/transnext_weights.py) `_DEFAULT_URLS` — same: keeps both URLs; the auto-downloader picks the right one based on the requested variant.
+- [`src/lightning/module.py`](src/lightning/module.py) / [`src/runner.py`](src/runner.py) `TRANSNEXT_NAMES` sets — same.
+- `src/models/transnext_official/**` — vendored upstream code; never modified.
+- `docs/prds/archive/**` — historical PRDs preserved verbatim for traceability.
+
+**Acceptance Criteria:**
+- [x] [`src/experiments/cells.py`](src/experiments/cells.py) `MODELS` tuple ends in `"transnext_small"`. `iter_cells()` emits 62 cell tags whose model component is `transnext_small`. Total still 186.
+- [x] [`tune_all.py`](tune_all.py) `SUPPORTED_MODELS` ends in `"transnext_small"`. *(line 33 updated)*
+- [x] `artifacts/priors/transnext_small.json` exists, parses, mirrors the git-resident `transnext_base.json` schema, decade-bound is preserved on every distribution. *(file written 2026-05-14; band identical to the retired base prior)*
+- [x] All 35 grep hits for `transnext_base` across the live repo classified: 8 production touch-points updated, the rest are intentionally retained (vendored upstream code under `src/models/transnext_official/`, dispatch sets that accept any TransNeXt variant, archived PRDs / progress logs, the quarantine utility's example tag).
+- [x] [`scripts/validate_top3.py`](scripts/validate_top3.py) `DEFAULT_PAIRS` + `--model` choices: `transnext_base` → `transnext_small`. *(line 46, 49, 55, 83)*
+- [x] [`src/tests/test_matrix.py`](src/tests/test_matrix.py) canonical-tag fixture list reflects `transnext_small`. *(line 104, 106, 108)*
+- [x] [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) example paths point at the new on-disk filenames (`transnext_small_224_1k.pth`, `transnext_small.json`). *(weight-privacy contract still green: priors file tracked, weight binary ignored)*
+- [x] [`CLAUDE.md`](CLAUDE.md) "Models" row + Optuna priors path reflect TransNeXt-small as canonical.
+- [x] [`README.md`](README.md) campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting, model table — all reflect TransNeXt-small.
+- [x] [`PRD.md`](PRD.md) renumbering complete: 15 active USs (US-001 … US-015); US-002 body retargeted; new US-004 entry present; old US-004…US-014 are now US-005…US-015 with `transnext_base` → `transnext_small` substitution everywhere; §5.2 / §5.3 / §6.2 / §8.bis / §8.5 / §10 / §11 / §12 reflect the swap; D8 added.
+- [ ] `Final_Exp.md` regenerated by `python scripts/update_final_exp.py`; all 62 TransNeXt rows show `transnext_small` in their tags; total still 186; statuses still `Pending` (no run-dir migrations performed).
+- [ ] `artifacts/weights/transnext_small_224_1k.pth` pre-staged via `python scripts/fetch_transnext_weights.py --sizes small` (mandatory — operator deleted the base `.pth` pre-swap; no on-disk fallback).
+- [ ] `pytest src/tests` green; `mypy src scripts` green.
+- [ ] `progress.txt`: `US-004 CLOSED: TransNeXt base→small swap landed; cells.py / tune_all.py / priors / PRD all updated; 62 TransNeXt rows pending under new tags.`
+
+**Gate to US-005+:** with US-004 closed, US-002 unblocks (retargeted small tune) and US-005 RALPH driver can proceed in parallel. US-006…US-008 (Phase A execution) remain gated on US-002 + US-005.
+
+---
+
+### US-005: RALPH Loop Driver Framework (legacy US-046 — infra only)
 
 **Description:** `scripts/run_ralph_loop.py` (new) — thin wrapper over `run_systematic.run_cell()` providing (a) sequential dispatch over `iter_cells()` filtered by `--phase`/`--model`/`--dataset`, (b) pathology guard evaluating §6.3 verdicts after each `Trainer.fit`, (c) sentinel writes (`NEEDS_FULL_FT`, `INTERRUPTED`, `QUARANTINED_AFTER_RETRY`), (d) `--remediate-only` second-pass mode under §6.4 Full FT, (e) DEBUGGER hook with 3-attempt cap. **No production runs in this story** — framework + tests only.
 
@@ -348,9 +402,9 @@ Activation rules:
 
 ---
 
-### US-005: Phase A execution — resnet50 × {cifar10, mnist}
+### US-006: Phase A execution — resnet50 × {cifar10, mnist}
 
-**Description:** Run the 2 ResNet50 Phase A clean baselines (`final_clean_resnet50_cifar10`, `final_clean_resnet50_mnist`) via the US-004 driver. After both complete, REPORTER drafts the summary, VALIDATOR signs off, LIBRARIAN updates `docs/phase_a.md`. **Hard halt** for operator approval before US-006.
+**Description:** Run the 2 ResNet50 Phase A clean baselines (`final_clean_resnet50_cifar10`, `final_clean_resnet50_mnist`) via the US-005 driver. After both complete, REPORTER drafts the summary, VALIDATOR signs off, LIBRARIAN updates `docs/phase_a.md`. **Hard halt** for operator approval before US-007.
 
 **Owner agents:** EXECUTOR, DEBUGGER, VALIDATOR (reproducibility — re-run one cell with seed=43, compare within ±0.5pp), REPORTER, LIBRARIAN, DESIGNER, NOTEBOOKLM_SYNC.
 
@@ -362,24 +416,24 @@ Activation rules:
 - [ ] REPORTER `artifacts/reports/phase_a_resnet50_summary.md`: (a) val_acc + PSNR + SSIM table for both cells, (b) gap to paper baseline (TResNet paper), (c) NaN/divergence flags, (d) ≤200-word narrative.
 - [ ] LIBRARIAN updates `docs/phase_a.md` "ResNet50" subsection + README "Best Results So Far" row.
 - [ ] DESIGNER adds an "Execution US Trend" section to `Final_Exp.html` for the 2 ResNet50 rows.
-- [ ] `progress.txt`: `US-005 CLOSED: resnet50 Phase A — cifar10=<acc>, mnist=<acc>; awaiting operator approval to proceed to US-006.`
-- [ ] **HALT** — do not start US-006 without explicit operator approval.
+- [ ] `progress.txt`: `US-006 CLOSED: resnet50 Phase A — cifar10=<acc>, mnist=<acc>; awaiting operator approval to proceed to US-007.`
+- [ ] **HALT** — do not start US-007 without explicit operator approval.
 
 ---
 
-### US-006: Phase A execution — densenet121 × {cifar10, mnist}
+### US-007: Phase A execution — densenet121 × {cifar10, mnist}
 
-Same shape as US-005, `--model densenet121`. 2 cells, same deliverable set. **HALT** before US-007.
-
----
-
-### US-007: Phase A execution — transnext_base × {cifar10, mnist}
-
-Same shape, `--model transnext_base`. 2 cells. Closes Phase A. **No SYNCHRONIZER push here** — the Phase A boundary push happens once at US-014. **HALT** before US-008.
+Same shape as US-006, `--model densenet121`. 2 cells, same deliverable set. **HALT** before US-008.
 
 ---
 
-### US-008: Phase B execution — resnet50 × L1…L5 × {cifar10, mnist}
+### US-008: Phase A execution — transnext_tiny × {cifar10, mnist}
+
+Same shape, `--model transnext_tiny`. 2 cells. Closes Phase A. **No SYNCHRONIZER push here** — the Phase A boundary push happens once at US-015. **HALT** before US-009.
+
+---
+
+### US-009: Phase B execution — resnet50 × L1…L5 × {cifar10, mnist}
 
 **Description:** 10 cells = 5 levels × 2 datasets. Tags `final_B_L{1..5}_resnet50_{cifar10,mnist}`. All 5 axes active at the same L per cell.
 
@@ -394,46 +448,46 @@ Same shape, `--model transnext_base`. 2 cells. Closes Phase A. **No SYNCHRONIZER
 - [ ] REPORTER `artifacts/reports/phase_b_resnet50_summary.md`: val_acc vs L1…L5 curve per dataset, PSNR/SSIM at L3, retry counts.
 - [ ] LIBRARIAN `docs/phase_b.md` "ResNet50" subsection updated.
 - [ ] DESIGNER adds the per-US trend graph to `Final_Exp.html`.
-- [ ] `progress.txt`: `US-008 CLOSED: resnet50 Phase B — <complete>/<failed>; awaiting approval.`
-- [ ] **HALT** before US-009.
+- [ ] `progress.txt`: `US-009 CLOSED: resnet50 Phase B — <complete>/<failed>; awaiting approval.`
+- [ ] **HALT** before US-010.
 
 ---
 
-### US-009: Phase B execution — densenet121 × L1…L5 × {cifar10, mnist}
+### US-010: Phase B execution — densenet121 × L1…L5 × {cifar10, mnist}
 
-Same shape as US-008, `--model densenet121`, 10 cells. **HALT** before US-010.
-
----
-
-### US-010: Phase B execution — transnext_base × L1…L5 × {cifar10, mnist}
-
-Same shape, `--model transnext_base`, 10 cells. Closes Phase B. **HALT** before US-011.
+Same shape as US-009, `--model densenet121`, 10 cells. **HALT** before US-011.
 
 ---
 
-### US-011: Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist}
+### US-011: Phase B execution — transnext_tiny × L1…L5 × {cifar10, mnist}
+
+Same shape, `--model transnext_tiny`, 10 cells. Closes Phase B. **HALT** before US-012.
+
+---
+
+### US-012: Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist}
 
 **Description:** 50 cells = 5 axes × 5 levels × 2 datasets. Tags `final_C_L{1..5}_{axis}_resnet50_{cifar10,mnist}` for `axis ∈ {resolution, noise, blur, saturation, salt_pepper}`. Inactive axes at identity (per US-003).
 
-**Acceptance Criteria:** same shape as US-008 but 50-cell denominator. REPORTER summary breaks results down by axis: a 5×5 heatmap (axis × level) per dataset. LIBRARIAN `docs/phase_c.md` updated. **HALT** before US-012.
+**Acceptance Criteria:** same shape as US-009 but 50-cell denominator. REPORTER summary breaks results down by axis: a 5×5 heatmap (axis × level) per dataset. LIBRARIAN `docs/phase_c.md` updated. **HALT** before US-013.
 
 ---
 
-### US-012: Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist}
+### US-013: Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist}
 
-Same, `--model densenet121`, 50 cells. **HALT** before US-013.
-
----
-
-### US-013: Phase C execution — transnext_base × 5 axes × L1…L5 × {cifar10, mnist}
-
-Same, `--model transnext_base`, 50 cells. Closes Phase C. **HALT** before US-014.
+Same, `--model densenet121`, 50 cells. **HALT** before US-014.
 
 ---
 
-### US-014: End-of-Campaign Verification + Three Phase-Boundary Pushes (legacy US-047)
+### US-014: Phase C execution — transnext_tiny × 5 axes × L1…L5 × {cifar10, mnist}
 
-**Description:** After all 9 execution stories close, refresh trackers and push the tracker pathspec via [`scripts/sync_trackers_git.py`](scripts/sync_trackers_git.py) exactly three times — once per phase boundary. No per-cell or per-US pushes during US-005…US-013.
+Same, `--model transnext_tiny`, 50 cells. Closes Phase C. **HALT** before US-015.
+
+---
+
+### US-015: End-of-Campaign Verification + Three Phase-Boundary Pushes (legacy US-047)
+
+**Description:** After all 9 execution stories close (US-006…US-014), refresh trackers and push the tracker pathspec via [`scripts/sync_trackers_git.py`](scripts/sync_trackers_git.py) exactly three times — once per phase boundary. No per-cell or per-US pushes during US-006…US-014.
 
 **Owner agents:** SYNCHRONIZER (the 3 pushes), SECURITY (final leak audit), LIBRARIAN (final docs sweep), MASTER (sign-off), NOTEBOOKLM_SYNC.
 
@@ -448,13 +502,41 @@ Same, `--model transnext_base`, 50 cells. Closes Phase C. **HALT** before US-014
 
 ---
 
+### US-016: TransNeXt small→tiny variant swap (new 2026-05-14, same day as US-004) — **CLOSED 2026-05-14**
+
+**Description:** Repo-wide retargeting of the canonical TransNeXt variant from `transnext_small` (~50M params) to `transnext_tiny` (~28M params). Triggered mid-flight in US-002 Stage 1 cifar10 (10/20 trials, 57.8 min/trial median) by the projection that the 186-cell campaign under `small` would overrun the 2026-07-26 final deadline at the pessimistic end. Motivation: tighter capacity-match to ResNet50 (~25M), ~310 GPU-h saved across the 62 TransNeXt rows of the matrix, and ~7 GB peak VRAM (vs ~9 GB for small) leaving 5 GB headroom on the 12 GB RTX 5070.
+
+The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt rows in the matrix stay in the 186 denominator; their tags rotate from `…transnext_small…` to `…transnext_tiny…`. No prior TransNeXt cell results are invalidated (none ran). The in-flight `transnext_small_cifar10_L3` Stage 1 study (10 trials, best #0 val_acc=0.6150) is halted and left orphaned in `artifacts/optuna_thz.db` (no cleanup; new `transnext_tiny_cifar10_L3` study is independent). US-002 is retargeted in-place by this story (new title: `transnext_tiny Optuna tune`).
+
+**Owner agents:** DATA_ARCHITECT (owns `MODELS` tuple in [`cells.py`](src/experiments/cells.py)), OPTIMIZER (priors mirror + decade-bound re-validation), VALIDATOR (test_quarantine_transnext + dry-run the matrix), LIBRARIAN (CLAUDE.md + README + PRIORS_SOURCES.md sync), SYNCHRONIZER (no push here — tracker pushes deferred to US-015).
+
+**Acceptance Criteria:**
+- [x] [`src/experiments/cells.py`](src/experiments/cells.py) `MODELS` tuple ends in `"transnext_tiny"`. `iter_cells()` emits 62 cell tags whose model component is `transnext_tiny`. Total still 186.
+- [x] [`tune_all.py`](tune_all.py) `SUPPORTED_MODELS` ends in `"transnext_tiny"`.
+- [x] `artifacts/priors/transnext_tiny.json` exists, parses, mirrors the now-retired `transnext_small.json` schema, decade-bound is preserved on every distribution. (`tune_all.py --validate-only` → `OK transnext_tiny`.)
+- [x] [`scripts/validate_top3.py`](scripts/validate_top3.py) `DEFAULT_PAIRS` + `--model` choices: `transnext_small` → `transnext_tiny`.
+- [x] [`src/tests/test_matrix.py`](src/tests/test_matrix.py) canonical-tag fixture list reflects `transnext_tiny`.
+- [x] [`src/tests/test_quarantine_transnext.py`](src/tests/test_quarantine_transnext.py) `SUPPORTED_MODELS` assertion updated.
+- [x] [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) example paths point at the new on-disk filenames (`transnext_tiny_224_1k.pth`, `transnext_tiny.json`).
+- [x] [`CLAUDE.md`](CLAUDE.md) "Models" row + Optuna priors path reflect TransNeXt-tiny as canonical.
+- [x] [`README.md`](README.md) campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting, model table — all reflect TransNeXt-tiny.
+- [x] [`PRD.md`](PRD.md) §5.2 / §5.3 / §6.2 / §8.bis / §8.5 / §10 / §11 / §12 reflect the swap; D9 added.
+- [x] `artifacts/weights/transnext_tiny_224_1k.pth` pre-staged via `python scripts/fetch_transnext_weights.py --sizes tiny` (113,221,596 bytes; ~57% of `transnext_small_224_1k.pth`'s 199 MB).
+- [x] `Final_Exp.md` regenerated; all 62 TransNeXt rows show `transnext_tiny` in their tags; total still 186; statuses still `Pending`.
+- [x] `pytest src/tests` green; `mypy src scripts` green (modulo pre-existing vendored `transnext_official` duplicate-module errors per progress.txt line 213).
+- [x] `progress.txt`: `US-016 CLOSED: TransNeXt small→tiny swap landed; cells.py / tune_all.py / priors / PRD all updated; 62 TransNeXt rows pending under new tags; stale transnext_small_cifar10_L3 study left in optuna_thz.db (orphaned, no cleanup).`
+
+**Gate to US-002:** with US-016 closed, US-002 can launch under the new tiny variant. US-005…US-014 remain gated on US-002 + US-005.
+
+---
+
 ## 9. Risk Mitigation
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | **cu128 wheel not yet on PyPI** | Med | High | `setup_gpu_env.py --index-url https://download.pytorch.org/whl/cu128` points at the official cu128 wheelhouse; falls back to the nightly index with operator confirmation. |
 | **bf16 destabilizes TransNeXt attention** | Med | Med | Pathology matrix catches NaN loss at epoch 2; Full FT retry under fp32 attention (`autocast_dtype=torch.float32` override on `attention_native` path) is the documented escape hatch. |
-| **TransNeXt-base OOMs at batch 32 / 224×224** | Med | High | Bootstrap probe at boot retries at batch 16 with grad-accum 2 once; on second OOM the cell records `QUARANTINED_AFTER_RETRY` and the row stays in the 186 denominator. No silent dropout. |
+| **TransNeXt-tiny OOMs at batch 32 / 224×224** | Very Low (post-US-016 swap; peak ~7 GB on 12 GB VRAM) | Med | Bootstrap probe at boot retries at batch 16 with grad-accum 2 once; on second OOM the cell records `QUARANTINED_AFTER_RETRY` and the row stays in the 186 denominator. No silent dropout. (Likelihood was Low under US-004's `transnext_small` peak ~9 GB and Med under the retired `transnext_base` peak ~11 GB.) |
 | **Optuna proxy ranks the wrong winner** | Empirically confirmed (resnet50_cifar10: trial #23 fast-rank 2 → full-rank 1) | Med | Stage 1.5 top-3 validation at full convergence is the gating contract. `validated_at_full_convergence: true` must be present on every winner JSON before any Phase B cell launches. |
 | **RALPH retry loop infinite-loops on a degenerate cell** | Low | High | Retry budget is hard-capped at 1 per cell; second failure → `QUARANTINED_AFTER_RETRY` sentinel and the loop advances. Asserted in `src/tests/test_ralph_loop.py`. |
 | **Severity bump invalidates legacy comparisons** | Cert | Low | `metrics.json.degradation_levels_hash` rotates; tracker rendering surfaces the new hash; no cross-batch comparison is run against the pre-2026-05-12 table. |
@@ -469,49 +551,51 @@ Same, `--model transnext_base`, 50 cells. Closes Phase C. **HALT** before US-014
 Legacy (DONE/CLOSED):
 US-040 (reset) ──► US-041 (5070 bootstrap) ──► US-042 (TransNeXt @ 224 un-quarantine) ──► US-043 (resnet50 × 2 tune, CLOSED)
 
-Open (renumbered 2026-05-13):
-US-001 (densenet121 tune, was US-044) ──┐
-US-002 (transnext_base tune, was US-045)┤
-US-003 (Phase C single-axis fix) ───────┤
-                                        ▼
-                            US-004 (RALPH Driver Framework, was US-046 infra)
-                                        │
-                                        ▼
-                            US-005 (Phase A · resnet50) ──HALT── US-006 (Phase A · densenet) ──HALT── US-007 (Phase A · transnext)
-                                        │
-                                       HALT
-                                        ▼
-                            US-008 (Phase B · resnet50) ──HALT── US-009 (Phase B · densenet) ──HALT── US-010 (Phase B · transnext)
-                                        │
-                                       HALT
-                                        ▼
-                            US-011 (Phase C · resnet50) ──HALT── US-012 (Phase C · densenet) ──HALT── US-013 (Phase C · transnext)
-                                        │
-                                       HALT
-                                        ▼
-                            US-014 (verify + 3 phase-boundary pushes, was US-047)
+Open (renumbered 2026-05-13; extended 2026-05-14 by US-004 and US-016):
+US-001 (densenet121 tune, was US-044)  ──┐
+                                         │
+US-004 (TransNeXt base→small swap) ──► US-016 (TransNeXt small→tiny swap) ──► US-002 (transnext_tiny tune, was US-045, retargeted twice)
+                                         │
+US-003 (Phase C single-axis fix) ────────┤
+                                         ▼
+                            US-005 (RALPH Driver Framework, was US-046 infra)
+                                         │
+                                         ▼
+                            US-006 (Phase A · resnet50) ──HALT── US-007 (Phase A · densenet) ──HALT── US-008 (Phase A · transnext_tiny)
+                                         │
+                                        HALT
+                                         ▼
+                            US-009 (Phase B · resnet50) ──HALT── US-010 (Phase B · densenet) ──HALT── US-011 (Phase B · transnext_tiny)
+                                         │
+                                        HALT
+                                         ▼
+                            US-012 (Phase C · resnet50) ──HALT── US-013 (Phase C · densenet) ──HALT── US-014 (Phase C · transnext_tiny)
+                                         │
+                                        HALT
+                                         ▼
+                            US-015 (verify + 3 phase-boundary pushes, was US-047)
 ```
 
 **Ordering rules:**
 - US-040…US-042 + US-043 strictly precede the renumbered series.
-- US-001 / US-002 / US-003 may interleave on a single GPU — they are independent (priors per model, data-pipeline edit, both orthogonal).
-- US-004 is gated on all 6 winner JSONs present with `validated_at_full_convergence: true` AND US-003 landed (Phase C identity semantics in `degradation_levels.py`).
-- US-005…US-013 are **strictly sequential** with operator-approval halts between each US. No parallel execution.
-- US-014 is the single end-of-campaign closer.
+- US-001 / US-003 / US-004 / US-016 may interleave on a single GPU — they are independent (densenet tune, Phase C data-pipeline edit, two repo-only variant swaps). US-002 strictly follows US-016 (which itself follows US-004): the small→tiny swap must land before the retargeted tiny tune can start.
+- US-005 is gated on all 6 winner JSONs present with `validated_at_full_convergence: true` AND US-003 landed (Phase C identity semantics in `degradation_levels.py`).
+- US-006…US-014 are **strictly sequential** with operator-approval halts between each US. No parallel execution.
+- US-015 is the single end-of-campaign closer.
 
 ---
 
 ## 11. Definition-of-Done (PRD-level)
 
-- [ ] All 14 renumbered open stories (US-001 … US-014) + the 4 legacy stories (US-040 … US-043) check green.
+- [ ] All 15 renumbered open stories (US-001 … US-015) + the 4 legacy stories (US-040 … US-043) check green.
 - [ ] `Final_Exp.md` status block: `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186`.
 - [ ] `artifacts/Final_Exp.html` renders all 186 rows; first row visible under the sticky header.
-- [ ] `pytest src/tests` green (torch-free baseline + new `test_ralph_loop.py` from US-004; updated `test_matrix.py` from US-003).
+- [ ] `pytest src/tests` green (torch-free baseline + new `test_ralph_loop.py` from US-005; updated `test_matrix.py` from US-003 + US-004).
 - [ ] `mypy src scripts` green.
 - [ ] No `*.ckpt`/`*.pt`/`*.pth` paths leaked into `Final_Exp.json` / `.md` / `.html` / `priors.json` / `best_hparams/*.json` / `history.json` / `progress.txt` / any commit pathspec.
 - [ ] Determinism gate green (MSE = 0) at out_size=224 for both datasets against the **post-US-003** `degradation_levels_hash` (which itself replaces the 2026-05-12 severity-bumped hash).
-- [ ] Three SYNCHRONIZER pushes at US-014 (was US-047), each with the explicit tracker pathspec only.
-- [ ] 9 REPORTER summary docs under `artifacts/reports/phase_{a,b,c}_{resnet50,densenet121,transnext_base}_summary.md`.
+- [ ] Three SYNCHRONIZER pushes at US-015 (was US-047), each with the explicit tracker pathspec only.
+- [ ] 9 REPORTER summary docs under `artifacts/reports/phase_{a,b,c}_{resnet50,densenet121,transnext_tiny}_summary.md`.
 - [ ] LIBRARIAN-owned `docs/phase_{a,b,c}.md` capture the final per-phase findings.
 
 ---
@@ -525,6 +609,8 @@ US-003 (Phase C single-axis fix) ───────┤
 - **D5 — Self-correction:** single retry per cell; second failure records `QUARANTINED_AFTER_RETRY` and the row counts toward `Failed` in the 186 denominator.
 - **D6 — Commit cadence:** three per-phase boundary pushes (A-close, B-close, C-close), never per-cell. Matches the US-016 SYNCHRONIZER contract (Q3=C, extended).
 - **D7 — Severity bump:** the 2026-05-12 [`degradation_levels.py`](src/data/degradation_levels.py) bump replaces the 2026-04 table; no cross-batch comparison crosses that hash boundary.
+- **D8 — TransNeXt variant swap (operator 2026-05-14):** Replace `transnext_base` (~89M params, ~11 GB peak VRAM at batch 32 / 224×224) with `transnext_small` (~50M params, ~9 GB peak) across the 186-cell matrix. Rationale: capacity-match to ResNet50 (~25M) / DenseNet121 (~8M) given the small dataset size (10K train × 10 classes); ~40% fewer params frees days of GPU time against the 2026-05-31 poster deadline; OOM-fallback path is now unlikely on the 12 GB RTX 5070. No prior TransNeXt cell results are invalidated (none ran). US-002 retargeted in place; new US-004 owns the swap; all subsequent stories shifted forward by one.
+- **D9 — TransNeXt variant swap, round 2 (operator 2026-05-14, same day as D8):** Replace `transnext_small` (~50M params, ~9 GB peak) with `transnext_tiny` (~28M params, ~7 GB peak) across the 186-cell matrix. Triggered by the in-flight US-002 Stage 1 cifar10 anchor data point of 57.8 min/trial for small, which projected the 186-cell campaign past the 2026-07-26 final deadline at the pessimistic end. Rationale: tighter capacity-match to ResNet50 (~25M) than small offered; ~310 GPU-h savings across the 62 TransNeXt rows; 5 GB VRAM headroom (vs 3 GB) on the 12 GB RTX 5070. Sunk: 10/20 trials of `transnext_small_cifar10_L3` Stage 1 (~10 GPU-h, orphaned study retained in `optuna_thz.db`). No frozen winner JSON was invalidated (no TransNeXt winner JSON existed yet). US-002 retargeted in place (small → tiny); new US-016 owns the swap; US-008/US-011/US-014 model names shift accordingly.
 
 ---
 

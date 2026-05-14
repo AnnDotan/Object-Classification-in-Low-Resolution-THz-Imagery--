@@ -1,7 +1,7 @@
 """Validate the per-model hparam priors files and the loader rejection paths.
 
 Two contracts:
-  (a) Every shipped priors file (resnet50, densenet121, transnext_base) loads
+  (a) Every shipped priors file (resnet50, densenet121, transnext_tiny) loads
       and validates cleanly.
   (b) The loader rejects malformed priors with a descriptive message —
       negative `low`, `low > high`, missing required field, missing

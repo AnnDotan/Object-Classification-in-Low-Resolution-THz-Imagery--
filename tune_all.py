@@ -30,7 +30,7 @@ SCHEMA_PATH = PRIORS_DIR / "_schema.json"
 SUPPORTED_MODELS = (
     "resnet50",
     "densenet121",
-    "transnext_base",
+    "transnext_tiny",
 )
 SUPPORTED_DATASETS = ("cifar10", "mnist")
 

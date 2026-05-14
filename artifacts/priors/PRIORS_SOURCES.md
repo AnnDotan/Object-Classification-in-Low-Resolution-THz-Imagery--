@@ -13,7 +13,7 @@ Companion to [`artifacts/priors/{model}.json`](.) (and `_schema.json`). Authored
 - [`_schema.json`](\_schema.json) — JSON Schema (Draft-07) for prior file shape
 - [`resnet50.json`](resnet50.json) — ResNet50 prior, used for `resnet50_cifar10` + `resnet50_mnist`
 - [`densenet121.json`](densenet121.json) — DenseNet121 prior, used for `densenet121_cifar10` + `densenet121_mnist`
-- [`transnext_base.json`](transnext_base.json) — TransNeXt prior (un-quarantined; trained at 224×224 with full-FT + differential LR)
+- [`transnext_tiny.json`](transnext_tiny.json) — TransNeXt-tiny prior (canonical campaign variant; swapped from `transnext_small` by US-016 on 2026-05-14, which itself swapped from `transnext_base` by US-004 same day; trained at 224×224 with full-FT + differential LR)
 - this file — paper-quote attribution
 
 ## Hyperparameter sources
@@ -40,7 +40,10 @@ The five hparams enforced by the schema (`head_lr`, `backbone_lr`, `weight_decay
 | `label_smoothing` | `0.1` | `[0.0, 0.2]` (uniform) | [papers/TResNet.pdf](../../papers/TResNet.pdf) §3.3 — DenseNet predates label smoothing; we cite TResNet as the modern CNN training reference |
 | `warmup_epochs` | `0` | `[0, 5]` (uniform → int) | [papers/Densely Connected Convolutional Networks.pdf](../../papers/Densely%20Connected%20Convolutional%20Networks.pdf) §4 — short warmup is standard for cosine fine-tuning |
 
-### TransNeXt — Base ([artifacts/priors/transnext_base.json](transnext_base.json)) — un-quarantined, 224×224
+### TransNeXt — Tiny ([artifacts/priors/transnext_tiny.json](transnext_tiny.json)) — canonical 2026-05-14, 224×224
+
+The campaign canonical variant was swapped twice on 2026-05-14: first `transnext_base` (~89M params) → `transnext_small` (~50M params) (US-004) for capacity match to ResNet50 / DenseNet121 and dataset size; then `transnext_small` → `transnext_tiny` (~28M params) (US-016) for an even tighter capacity-match to ResNet50 (~25M) and ~310 GPU-h savings across the 62 TransNeXt rows. Priors are unchanged across both swaps — they are LR/WD/warmup, paper-derived, and not architecture-dependent.
+
 
 | Hparam | Anchor | Range | Source |
 |---|---|---|---|
