@@ -738,6 +738,99 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
 
+## Iteration 13 (2026-05-15) — US-010 first pass COMPLETE (Phase B densenet121, 10/10)
+- What was done: dispatched `python scripts/run_ralph_loop.py --plan final
+  --phase B --model densenet121 --skip-existing` (b2zqaal32) — first
+  execution US after operator-waived halt from US-006/007/008. All 10
+  cells completed in **6.17 GPU-hours** (median ~37 min/cell, range
+  19–67 min). Driver exited 0 cleanly; no tkinter recurrences (Agg fix
+  from commit 4522110 held); no OOM events.
+- Per-cell results (best_val_acc / best_epoch / epochs_run / runtime /
+  train-val gap@best):
+    L1 cifar10  0.8464  ep36  46ep  3401s  +15.4pp
+    L1 mnist    0.9916  ep44  54ep  3980s   +0.8pp
+    L2 cifar10  0.7558  ep29  39ep  2917s  +24.4pp  [NEEDS_FULL_FT=overfitting]
+    L2 mnist    0.9830  ep23  33ep  2514s   +1.7pp
+    L3 cifar10  0.6030  ep34  44ep  3403s  +39.7pp  [NEEDS_FULL_FT=overfitting]
+    L3 mnist    0.9220  ep 9  19ep  1477s   +5.8pp
+    L4 cifar10  0.4586  ep 4  14ep  1112s   +3.9pp
+    L4 mnist    0.7824  ep 4  14ep  1115s   +4.9pp
+    L5 cifar10  0.2572  ep 4  14ep  1145s   +2.3pp
+    L5 mnist    0.4040  ep 4  14ep  1151s   +5.3pp
+- Pathology counts: 8 healthy, 2 NEEDS_FULL_FT=overfitting
+  (L2 cifar10 + L3 cifar10), 0 failed_convergence, 0 NaN.
+- Cross-model headline (CIFAR-10 trend, clean → L5):
+    resnet50:    0.9518 → 0.8432 → 0.7344 → 0.5590 → 0.4174 → 0.2684
+    densenet121: 0.9356 → 0.8464 → 0.7558 → 0.6030 → 0.4586 → 0.2572
+  DenseNet121 *outperforms* ResNet50 on every degraded cifar10 level
+  (L1..L4) despite ~3.5× fewer params (~7M vs ~25M). The crossover
+  is at L5 where ResNet50 edges back (0.2684 vs 0.2572). On the
+  Phase A clean baseline ResNet50 still leads (0.9518 vs 0.9356), but
+  the gap inverts under degradation — DenseNet's dense feature reuse
+  generalizes better when the input signal is corrupted.
+- Cross-model headline (MNIST trend, clean → L5):
+    resnet50:    0.9914 → 0.9918 → 0.9804 → 0.9088 → 0.7426 → 0.3982
+    densenet121: 0.9930 → 0.9916 → 0.9830 → 0.9220 → 0.7824 → 0.4040
+  DenseNet121 marginally better (≤1.5 pp) on every level — MNIST
+  saturates and the architecture matters less.
+- Pre-existing §6.4 false-positive concern (Iteration 12): L2 cifar10
+  and L3 cifar10 NEEDS_FULL_FT verdicts mirror the L2 resnet50 case.
+  Monotonic-degradation sanity check shows:
+    L2 cifar10 0.7558 must stay > L3's 0.6030.
+    L3 cifar10 0.6030 must stay > L4's 0.4586.
+  If the §6.4 retry suppresses either result the way it did for L2
+  resnet50 (val_acc ~0.45 under aggressive regularization), L2 → L3
+  or L3 → L4 monotonicity would invert. Recommendation: same
+  operator-declined retry pattern as Iteration 12 — the
+  overfitting gap reflects the measurement at low-to-moderate
+  cifar10 degradation, not a remediable pathology, especially
+  when the Optuna winner is already tightly tuned.
+- Files affected: artifacts/Final_Exp.json + Final_Exp.html (10 row
+  patches via refresh_trackers --cell ... --no-md), 10 dashboard
+  thumbs rendered; runs/final/final_B_*_densenet121_* dirs
+  (gitignored). PRD US-010 acceptance boxes NOT yet ticked (operator
+  decides on remediate-or-decline, then VALIDATOR seed=43, REPORTER,
+  LIBRARIAN). This progress.txt entry.
+- Validation: pytest baseline unchanged (no source edits). Dashboard
+  counts read Complete=10 / Failed=0 for Phase B densenet121 (the 2
+  NEEDS_FULL_FT sentinels are pending — they don't flip status until
+  paired with QUARANTINED_AFTER_RETRY).
+- Learnings for next cycles:
+  - Patterns: DenseNet121 per-cell wallclock is **~50 % SLOWER than
+    ResNet50** at the same protocol (~37 min/cell median vs ~22 min
+    for resnet50), even though param count is 3.5× smaller. Cause:
+    DenseNet's dense connections create many small backprop
+    dependencies that don't parallelize on GPU as well as ResNet's
+    residual blocks. Budget US-011 (transnext_tiny) Phase B at the
+    transnext_tiny Phase A rate (~64 min/cell average) — projected
+    ~10–11 GPU-hours total.
+  - Patterns: Two cells flagged for §6.4 retry on cifar10 (L2 + L3)
+    is a stronger signal than the single L2 cifar10 case on
+    resnet50. It suggests the cifar10 Phase B Optuna winner JSONs
+    were tuned at L3 with the OLD blur scale (per the 2026-05-14
+    operator-accepted deferral) and are sub-optimal for the new
+    blur. The §6.4 retry will not fix that — only a Phase B re-tune
+    would. Mention this in the Iteration 13 closure note.
+  - Traps: Phase B densenet121's L3 cifar10 gap (39.7 pp!) is far
+    larger than resnet50's L2 (26.5 pp) but the val_acc is fine
+    (0.6030, between L2 and L4). Don't conflate "huge gap" with
+    "bad result" — the model is over-parameterized for this
+    train-set + degradation combo and memorizes early, but the val
+    plateau is genuinely the measurement at L3 cifar10.
+  - Helpful context: Remaining US-010 work (PRD §8 lines 454-463):
+      454 first pass dispatched ✓ (this iteration)
+      455 pathology counts recorded ✓ (8 healthy / 2 overfitting / 0 fc / 0 NaN)
+      456 ⏳ operator decision: dispatch §6.4 retry for L2+L3 cifar10
+            OR decline (recommend decline per Iteration 12 pattern)
+      457 ⏳ complete + failed == 10 (currently 10 + 0; if remediate
+            runs and both retries quarantine, becomes 8 + 2)
+      458 ⏳ VALIDATOR seed=43 — one cifar10 + one mnist cell (~50min)
+      459 ⏳ REPORTER `artifacts/reports/phase_b_densenet121_summary.md`
+      460 ⏳ LIBRARIAN `docs/phase_b.md` DenseNet121 subsection
+      461 ✓ DESIGNER trend section auto-surfaces (US-006 commit 2f1c569)
+      462 ⏳ progress.txt closure line
+      463 ⏳ HALT before US-011 (operator may waive again)
+
 ## Iteration 12 (2026-05-15) — §6.4 fix-set + operator-declined retry for L2 cifar10
 - What was done: shipped 4 code fixes to the §6.4 retry path (concerns
   surfaced from Iteration 11's identical-to-first-pass outcome) and
