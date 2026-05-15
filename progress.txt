@@ -738,6 +738,104 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
 
+## Iteration 10 (2026-05-15) — US-009 first pass COMPLETE (10/10 cells; 1 NEEDS_FULL_FT)
+- What was done: Relaunched the driver after the Iteration 9 Agg-backend
+  hotfix. The 8 cells from the first dispatch were skipped via
+  `--skip-existing` (metrics.json already on disk); only L5 cifar10
+  (re-run from clean dir) and L5 mnist (new dispatch) trained. Both
+  finished in ~13 min each (789 s + 801 s wallclock); exit 0; no
+  tkinter errors in the log tail — the Agg backend hotfix held under
+  back-to-back cell dispatch.
+- Final first-pass results (Phase B resnet50, 10/10):
+    L1 cifar10: 0.8432 healthy
+    L1 mnist:   0.9918 healthy
+    L2 cifar10: 0.7344 NEEDS_FULL_FT=overfitting  (train_acc≈0.99 vs val 0.73 → 26 pp gap)
+    L2 mnist:   0.9804 healthy
+    L3 cifar10: 0.5590 healthy (early-stopped @ ep 13, gap < 12 pp)
+    L3 mnist:   0.9088 healthy
+    L4 cifar10: 0.4174 healthy
+    L4 mnist:   0.7426 healthy
+    L5 cifar10: 0.2684 healthy (still 2.7× random; train≈0.20 ≈ val 0.27)
+    L5 mnist:   0.3982 healthy
+- Pathology guard outcomes: 9 healthy, 1 needs_full_ft (overfitting,
+  L2 cifar10). 0 failed_convergence. 0 NaN/divergence.
+- Total wallclock: ~3.7 GPU-hours across both dispatches
+  (~3.1 h first pass crashed at cell 9; +26 min for the L5 pair).
+- Trackers refreshed: `python scripts/refresh_trackers.py --cell <tag>
+  --no-md` for all 10 tags. Final_Exp.json + HTML + dashboard thumbs
+  now reflect Phase B resnet50; `Final_Exp.html` Execution-US-Trend
+  card for US-009 surfaces with the 10 best_val_acc values.
+- Files affected: `artifacts/Final_Exp.json` (10 row patches),
+  `artifacts/Final_Exp.html` (rebuilt), `artifacts/dashboard_thumbs/
+  final_B_*_resnet50_*.png` (10 thumbs); `runs/final/final_B_*_resnet50_*`
+  (gitignored — metrics + history + checkpoints + visualize PNGs);
+  this progress.txt entry. PRD.md US-009 acceptance criteria NOT yet
+  ticked beyond the first-pass dispatch — the second-pass remediate,
+  VALIDATOR reproducibility, REPORTER, LIBRARIAN, DESIGNER, and the
+  HALT closure line are still pending.
+- Validation: pytest baseline preserved (50/50 from Iteration 9; no
+  source code change since). No mypy drift (no source code change).
+- Headline plots emerging from the data:
+  * **CIFAR-10 trend (clean→L5)**: 0.9518 → 0.8432 → 0.7344 → 0.5590
+    → 0.4174 → 0.2684. The drop is monotonic and accelerating, exactly
+    what the all-axis combined-degradation hypothesis predicts at the
+    new (2026-05-14) blur scale. L5 is still 2.7× random — the
+    resnet50 backbone retains *some* shape information through K=91/
+    σ=18 blur + 0.22 noise + 0.18 S&P + saturation=0.
+  * **MNIST trend**: 0.9918 → 0.9804 → 0.9088 → 0.7426 → 0.3982.
+    Robust through L2 (loss < 1 pp), graceful through L3, then steep.
+    L5 cifar10 (0.2684) is still WORSE than L5 mnist (0.3982) — the
+    color/texture cues that helped clean-cifar10 outperform clean-mnist
+    are lost first; the digit-shape cues survive longer.
+  * **Overfitting hit at L2 cifar10**: 26 pp train/val gap at best
+    epoch — the §6.3 overfitting threshold (12 pp) is comfortably
+    exceeded. The §6.4 remediate (`lr_backbone ÷ 2`, `weight_decay
+    × 2`, `dropout += 0.1`) will fire on this single cell next.
+- Learnings for next cycles:
+  - Patterns: With the Agg fix in place, end-to-end Phase B execution
+    for resnet50 fits in **~3.7 GPU-hours** on the 5070. Project this
+    out: US-010 (densenet121) likely similar or slightly faster
+    (denser layers but smaller param count); US-011 (transnext_tiny)
+    will be longer — transnext_tiny's Phase A took 2 h 8 m for 2 cells
+    alone, so 10 cells likely 7–10 h. Plan the operator's GPU-time
+    windows accordingly.
+  - Patterns: `refresh_trackers.py --cell <tag> --no-md` is the right
+    shape for batch-patching multiple completed cells — it skips the
+    expensive Final_Exp.md re-render but rebuilds the JSON/HTML/thumb
+    for each cell. 10 cells took ~30 s.
+  - Patterns: Phase B's "cifar10 plateaus by epoch 12, mnist by ep 24"
+    pattern from Phase A holds at L4/L5 too — both L5 cells stopped at
+    epoch 12. At those degradation levels there's little signal to
+    learn from, so patience exhausts fast. This is the right behavior
+    — NOT a bug.
+  - Traps: The driver's NEEDS_FULL_FT sentinel is written with the
+    verdict string ("overfitting" or "failed_convergence") as the
+    file body. Read it with `(d/'NEEDS_FULL_FT').read_text().strip()`
+    before dispatching `--remediate-only`. The retry config that
+    `build_retry_config` produces depends on which verdict applies.
+  - Helpful context: Remaining US-009 acceptance work (PRD §8 lines
+    454-463):
+      L454 ✓ first pass dispatched (this iteration)
+      L455 ✓ pathology counts recorded above (9 healthy / 1
+            overfitting / 0 failed_convergence)
+      L456 ⏳ second pass `--remediate-only --model resnet50 --phase B`
+            (1 cell × ~25 min projected)
+      L457 ⏳ Final_Exp.json counts for phase=B model=resnet50:
+            complete + failed == 10 — currently complete=10, failed=0;
+            after the remediate the L2 cifar10 status will land at
+            either complete (success) or failed (QUARANTINED_AFTER_
+            RETRY). The "== 10" arithmetic holds either way.
+      L458 ⏳ VALIDATOR reproducibility — one cifar10 cell + one mnist
+            cell re-run at seed=43 (~50 min combined)
+      L459 ⏳ REPORTER summary
+            `artifacts/reports/phase_b_resnet50_summary.md`
+      L460 ⏳ LIBRARIAN `docs/phase_b.md` ResNet50 subsection
+      L461 ⏳ DESIGNER (already done via the US-006-built trend
+            section — US-009 card auto-surfaces because cells are
+            Complete; verify in browser)
+      L462 ⏳ progress.txt closure line
+      L463 ⏳ HALT before US-010
+
 ## Iteration 9 (2026-05-15) — US-009 dispatch attempted; matplotlib/tk crash; hotfix applied
 - What was done: Operator authorized starting Phase B execution skipping
   the US-006/007/008 halts. Launched `python scripts/run_ralph_loop.py
