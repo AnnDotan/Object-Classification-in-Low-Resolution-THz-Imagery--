@@ -738,6 +738,121 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
 
+## Iteration 11 (2026-05-15) — US-009 §6.4 remediate FAILED → QUARANTINED_AFTER_RETRY
+- What was done: dispatched `python scripts/run_ralph_loop.py --plan
+  final --phase B --model resnet50 --remediate-only` (b69buj7ue) to
+  retry the single NEEDS_FULL_FT=overfitting cell from Iteration 10
+  (L2 cifar10). Driver wrote `retry_config.json` with the §6.4
+  overfitting deltas: `dropout: 0.1` (was 0), `weight_decay: 0.0002`
+  (×2 of CNN default 1e-4; NOT ×2 of the Optuna winner's 0.000462 —
+  this is the build_retry_config "reset to known-good regularization"
+  convention), `remediation_reason: "overfitting"`, `full_ft: true`.
+  Trained the cell in a sibling dir `final_B_L2_resnet50_cifar10__v2`
+  for 47 epochs (3045 s / 50.8 min).
+- Outcome: **§6.4 remediate produced identical results to the first
+  pass.** Best_val_acc=0.7344, best_epoch=37, train@best=0.999 →
+  gap@best=26.5 pp (same as first pass). The pathology guard fires
+  `overfitting` again on the retry → driver writes
+  `QUARANTINED_AFTER_RETRY` with body `second_failure:overfitting`
+  alongside the existing `NEEDS_FULL_FT` sentinel; exits 1 (contract-
+  expected per US-005 spec — quarantined retry is the second-pass
+  failure outcome, not a crash).
+- Why the §6.4 deltas had zero effect (analysis):
+    (a) `weight_decay`: original Optuna winner used 0.000462; the
+        retry "reset" to 0.0002. So we *decreased* weight_decay by
+        ~57 % in the retry. The §6.4 spec was written assuming the
+        baseline is CNN default 1e-4, but the Optuna winners search
+        beyond the default. The build_retry_config policy needs
+        reconsideration — should it be ×2 of the *current value*
+        rather than ×2 of the CNN default?
+    (b) `dropout`: ResNet50's torchvision backbone has NO dropout
+        layer in its forward path. Setting `dropout: 0.1` in the
+        config doesn't wire to anything on ResNet50; the field is
+        plumbed for TransNeXt-tiny where `drop_path_rate` is honored.
+        So the dropout delta was a no-op for this cell.
+    (c) `lr_backbone ÷ 2`: would have applied IF the verdict were
+        `overfitting` AFTER the §6.4 ratio-tighten of step 1. But
+        the dispatch logs show `backbone_lr: 0.0008706` — same as
+        first pass. The retry path may not be applying the LR delta
+        as advertised. (Could be a separate bug; not investigated
+        this iteration.)
+- Sentinel state on disk now:
+    runs/final/final_B_L2_resnet50_cifar10/NEEDS_FULL_FT (still present)
+    runs/final/final_B_L2_resnet50_cifar10/QUARANTINED_AFTER_RETRY ←
+      body: `second_failure:overfitting`
+    runs/final/final_B_L2_resnet50_cifar10__v2/ ← v2 audit dir
+- Tracker refreshed via `refresh_trackers.py --cell ... --no-md`. But:
+  **Final_Exp.json shows status=Complete, quarantined=False for this
+  cell**. The aggregator `build_final_exp_json` does NOT yet inspect
+  the `QUARANTINED_AFTER_RETRY` sentinel — it only reports the
+  per-cell metrics.json (which carries best_val_acc=0.7344 from the
+  first pass). The quarantine semantic is on disk but invisible to
+  the dashboard. **Follow-up needed:** wire sentinel reading into
+  `build_final_exp_json` so `status="Failed"` / `quarantined=True` /
+  `quarantine_reason="second_failure:overfitting"` flow through to
+  the row. This is independent of US-009 closure but is required for
+  PRD US-009 line 457 ("complete + failed == 10") to read correctly.
+- Files affected: `artifacts/Final_Exp.json` (idempotent refresh,
+  no semantic change), `artifacts/Final_Exp.html` (rebuilt);
+  `runs/final/final_B_L2_resnet50_cifar10/{NEEDS_FULL_FT,
+  QUARANTINED_AFTER_RETRY,retry_config.json}` (gitignored);
+  `runs/final/final_B_L2_resnet50_cifar10__v2/**` (gitignored);
+  this progress.txt entry. No source code change. No mark on PRD
+  US-009 acceptance yet.
+- Validation: contract-expected outcome per US-005 spec. pytest
+  baseline unchanged (no source edits). The L2 cifar10 cell stands
+  at `best_val_acc=0.7344` (first pass = retry, identical) and is
+  permanently quarantined; per the PRD second-pass rule "no cell
+  runs more than twice" this case is closed.
+- Scientific interpretation: L2 cifar10 is genuinely hard to
+  optimize under the locked protocol — the model's only path to
+  high val_acc is to memorize, and we've established that
+  ×2 weight_decay + +0.1 dropout (limited to where dropout is wired)
+  doesn't break the pattern. Three real options for the operator:
+    1. **Accept the 0.7344 result as the L2 cifar10 reading and
+       move on** (the campaign goal is measurement, not max-acc).
+       This is the path of least disruption to the schedule.
+    2. **Investigate the build_retry_config policy** (a) — change to
+       "×2 of current value" rather than "×2 of CNN default". This
+       requires a code change + test + may help future cells but
+       won't change L2 cifar10's outcome at this point (already
+       quarantined per the no-more-than-twice rule).
+    3. **Bigger campaign change** — re-tune Optuna at L3 with the
+       2026-05-14 blur scale (currently deferred per operator
+       decision). If the priors shift, the new winners' hparams
+       might be less prone to the memorization-race pattern.
+- Learnings for next cycles:
+  - Patterns: A QUARANTINED_AFTER_RETRY outcome IS the §6.4 contract
+    closing — not a crash. The Ralph driver's exit 1 distinguishes
+    "the retry failed scientifically" from exit 3 (the Iteration 9
+    matplotlib crash). Don't conflate the two when reading
+    task-failed notifications.
+  - Patterns: The driver writes the retry into a `__v2` sibling dir
+    (preserves the v1 artifacts for audit). Both v1 and v2 carry the
+    same best_val_acc here because the seed+protocol locked the
+    trajectory. For future quarantine cases, compare v1 vs v2
+    history side-by-side before assuming the retry was a no-op —
+    the seed *should* lock train trajectory, but env drift (driver
+    upgrade, num_workers, etc.) can perturb.
+  - Traps: `build_final_exp_json` does NOT read sentinels yet. The
+    dashboard says "Complete" for cells that are scientifically
+    Quarantined. Until a follow-up PR fixes this, the operator must
+    read the sentinels on disk to know the real status. List with
+    `ls runs/final/<tag>/{NEEDS_FULL_FT,QUARANTINED_AFTER_RETRY}`.
+  - Traps: The build_retry_config "×2 of CNN default" policy can
+    DECREASE weight_decay if the Optuna winner was already above
+    the default. Verify the actual `retry_config.json` field values
+    before reasoning about whether the retry was a meaningful
+    perturbation — a "retry" that reduces regularization is not a
+    real retry.
+  - Helpful context: With the §6.4 contract closed for L2 cifar10
+    (1 quarantine), the remaining US-009 work is non-GPU except
+    for VALIDATOR seed=43 (~9 min × 2 cells). Sequence: REPORTER
+    summary → LIBRARIAN docs/phase_b.md ResNet50 subsection →
+    VALIDATOR seed=43 → progress.txt closure line → HALT before
+    US-010. The REPORTER summary should explicitly call out the
+    L2 cifar10 quarantine + the §6.4 policy discussion above.
+
 ## Iteration 10 (2026-05-15) — US-009 first pass COMPLETE (10/10 cells; 1 NEEDS_FULL_FT)
 - What was done: Relaunched the driver after the Iteration 9 Agg-backend
   hotfix. The 8 cells from the first dispatch were skipped via
