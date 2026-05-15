@@ -738,6 +738,62 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
 
+## Iteration 14 (2026-05-15) — US-010 CLOSED via Iteration-12 pattern (retry declined)
+- Operator decision: decline the §6.4 retry on both flagged cifar10
+  cells (L2 +24.4 pp, L3 +39.7 pp). Same scientific reasoning as
+  Iteration 12: the §6.4 deltas (wd ×2 + dropout=0.1 + backbone_lr÷20)
+  are too aggressive for tightly-tuned Optuna winners; the demonstrated
+  outcome on L2 resnet50 was a healthy-but-underfit trajectory (val
+  ~0.44) that would invert monotonic-degradation. Preserve the
+  first-pass 0.7558 (L2) and 0.6030 (L3) as the authoritative readings.
+- State changes: removed
+  `runs/final/final_B_L2_densenet121_cifar10/NEEDS_FULL_FT` and
+  `runs/final/final_B_L3_densenet121_cifar10/NEEDS_FULL_FT`. No
+  retry_config.json existed (retry never dispatched). No __v2 dirs
+  created. First-pass metrics.json / history.json / best.pt are
+  authoritative for all 10 cells.
+- Tracker state: refresh_trackers --cell --no-md ran on the two
+  affected cells. Phase B densenet121 reads Complete=10 / Failed=0 /
+  Pending=0 / Running=0. PRD §8 line 457 arithmetic correct.
+- Phase B densenet121 final tally — frozen as authoritative readings:
+    L1 cifar10  0.8464   L1 mnist  0.9916
+    L2 cifar10  0.7558   L2 mnist  0.9830
+    L3 cifar10  0.6030   L3 mnist  0.9220
+    L4 cifar10  0.4586   L4 mnist  0.7824
+    L5 cifar10  0.2572   L5 mnist  0.4040
+- Files affected: artifacts/Final_Exp.json + Final_Exp.html
+  (2 incremental row refreshes); 2 dashboard thumbs idempotent;
+  this progress.txt entry. No source code change. PRD US-010
+  acceptance boxes NOT individually ticked yet — REPORTER, LIBRARIAN,
+  and VALIDATOR seed=43 remain pending (same posture as the deferred
+  US-009 paperwork).
+- Validation: pytest baseline unchanged (50/50 — no source edits this
+  iteration; 53/53 since the §6.4 fix-set in commit 0da0051).
+- Learnings carried forward (no new traps):
+  - Patterns: The "first-pass cifar10 result is authoritative" pattern
+    is now consistent across Iteration 12 (resnet50 L2) and
+    Iteration 14 (densenet121 L2 + L3). Three §6.4 false-positives
+    on the same dataset (cifar10) at low-to-moderate degradation
+    (L2-L3) on different architectures strongly suggests the Phase B
+    cifar10 Optuna winners (tuned on L3-old-blur) are at a
+    local-optimum that out-of-band regularization cannot move
+    constructively. A campaign-level fix would be to re-tune Optuna
+    at L3 with the post-2026-05-14 blur scale; this is a deferred
+    operator decision (per the 2026-05-14 Blur axis rescaled note).
+  - Patterns: Closing an execution US by "decline retry" requires
+    removing only the `NEEDS_FULL_FT` sentinel — `refresh_trackers
+    --cell` then surfaces the first-pass metrics as Complete.
+    `QUARANTINED_AFTER_RETRY` writes only when the retry actually
+    runs and the second-pass guard fires; if you decline before
+    dispatch, the sentinel never appears.
+  - Helpful context: After this iteration the remaining US-010 work
+    (PRD §8 lines 458-463) mirrors US-009's: VALIDATOR seed=43,
+    REPORTER summary, LIBRARIAN docs/phase_b.md DenseNet121
+    subsection, progress.txt closure line, HALT (operator may
+    waive). Same paperwork shape as the US-009 trailing acceptance
+    items — both can be batch-handled later. Next dispatch: US-011
+    Phase B transnext_tiny, ~10–11 GPU-hours projected.
+
 ## Iteration 13 (2026-05-15) — US-010 first pass COMPLETE (Phase B densenet121, 10/10)
 - What was done: dispatched `python scripts/run_ralph_loop.py --plan final
   --phase B --model densenet121 --skip-existing` (b2zqaal32) — first
