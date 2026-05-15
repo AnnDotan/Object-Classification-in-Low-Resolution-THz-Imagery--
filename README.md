@@ -73,8 +73,9 @@ Per-model upper bound at 224×224 under the convergence-first protocol (60 ep / 
 | Model | CIFAR-10 best_val_acc | MNIST best_val_acc | Story |
 |---|---:|---:|---|
 | `resnet50` | 0.9518 | 0.9914 | US-006 |
+| `transnext_tiny` | **0.9764** | 0.9924 | US-008 (PARTIAL — seed=43 re-run pending) |
 
-Rows for `densenet121` (US-007) and `transnext_tiny` (US-008) will be added as their stories close.
+The `densenet121` (US-007) row will be added when its story closes.
 
 ### Recent scientific changes
 

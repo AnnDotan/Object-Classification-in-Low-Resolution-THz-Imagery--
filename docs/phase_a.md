@@ -36,7 +36,7 @@ Both runs were preserved across the 2026-05-12 state reset (legacy 4050 box; bf1
 
 ## TransNeXt-tiny
 
-**Story:** US-008 (PARTIAL — REPORTER + pathology done; LIBRARIAN/DESIGNER/VALIDATOR seed=43 pending). Summary: [`artifacts/reports/phase_a_transnext_tiny_summary.md`](../artifacts/reports/phase_a_transnext_tiny_summary.md). First Phase A pair executed end-to-end on the RTX 5070 via the US-005 driver.
+**Story:** US-008 (PARTIAL — REPORTER + pathology + LIBRARIAN done; DESIGNER + VALIDATOR seed=43 pending). Summary: [`artifacts/reports/phase_a_transnext_tiny_summary.md`](../artifacts/reports/phase_a_transnext_tiny_summary.md). First Phase A pair executed end-to-end on the RTX 5070 via the US-005 driver.
 
 | Cell | best_val_acc | best_epoch | epochs_run | last_train_acc | runtime |
 |---|---:|---:|---:|---:|---:|

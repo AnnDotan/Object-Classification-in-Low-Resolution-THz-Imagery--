@@ -437,7 +437,7 @@ Same shape, `--model transnext_tiny`. 2 cells. Closes Phase A. **No SYNCHRONIZER
 - [x] Pathology guard verdict for both cells: `healthy`. *(`evaluate_pathology` returns `healthy` on both: cifar10 best=0.9764 @ ep5 / 15 trained, mnist best=0.9924 @ ep25 / 35 trained; gap < 12 pp, no NaN at epoch ≥ 2.)*
 - [ ] VALIDATOR re-runs `final_clean_transnext_tiny_cifar10` with seed=43 in a side dir; best_val_acc within ±0.5pp of seed=42. *(GPU-gated, deferred to a follow-on Ralph cycle.)*
 - [x] REPORTER `artifacts/reports/phase_a_transnext_tiny_summary.md`. *(written 2026-05-15; narrative = 154 words; cross-model comparison table shows transnext_tiny tops cifar10 by +2.46 pp over resnet50 and +4.08 pp over densenet121; mnist clusters tight at 0.991–0.993.)*
-- [ ] LIBRARIAN updates `docs/phase_a.md` "TransNeXt-tiny" subsection + README "Best Results So Far" row.
+- [x] LIBRARIAN updates `docs/phase_a.md` "TransNeXt-tiny" subsection + README "Best Results So Far" row. *(Iteration 15, 2026-05-15 — `docs/phase_a.md` TransNeXt-tiny subsection already populated in Iteration 7; this pass added the `transnext_tiny | 0.9764 | 0.9924 | US-008 (PARTIAL — seed=43 re-run pending)` row to README Best Results table and trimmed the trailing note to reference only the still-pending densenet121 row. Outstanding-for-US-008 line in `docs/phase_a.md` updated to drop LIBRARIAN from the pending set.)*
 - [ ] DESIGNER adds an "Execution US Trend" section to `Final_Exp.html` for the 2 transnext_tiny rows.
 - [ ] `progress.txt`: `US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924; both healthy; awaiting VALIDATOR seed=43 + LIBRARIAN docs.`
 - [ ] **HALT** — do not start US-009 without explicit operator approval.
