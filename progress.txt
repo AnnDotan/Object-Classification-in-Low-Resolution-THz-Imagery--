@@ -738,6 +738,101 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     None of (a)-(d) can be marked from a single Ralph cycle alone
     except (a). The next non-GPU Ralph cycle should target (a).
 
+## Iteration 9 (2026-05-15) — US-009 dispatch attempted; matplotlib/tk crash; hotfix applied
+- What was done: Operator authorized starting Phase B execution skipping
+  the US-006/007/008 halts. Launched `python scripts/run_ralph_loop.py
+  --plan final --phase B --model resnet50 --skip-existing` in background
+  (b0jbu2t5q) logging to `artifacts/tune_logs/us009_phase_b_resnet50.log`.
+  The driver ran for ~3.1 GPU-hours and completed **8 of 10** cells with
+  metrics.json before crashing during cell 9 (`final_B_L5_resnet50_cifar10`)
+  at epoch 2.
+- Crash signature: `Tcl_AsyncDelete: async handler deleted by the wrong
+  thread` followed by `RuntimeError: main thread is not in main loop`
+  inside `tkinter/__init__.py:4119` (`Image.__del__`). Exit code 3 (abort).
+  Root cause: `src/tools/visualize_run.py` imports `matplotlib.pyplot` at
+  module top without first calling `matplotlib.use("Agg")`. On Windows
+  the default backend is `TkAgg`; running through 8 train-then-visualize
+  cycles in a single Python process accumulates Tk objects, and their
+  __del__ ends up running on a non-main thread (Lightning's worker
+  thread or DataLoader cleanup), tripping Tk's internal thread-affinity
+  check and aborting the process. `src/tools/render_curve_thumbs.py:25`
+  already sets `matplotlib.use("Agg")` — `visualize_run.py` was simply
+  missing the same line.
+- Why this didn't fire on the TransNeXt-tiny Phase A pair (Iteration 6):
+  only 2 cells executed there, and per-cell wallclock was longer (38–90
+  min vs ~22 min/cell here). The Tk-pollution failure mode needs both
+  many sequential calls AND fast turnaround for the garbage-collection
+  race to surface.
+- Fix shipped this iteration: added `import matplotlib;
+  matplotlib.use("Agg")` ahead of the pyplot import at the top of
+  `src/tools/visualize_run.py`. Verified via
+  `python -c "from src.tools.visualize_run import RunVisualizer;
+  import matplotlib; print(matplotlib.get_backend())"` → `Agg`.
+- Files affected: `src/tools/visualize_run.py` (+2 lines + comment);
+  this progress.txt entry. PRD.md US-009 acceptance NOT ticked (the
+  campaign isn't complete — cells 9 and 10 are still pending).
+- Validation: `pytest src/tests -q` = 50 passed in 10.29 s ✓. mypy
+  not re-run (single trivial change at the top of a script-shaped file).
+- Partial results captured before the crash (do not commit per-cell
+  files — they live under `runs/final/**`, gitignored):
+    L1 cifar10: best=0.8432, 27 ep, 1598 s
+    L1 mnist:   best=0.9918, 24 ep, 1412 s
+    L2 cifar10: best=0.7344, 47 ep, 2795 s   [NEEDS_FULL_FT=overfitting]
+    L2 mnist:   best=0.9804, 21 ep, 1282 s
+    L3 cifar10: best=0.5590, 13 ep,  812 s
+    L3 mnist:   best=0.9088, 26 ep, 1629 s
+    L4 cifar10: best=0.4174, 13 ep,  836 s
+    L4 mnist:   best=0.7426, 12 ep,  779 s
+    L5 cifar10: partial — 2 epochs (val_acc 0.245 → 0.268), no metrics.json
+    L5 mnist:   not started
+  Phase B trend on cifar10 is monotonic and steep
+  (95.18 → 84.32 → 73.44 → 55.90 → 41.74 → …), exactly what the
+  combined-degradation hypothesis predicts at the new (post-2026-05-14)
+  blur scale + L4–L5 noise.
+  L2 cifar10's NEEDS_FULL_FT=overfitting sentinel means the §6.4
+  remediate pass will run on it (`lr_backbone ÷ 2`, `weight_decay × 2`,
+  `dropout += 0.1`) once the first pass completes.
+- Next action: clean the partial `final_B_L5_resnet50_cifar10/` dir
+  (no metrics.json → re-run is mandatory anyway), relaunch the driver
+  with `--skip-existing` (the 8 healthy cells are skipped; the
+  NEEDS_FULL_FT cell is skipped by the first pass and picked up by the
+  second pass; only L5 cifar10 + L5 mnist re-run — ~45 min projected).
+- Learnings for next cycles:
+  - Patterns: On Windows + Lightning + many sequential cell launches,
+    ANY `matplotlib.pyplot` import must be preceded by
+    `matplotlib.use("Agg")`. Audit before launching multi-cell loops:
+    `grep -rln "matplotlib\.pyplot" src/tools/` and verify each file
+    sets the backend. As of this iteration only `render_curve_thumbs.py`
+    and (now) `visualize_run.py` are confirmed safe; the other four
+    (`degradation_robustness.py`, `plot_experiments.py`,
+    `top_runs_comparison.py`, `visualize_degradation.py`) are not on
+    the per-cell hot path so left untouched, but should be hardened
+    before the operator extends the dashboard pipeline.
+  - Patterns: Phase B per-cell wallclock at the new (post-2026-05-14)
+    blur scale lands at ~20–25 min on resnet50 (vs ~8 min for Phase A
+    clean — the blur kernel-91 / σ-18 L5 case is the slowest). Phase B
+    for resnet50 should take ~3.5–4 GPU-hours end-to-end on the 5070.
+    Useful for sizing the US-010 (densenet121) and US-011 (transnext_tiny)
+    dispatches.
+  - Traps: A "failed" notification (exit 3) does NOT mean the cells
+    haven't completed. Read `runs/final/*/metrics.json` to discover
+    how far the loop got. The crash in this case was AFTER 8 cells,
+    not before any of them. Always grep for metrics.json existence
+    before declaring data loss.
+  - Traps: Don't trust `--skip-existing` to leave partial dirs alone —
+    the spec says it reads `metrics.json.best_val_acc ≥ 0` to decide.
+    A dir without metrics.json (like L5 cifar10 after this crash) is
+    re-attempted, but the stale partial artifacts (`history.json`,
+    `best.pt`, `lightning_csv/`) coexist with the new run's outputs
+    and may confuse Lightning. Clean the partial dir before relaunch
+    to avoid append-vs-overwrite ambiguity.
+  - Helpful context: The original wakeup smoke-check was scheduled at
+    +90 s — way too early for a 20-min-per-cell campaign. Future Phase
+    B/C dispatches should schedule the first smoke check at +5–10 min
+    (one cell elapsed) and the next at +60–90 min (mid-campaign check).
+    The wakeup also doesn't help diagnose mid-run crashes — those need
+    the tool's failed-task notification to surface.
+
 ## Iteration 8 (2026-05-15) — US-006 DESIGNER pass (Execution US Trend section)
 - What was done: ticked PRD line 418 — the DESIGNER deliverable for US-006.
   Extended `src/tools/build_final_dashboard.py` with a collapsible

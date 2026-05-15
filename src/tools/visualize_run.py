@@ -7,6 +7,8 @@ enabling quick visual analysis for research decisions.
 
 from pathlib import Path
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")  # headless backend — invoked from background train loops on Windows where the default TkAgg backend crashes with "Tcl_AsyncDelete: async handler deleted by the wrong thread" after a few cells (US-009 Iteration 9 failure, 2026-05-15). Must precede the pyplot import.
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from typing import Optional
