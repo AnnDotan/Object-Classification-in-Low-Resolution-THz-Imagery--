@@ -305,6 +305,7 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
         "label_smoothing": float(bp["label_smoothing"]),
         "warmup_epochs": int(round(float(bp["warmup_epochs"]))),
         "drop_path_rate": float(bp.get("drop_path_rate", 0.0)),
+        "dropout": float(bp.get("dropout", 0.0)),
 
         # Blackwell + TransNeXt knobs (CellSpec is SoT; all 224x224 now)
         "img_size": spec.img_size,
@@ -420,6 +421,15 @@ def run_cell(
         )
     spec = by_tag[cell_tag]
     hparams = _load_hparams_for_cell(spec)
+    # §6.4 retry plumbing (Iteration 12, 2026-05-15): if the ralph driver
+    # wrote a retry_config.json for this cell, it overrides best_hparams so
+    # the deltas (lr_backbone÷2, weight_decay×2, dropout+=0.1 for overfitting;
+    # head_lr÷3, weight_decay×1.5, label_smoothing+=0.05 for failed_convergence)
+    # actually reach the trainer. Without this hook the retry trained with the
+    # original Optuna winner hparams and produced identical results.
+    retry_path = Path("runs/final") / cell_tag / "retry_config.json"
+    if retry_path.exists():
+        hparams = json.loads(retry_path.read_text(encoding="utf-8"))
     config = _cell_config(spec, hparams, mode)
 
     run_experiment = run_experiment_fn or _resolve_run_experiment(engine)

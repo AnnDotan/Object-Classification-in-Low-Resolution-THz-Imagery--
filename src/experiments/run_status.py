@@ -33,10 +33,51 @@ QUARANTINE_REASON = "Awaiting Native-Resolution Refactor"
 # regardless of any incomplete metrics.json the trainer wrote before exiting.
 INTERRUPTED_SENTINEL = "INTERRUPTED"
 
+# Filename of the §6.4 second-pass failure sentinel written by the ralph
+# driver (scripts/run_ralph_loop.py:run_remediate) when the retry-after-
+# NEEDS_FULL_FT itself fails the pathology guard. Body is `second_failure:
+# <verdict>` (e.g. `second_failure:overfitting`). Presence -> the cell is
+# Failed and quarantined; the original metrics.json is preserved for audit
+# but the row should NOT count as Complete in the Final_Exp counts.
+# (Iteration 12, 2026-05-15 — wired into detect_status precedence + read by
+# build_final_exp_json for quarantine fields.)
+QUARANTINED_AFTER_RETRY_SENTINEL = "QUARANTINED_AFTER_RETRY"
+
+
+def read_quarantine_sentinel(
+    tag: str, runs_root: Optional[Path] = None
+) -> Optional[str]:
+    """Return the body of the QUARANTINED_AFTER_RETRY sentinel (e.g.
+    `second_failure:overfitting`) for `tag`, or None if absent.
+
+    Used by the Final_Exp aggregator to flag rows that the §6.4 retry path
+    permanently quarantined. The sentinel body documents the verdict so the
+    dashboard can render `Failed · second_failure:overfitting` directly.
+    """
+    if runs_root is None:
+        runs_root = RUNS_ROOT_DEFAULT
+    p = runs_root / tag / QUARANTINED_AFTER_RETRY_SENTINEL
+    if not p.exists():
+        return None
+    try:
+        return p.read_text(encoding="utf-8").strip() or "second_failure"
+    except OSError:
+        return None
+
 
 def is_quarantined(model: str) -> bool:
-    """Return True if `model` is currently deferred from execution."""
-    return "transnext" in (model or "").lower()
+    """Return True if `model` is currently deferred from execution.
+
+    V3 quarantine lift (ratified 2026-05-12): the predicate is now a permanent
+    no-op. Pre-V3 it returned True for `transnext_*` so the runner skipped
+    those cells while the project waited for Blackwell hardware. The hardware
+    arrived (RTX 5070, sm_120) and TransNeXt cells are now part of the active
+    campaign, so this returns False unconditionally. Kept as a function (vs
+    deleted) so the call sites in `tune_all.py`, `scripts/update_final_exp.py`,
+    and `src/tools/build_final_exp_json.py` continue to work without edits —
+    they just stop quarantining anything.
+    """
+    return False
 
 
 def read_metrics(tag: str, runs_root: Path = RUNS_ROOT_DEFAULT) -> Optional[dict]:
@@ -71,6 +112,10 @@ def detect_status(
     Precedence:
       1. INTERRUPTED sentinel (US-016) -> Failed regardless of any partial
          metrics.json the trainer flushed before the SIGINT.
+      1.5 QUARANTINED_AFTER_RETRY sentinel (US-005 §6.4, wired 2026-05-15) ->
+         Failed regardless of any metrics.json the retry produced. The
+         retry's best_val_acc is preserved for audit but a second-pass
+         failure means the cell is permanently quarantined.
       2. Published val_acc in metrics.json -> Complete even if log.txt also
          contains a traceback (training succeeded; something downstream
          printed an error).
@@ -80,6 +125,8 @@ def detect_status(
     """
     run_dir = runs_root / tag
     if (run_dir / INTERRUPTED_SENTINEL).exists():
+        return "Failed"
+    if (run_dir / QUARANTINED_AFTER_RETRY_SENTINEL).exists():
         return "Failed"
 
     if metrics is None:

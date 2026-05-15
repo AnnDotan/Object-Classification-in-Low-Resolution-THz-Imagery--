@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-15T09:13:29+00:00",
+  "generated_at": "2026-05-15T09:26:22+00:00",
   "rows": [
     {
       "tag": "final_B_L1_densenet121_cifar10",
@@ -632,15 +632,15 @@
         "salt_pepper": 0.06,
         "saturation": 0.65
       },
-      "status": "Complete",
+      "status": "Failed",
       "val_acc": 0.7343999743461609,
       "val_loss": 1.1993966102600098,
       "epochs_run": 47,
       "runtime_s": 2794.5310000000172,
       "started_at": "2026-05-14T22:29:36+00:00",
       "finished_at": "2026-05-14T23:16:14+00:00",
-      "quarantined": false,
-      "quarantine_reason": null,
+      "quarantined": true,
+      "quarantine_reason": "second_failure:overfitting",
       "visual_core": "dashboard_thumbs/final_B_L2_resnet50_cifar10.png",
       "psnr_mean": 15.435221672058105,
       "psnr_std": 0.4628678858280182,
@@ -8404,8 +8404,8 @@
     "total": 186,
     "pending": 170,
     "running": 0,
-    "complete": 16,
-    "failed": 0,
+    "complete": 15,
+    "failed": 1,
     "deferred": 0
   }
 }

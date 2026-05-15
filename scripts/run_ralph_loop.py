@@ -193,12 +193,18 @@ def cell_is_complete(tag: str, *, base: Path = RUNS_DIR) -> bool:
 def build_retry_config(base_hparams: dict, verdict: str) -> dict:
     """Build the Full-FT retry config per PRD §6.3 deltas + §6.4 ratio tighten.
 
-    failed_convergence: lr_head ÷ 3, weight_decay × 1.5, label_smoothing += 0.05 (cap 0.15).
-    overfitting:        lr_backbone ÷ 2, weight_decay × 2,   dropout += 0.1 (cap 0.3).
+    failed_convergence: head_lr ÷ 3, weight_decay × 1.5, label_smoothing += 0.05 (cap 0.15).
+    overfitting:        backbone_lr ÷ 2, weight_decay × 2,   dropout += 0.1 (cap 0.3).
 
-    Plus §6.4 step 1: tighten differential ratio so ``lr_backbone = lr_head / 10``
+    Plus §6.4 step 1: tighten differential ratio so ``backbone_lr = head_lr / 10``
     (applied *before* the verdict-specific deltas so the overfitting branch's
     ``÷ 2`` still composes with the tightened ratio).
+
+    The Optuna winner JSON nests the actual hparams under ``best_params``; the
+    deltas operate on those nested values (Iteration 12, 2026-05-15 — prior to
+    this fix the deltas were applied to top-level keys that didn't exist and
+    silently fell back to CNN defaults, producing a "retry" that decreased
+    regularization for L2 cifar10's already-tightly-tuned Optuna winner).
     """
     if verdict not in ("failed_convergence", "overfitting"):
         raise ValueError(f"unknown verdict for retry: {verdict!r}")
@@ -207,22 +213,25 @@ def build_retry_config(base_hparams: dict, verdict: str) -> dict:
     cfg["full_ft"] = True
     cfg["remediation_reason"] = verdict
 
-    if "lr_head" in cfg:
-        cfg["lr_backbone"] = float(cfg["lr_head"]) / 10.0
+    bp = dict(cfg.get("best_params", {}))
+
+    if "head_lr" in bp:
+        bp["backbone_lr"] = float(bp["head_lr"]) / 10.0
 
     if verdict == "failed_convergence":
-        if "lr_head" in cfg:
-            cfg["lr_head"] = float(cfg["lr_head"]) / 3.0
-        cfg["weight_decay"] = float(cfg.get("weight_decay", 1e-4)) * 1.5
-        ls = float(cfg.get("label_smoothing", 0.0))
-        cfg["label_smoothing"] = min(ls + 0.05, 0.15)
+        if "head_lr" in bp:
+            bp["head_lr"] = float(bp["head_lr"]) / 3.0
+        bp["weight_decay"] = float(bp.get("weight_decay", 1e-4)) * 1.5
+        ls = float(bp.get("label_smoothing", 0.0))
+        bp["label_smoothing"] = min(ls + 0.05, 0.15)
     else:  # overfitting
-        if "lr_backbone" in cfg:
-            cfg["lr_backbone"] = float(cfg["lr_backbone"]) / 2.0
-        cfg["weight_decay"] = float(cfg.get("weight_decay", 1e-4)) * 2.0
-        dp = float(cfg.get("dropout", 0.0))
-        cfg["dropout"] = min(dp + 0.1, 0.3)
+        if "backbone_lr" in bp:
+            bp["backbone_lr"] = float(bp["backbone_lr"]) / 2.0
+        bp["weight_decay"] = float(bp.get("weight_decay", 1e-4)) * 2.0
+        dp = float(bp.get("dropout", 0.0))
+        bp["dropout"] = min(dp + 0.1, 0.3)
 
+    cfg["best_params"] = bp
     return cfg
 
 

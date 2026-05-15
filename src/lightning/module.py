@@ -55,9 +55,14 @@ class THzClassifier(pl.LightningModule):
         warmup_epochs: int = 0,
         freeze_backbone: bool = False,
         drop_path_rate: float = 0.0,
+        dropout: float = 0.0,
         mixup_alpha: float = 0.0,
         cutmix_alpha: float = 0.0,
         pos_bias_interp: str = "bilinear",
+        img_size: int = 224,
+        patch_size: int = 4,
+        pretrain_size: Optional[int] = None,
+        compile_mode: str = "none",
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -106,14 +111,24 @@ class THzClassifier(pl.LightningModule):
                 pretrained=self.hparams.pretrained,
                 checkpoint_path=transnext_ckpt,
                 drop_path_rate=self.hparams.drop_path_rate,
+                img_size=self.hparams.img_size,
+                patch_size=self.hparams.patch_size,
+                pretrain_size=self.hparams.pretrain_size,
             )
             if self.hparams.pos_bias_interp != "bilinear":
                 self._retarget_pos_bias_interp(model, mode=self.hparams.pos_bias_interp)
         else:
+            # timm.create_model's `drop_rate` is the classifier-head dropout
+            # applied before the final FC (drop -> fc). The CNN backbones
+            # (resnet50, densenet121) do NOT honor `drop_path_rate` — that
+            # field is a TransNeXt-only knob. So §6.4 overfitting retry's
+            # `dropout += 0.1` lands on `drop_rate` for CNNs and on the
+            # transformer's stochastic-depth path elsewhere.
             model = timm.create_model(
                 self.hparams.model_name,
                 pretrained=self.hparams.pretrained,
                 num_classes=self.hparams.num_classes,
+                drop_rate=float(self.hparams.dropout),
             )
 
         if self.hparams.freeze_backbone:
@@ -124,6 +139,22 @@ class THzClassifier(pl.LightningModule):
                     p.requires_grad = True
             else:
                 raise RuntimeError("freeze_backbone=True but model has no attribute 'head'")
+
+        # torch.compile must run AFTER requires_grad flags are set; Inductor
+        # specialises the graph on the trainable-param set. OptimizedModule
+        # proxies named_parameters / state_dict to _orig_mod, so
+        # configure_optimizers and checkpointing keep working transparently.
+        if self.hparams.compile_mode != "none":
+            if torch.cuda.is_available():
+                cap = torch.cuda.get_device_capability()
+                if cap < (8, 0):
+                    print(
+                        f"[WARN] torch.compile requested but CUDA capability "
+                        f"{cap} is < (8, 0); compile is unvalidated on pre-Ampere."
+                    )
+                if cap == (12, 0):
+                    print(f"[INFO] Detected Blackwell sm_120; torch={torch.__version__}")
+            model = torch.compile(model, mode=self.hparams.compile_mode)
         return model
 
     @staticmethod

@@ -207,6 +207,42 @@ def test_interrupted_sentinel_marks_cell_failed():
         assert detect_status("final_B_L3_densenet121_mnist", runs_root=runs_root) == "Failed"
 
 
+def test_quarantined_after_retry_sentinel_marks_cell_failed():
+    """§6.4 retry plumbing (Iteration 12, 2026-05-15): a
+    QUARANTINED_AFTER_RETRY sentinel under runs/final/<tag>/ flips the
+    cell to Failed regardless of the post-retry metrics.json the trainer
+    wrote — second-pass failure means the cell is permanently quarantined
+    even though the retry's val_acc is preserved for audit."""
+    from src.experiments.run_status import (
+        QUARANTINED_AFTER_RETRY_SENTINEL,
+        detect_status,
+        read_quarantine_sentinel,
+    )
+    import json as _json
+
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        tag = "final_B_L2_resnet50_cifar10"
+        rd = runs_root / tag
+        rd.mkdir(parents=True)
+
+        # Without sentinel + completed retry metrics → Complete.
+        (rd / "metrics.json").write_text(
+            _json.dumps({"best_val_acc": 0.7344}), encoding="utf-8",
+        )
+        assert detect_status(tag, runs_root=runs_root) == "Complete"
+        assert read_quarantine_sentinel(tag, runs_root) is None
+
+        # Drop quarantine sentinel → must override to Failed even though
+        # metrics.json carries a real val_acc.
+        (rd / QUARANTINED_AFTER_RETRY_SENTINEL).write_text(
+            "second_failure:overfitting", encoding="utf-8",
+        )
+        assert detect_status(tag, runs_root=runs_root) == "Failed"
+        assert read_quarantine_sentinel(tag, runs_root) == \
+            "second_failure:overfitting"
+
+
 def test_v3_lift_tune_all_includes_transnext_by_default():
     """V3 lift: `tune_all.py` (no --model) now includes TransNeXt in the
     default sweep because is_quarantined is a no-op."""

@@ -37,6 +37,7 @@ from src.experiments.run_status import (
     is_quarantined,
     read_image_quality,
     read_metrics,
+    read_quarantine_sentinel,
 )
 from src.tools.final_exp_schema import (
     SCHEMA_VERSION,
@@ -168,6 +169,16 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
     quarantine_reason: Optional[str] = QUARANTINE_REASON if quarantined else None
     if quarantined:
         status = "Deferred"
+
+    # §6.4 retry quarantine (Iteration 12, 2026-05-15): if the ralph driver
+    # wrote a QUARANTINED_AFTER_RETRY sentinel for this cell, the second-pass
+    # retry failed and the cell is permanently quarantined. detect_status
+    # already promotes status to "Failed"; here we surface the verdict body
+    # (`second_failure:<verdict>`) so the dashboard renders why.
+    retry_quarantine_body = read_quarantine_sentinel(meta.tag, runs_root)
+    if retry_quarantine_body is not None and not quarantined:
+        quarantined = True
+        quarantine_reason = retry_quarantine_body
 
     # PSNR/SSIM (US-002): sourced from runs/final/<tag>/image_quality.json so
     # the dashboard can render them under the Visual Core thumbnail. Null on

@@ -117,50 +117,92 @@ def test_cell_is_complete_falsey_when_missing(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_build_retry_config_failed_convergence_deltas() -> None:
+    # Optuna winner JSON shape: hparams nested under best_params (Iteration 12
+    # fix, 2026-05-15 — previously the deltas were applied to top-level keys
+    # that didn't exist).
     base = {
-        "lr_head": 9e-4,
-        "lr_backbone": 9e-5,
-        "weight_decay": 1e-4,
-        "label_smoothing": 0.05,
+        "best_params": {
+            "head_lr": 9e-4,
+            "backbone_lr": 9e-5,
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.05,
+        },
         "batch_size": 32,
     }
     cfg = ralph.build_retry_config(base, "failed_convergence")
     assert cfg["full_ft"] is True
     assert cfg["remediation_reason"] == "failed_convergence"
-    # §6.4 step 1: lr_backbone = lr_head / 10 (applied first)
-    # Then §6.3: lr_head ÷ 3.
-    assert cfg["lr_head"] == pytest.approx(9e-4 / 3.0)
-    assert cfg["lr_backbone"] == pytest.approx(9e-4 / 10.0)
-    assert cfg["weight_decay"] == pytest.approx(1e-4 * 1.5)
-    assert cfg["label_smoothing"] == pytest.approx(0.10)
+    bp = cfg["best_params"]
+    # §6.4 step 1: backbone_lr = head_lr / 10 (applied first)
+    # Then §6.3: head_lr ÷ 3.
+    assert bp["head_lr"] == pytest.approx(9e-4 / 3.0)
+    assert bp["backbone_lr"] == pytest.approx(9e-4 / 10.0)
+    assert bp["weight_decay"] == pytest.approx(1e-4 * 1.5)
+    assert bp["label_smoothing"] == pytest.approx(0.10)
+    # Original best_params is not mutated (defensive copy).
+    original_bp = base["best_params"]
+    assert isinstance(original_bp, dict)
+    assert original_bp["head_lr"] == pytest.approx(9e-4)
 
 
 def test_build_retry_config_overfitting_deltas() -> None:
     base = {
-        "lr_head": 9e-4,
-        "lr_backbone": 9e-5,
-        "weight_decay": 1e-4,
-        "dropout": 0.0,
+        "best_params": {
+            "head_lr": 9e-4,
+            "backbone_lr": 9e-5,
+            "weight_decay": 1e-4,
+            "dropout": 0.0,
+        },
     }
     cfg = ralph.build_retry_config(base, "overfitting")
     assert cfg["full_ft"] is True
     assert cfg["remediation_reason"] == "overfitting"
-    # §6.4 step 1 first: lr_backbone = lr_head / 10 = 9e-5.
+    bp = cfg["best_params"]
+    # §6.4 step 1 first: backbone_lr = head_lr / 10 = 9e-5.
     # §6.3 then ÷ 2: 9e-5 / 2 = 4.5e-5.
-    assert cfg["lr_backbone"] == pytest.approx(9e-5 / 2.0)
-    assert cfg["weight_decay"] == pytest.approx(2e-4)
-    assert cfg["dropout"] == pytest.approx(0.1)
+    assert bp["backbone_lr"] == pytest.approx(9e-5 / 2.0)
+    assert bp["weight_decay"] == pytest.approx(2e-4)
+    assert bp["dropout"] == pytest.approx(0.1)
+
+
+def test_build_retry_config_overfitting_uses_optuna_winner_values() -> None:
+    """Regression for Iteration 11: weight_decay × 2 must operate on the
+    Optuna winner's value, not on the CNN default. With base weight_decay
+    = 0.000462 (the actual resnet50_cifar10 winner), the retry value must
+    be 0.000924 — not 0.0002 (which is 2 × CNN default 1e-4).
+    """
+    base = {
+        "best_params": {
+            "head_lr": 1.0994e-4,
+            "backbone_lr": 8.706e-4,
+            "weight_decay": 4.62258e-4,
+            "label_smoothing": 0.0425,
+        },
+    }
+    cfg = ralph.build_retry_config(base, "overfitting")
+    bp = cfg["best_params"]
+    assert bp["weight_decay"] == pytest.approx(4.62258e-4 * 2.0)
+    assert bp["weight_decay"] != pytest.approx(2e-4)  # NOT the CNN default ×2
+    # §6.4 ratio tighten composes with ÷ 2:
+    # backbone_lr = head_lr / 10 = 1.0994e-5, then ÷ 2 = 5.497e-6.
+    assert bp["backbone_lr"] == pytest.approx(1.0994e-4 / 10.0 / 2.0)
+
+
+def test_build_retry_config_overfitting_dropout_caps_at_03() -> None:
+    base = {"best_params": {"head_lr": 1e-3, "dropout": 0.25}}
+    cfg = ralph.build_retry_config(base, "overfitting")
+    assert cfg["best_params"]["dropout"] == pytest.approx(0.30)
 
 
 def test_build_retry_config_label_smoothing_cap() -> None:
-    base = {"lr_head": 1e-3, "label_smoothing": 0.13}
+    base = {"best_params": {"head_lr": 1e-3, "label_smoothing": 0.13}}
     cfg = ralph.build_retry_config(base, "failed_convergence")
-    assert cfg["label_smoothing"] == pytest.approx(0.15)
+    assert cfg["best_params"]["label_smoothing"] == pytest.approx(0.15)
 
 
 def test_retry_config_round_trip(tmp_path: Path) -> None:
     tag = "final_B_L3_resnet50_cifar10"
-    base = {"lr_head": 1e-3, "lr_backbone": 1e-4, "weight_decay": 1e-4}
+    base = {"best_params": {"head_lr": 1e-3, "backbone_lr": 1e-4, "weight_decay": 1e-4}}
     cfg = ralph.build_retry_config(base, "failed_convergence")
     p = ralph.write_retry_config(tag, cfg, base=tmp_path)
     assert p.exists()
@@ -170,7 +212,7 @@ def test_retry_config_round_trip(tmp_path: Path) -> None:
 
 def test_build_retry_config_rejects_unknown_verdict() -> None:
     with pytest.raises(ValueError, match="unknown verdict"):
-        ralph.build_retry_config({"lr_head": 1e-3}, "healthy")
+        ralph.build_retry_config({"best_params": {"head_lr": 1e-3}}, "healthy")
 
 
 # ---------------------------------------------------------------------------
