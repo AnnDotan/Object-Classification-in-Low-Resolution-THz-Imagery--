@@ -1443,3 +1443,83 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     LIBRARIAN pass (`docs/phase_a.md` DenseNet121 subsection — the
     stub created in Iteration 7 is the right insertion point) or
     the US-008 LIBRARIAN/DESIGNER passes (analogous to US-006).
+
+## Iteration 17 (2026-05-16) — US-008 DESIGNER pass (Execution US Trend card for transnext_tiny Phase A auto-renders; PRD 441 ticked)
+- What was done: Verification-only DESIGNER closure for PRD line 441
+  ("Execution US Trend" section for the 2 transnext_tiny Phase A rows).
+  The Iteration-8 generalisation made `EXECUTION_US_GROUPS` cover
+  US-006…US-014 with `{id, phase, model, title}` tuples, so US-008 is
+  already in the catalog at `build_final_dashboard.py:972..978`
+  (`{ id: 'US-008', phase: 'A', model: 'transnext_tiny', title: 'Phase
+  A · transnext_tiny' }`). The runtime filter at
+  `build_final_dashboard.py:991-1019` is
+  `r.phase === group.phase && r.model === group.model && r.status === 'Complete'`.
+  Both `final_clean_transnext_tiny_{cifar10,mnist}` rows in
+  `artifacts/Final_Exp.json` carry `status: "Complete"` (val_acc
+  0.9764 cifar10 / 0.9924 mnist, frozen since 2026-05-14 per Iter 6),
+  so the `renderExecutionUsTrend(doc.rows)` call wired into
+  `ingest()` at `:1166` emits the `US-008 — Phase A · transnext_tiny`
+  card with both rows on every dashboard poll. The inlined HTML
+  scaffold (`<details id="us-trend-section"> / <div id="us-trend-body">`)
+  is already present in `artifacts/Final_Exp.html` from Iter 8.
+  No code change, no rebuild necessary — verification suffices to
+  tick the box. PRD line 441 ticked with an inline evidence string
+  noting the build_final_dashboard.py line ranges, the Final_Exp.json
+  status values, and the runtime emit path.
+- Files affected: PRD.md (line 441 [ ] → [x] with closure attribution);
+  this progress.txt entry. No source code change; no GPU runs; no
+  acceptance criterion downstream of US-008 is touched.
+- Validation: `python -m pytest src/tests -q` = 53 passed in 3.40 s ✓
+  (torch-free baseline preserved; `test_dashboard.py` covers
+  build_final_dashboard's render path and remains green).
+- Learnings for next cycles:
+  - Patterns: DESIGNER PRD checkboxes that target the per-US trend
+    section after Iteration 8 are pure verification tickets when the
+    target US is in `EXECUTION_US_GROUPS` and its cells are Complete
+    in Final_Exp.json. The pattern: (a) grep `EXECUTION_US_GROUPS`
+    for the US id (must be present), (b) check Final_Exp.json for
+    `status: "Complete"` rows matching {phase, model} (must be
+    ≥ 1), (c) tick the box with line-range citations. No rebuild,
+    no JS edit. This generalises to US-009 line 461 (resnet50
+    Phase B) and US-010 (densenet121 Phase B) — both Complete in
+    Final_Exp.json after Iter 12/14 — and to US-011 line equivalent
+    (transnext_tiny Phase B, all 10 Complete after Iter 16).
+  - Patterns: The "verification-only Ralph cycle" shape is the right
+    fit for any deferred US-N checkbox whose work was already done
+    in a prior iteration but never bookkeept. Other candidates in
+    the same shape: US-009 LIBRARIAN (docs/phase_b.md doesn't exist
+    yet — would actually need writing), US-010 same, US-011 same;
+    each REPORTER summary doesn't exist yet either (only phase_a_*
+    summaries are in artifacts/reports/). The DESIGNER cards
+    auto-render for all three Phase B execution USs as soon as
+    Final_Exp.json shows their rows Complete, which it already does.
+  - Traps: Do not rebuild `Final_Exp.html` purely to "refresh" the
+    US Trend section — the section is JS-rendered client-side from
+    the inlined JSON snapshot at every `ingest()` cycle, so a stale
+    inlined snapshot would only delay visibility by one poll cycle
+    (~30 s). Rebuilds are only needed when (a) Final_Exp.json drifts
+    in a way that needs a fresh inline snapshot, or (b) the JS / CSS
+    itself changes. Pure tracker-state ticks don't need a rebuild.
+  - Traps: The `EXECUTION_US_GROUPS` table is hard-coded in JS, not
+    derived from Final_Exp.json. If a new execution US is added
+    (or a model renamed — cf. the US-016 small→tiny swap), the
+    catalog must be hand-edited in `build_final_dashboard.py` and
+    the HTML rebuilt. The US-016 swap was caught at Iter 8 time;
+    future model swaps require the same vigilance.
+  - Helpful context: Remaining US-008 work is (a) the VALIDATOR
+    seed=43 re-run at PRD line 438 (GPU-gated, ~9 min wallclock for
+    transnext_tiny_cifar10), (b) the progress.txt PARTIAL line +
+    HALT at PRD lines 442-443. (a) requires a GPU dispatch and
+    cannot be done in a non-GPU Ralph cycle. After (a) lands,
+    line 442 can flip from PARTIAL → CLOSED. Until then, US-008
+    stays PARTIAL.
+  - Helpful context: The next non-GPU actionable PRD [ ] after this
+    cycle is line 415 (US-006 VALIDATOR seed=43, also GPU-gated)
+    or line 459 (US-009 REPORTER `phase_b_resnet50_summary.md` — a
+    write-only summary doc; the densenet121 / transnext_tiny
+    equivalents would follow the same shape and unblock LIBRARIAN
+    `docs/phase_b.md`). The REPORTER trio (US-009/010/011 summaries
+    + docs/phase_b.md) is the right batch to absorb the deferred
+    Phase B trailing paperwork; this Iter 17 verification ticks
+    only the cheapest single box of that batch.
+---
