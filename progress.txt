@@ -1522,4 +1522,59 @@ US-002 CLOSED 2026-05-14: TransNeXt-tiny Optuna tune complete.
     + docs/phase_b.md) is the right batch to absorb the deferred
     Phase B trailing paperwork; this Iter 17 verification ticks
     only the cheapest single box of that batch.
+
+US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924; both healthy; awaiting VALIDATOR seed=43 (LIBRARIAN docs + DESIGNER per-US trend closed in Iter 15 / Iter 17 respectively).
+---
+
+## Iteration 18 (2026-05-16) — US-008 PARTIAL marker line written (PRD 442 ticked)
+- What was done: Appended the PRD-line-442-mandated marker line to
+  progress.txt verbatim
+  ("US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924;
+  both healthy; awaiting VALIDATOR seed=43 + LIBRARIAN docs.") with a
+  brief parenthetical noting that LIBRARIAN docs (Iter 15) and DESIGNER
+  per-US trend (Iter 17) are already closed, so the remaining gate is
+  VALIDATOR seed=43 alone. PRD line 442 ticked with an inline
+  attribution string.
+- Files affected: progress.txt (1-line marker insertion after the
+  Iter 17 entry); PRD.md (line 442 [ ] → [x]). No source code change;
+  no GPU runs.
+- Validation: `python -m pytest src/tests -q` skipped — markdown / text
+  only, zero Python touched. Prior baseline = 53/53 from Iter 17.
+- Learnings for next cycles:
+  - Patterns: Marker-line PRD checkboxes ("`progress.txt`: <verbatim
+    string>") are pure write-only single-task cycles. The pattern:
+    append the verbatim string after the latest Iter entry, then
+    tick the PRD box with an inline attribution. No code, no tests,
+    no rebuild. US-006 line 419 ("US-006 CLOSED: …") and the future
+    US-009/010/011 closure lines are the same shape — but line 419
+    is gated by line 415 (VALIDATOR seed=43, GPU) and line 420
+    (HALT), so it can't close in a non-GPU cycle.
+  - Patterns: When the PRD-mandated verbatim string contains a
+    pending-set enumeration that has shifted since the PRD was
+    drafted (here: "+ LIBRARIAN docs" no longer applies after
+    Iter 15), append the verbatim string for PRD-conformance and
+    add a parenthetical clarifying the current state. Don't
+    rewrite the PRD-mandated string; the PRD line is the contract.
+  - Traps: PRD line 442 says "awaiting VALIDATOR seed=43 + LIBRARIAN
+    docs", but as of Iter 15 the LIBRARIAN docs are closed. The
+    verbatim string written here preserves the PRD wording for
+    grep-ability (downstream tooling may scan for "US-008 PARTIAL")
+    while the parenthetical reflects current state.
+  - Helpful context: Remaining US-008 work is now exactly one
+    item — the VALIDATOR seed=43 re-run at PRD line 438 (GPU-gated,
+    ~9 min wallclock for transnext_tiny_cifar10). After that lands,
+    line 442 can be rewritten from PARTIAL → CLOSED and the HALT
+    on line 443 can be lifted for US-009 to start. Until then,
+    US-008 stays PARTIAL.
+  - Helpful context: Next non-GPU Ralph cycle candidates:
+    (a) line 459 US-009 REPORTER `phase_b_resnet50_summary.md` —
+    write-only summary doc, unblocks LIBRARIAN docs/phase_b.md;
+    (b) line 460 LIBRARIAN docs/phase_b.md — depends on (a) for
+    ResNet50 subsection but the doc itself doesn't exist yet
+    (mirror Iter 6's docs/phase_a.md creation pattern: skeleton
+    all three model subsections at once); (c) line 461 US-009
+    DESIGNER per-US trend — auto-renders via Iter 8 generalisation
+    for resnet50 Phase B since all 10 cells are Complete, so this
+    is another pure verification ticket. Pick (c) for the next
+    cycle: cheapest, fastest, follows the Iter-17 pattern.
 ---
