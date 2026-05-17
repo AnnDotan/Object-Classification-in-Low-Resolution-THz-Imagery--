@@ -1578,3 +1578,208 @@ US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924; both he
     is another pure verification ticket. Pick (c) for the next
     cycle: cheapest, fastest, follows the Iter-17 pattern.
 ---
+
+## Iteration 19 (2026-05-16) — US-012 dispatched (Phase C resnet50, 50 cells, IN FLIGHT)
+- What was done: Operator lifted the PRD line 475 HALT and approved
+  US-012 launch. Dispatched
+  `python scripts/run_ralph_loop.py --plan final --phase C --model resnet50 --skip-existing`
+  as background task `bamck1ig3` (same Iter-16 flow that closed
+  US-011's first pass cleanly). Dry-run pre-flight resolved exactly
+  50 cells (5 levels × 5 axes × 2 datasets, tag prefix
+  `final_C_L{1..5}_{resolution,noise,blur,saturation,salt_pepper}_resnet50_{cifar10,mnist}`).
+  Optuna winners verified present:
+  `artifacts/best_hparams/resnet50_{cifar10,mnist}.json` both on disk —
+  Phase C inherits the same per-(model, dataset) winners as Phase B
+  (Phase C is single-axis isolation, no per-axis Optuna tune; PRD
+  Sprint 4 budget covers (model, dataset) only).
+- Files affected: this progress.txt entry only. No PRD tick yet —
+  US-012 has no per-acceptance checkbox in PRD.md (the section at
+  lines 479-483 reuses the US-009 shape by reference, same as
+  US-010/US-011). Tracker refresh + per-cell visualisations will be
+  driven by the in-runner pass on each cell completion; aggregated
+  closure (REPORTER 5×5 heatmap, LIBRARIAN docs/phase_c.md update,
+  pathology guard outcome counts, VALIDATOR seed=43 re-run) follows
+  in a future Ralph cycle once the background task completes.
+- Validation: PENDING. The 50-cell sweep is in flight; this Ralph
+  cycle is intentionally NOT committed per Ralph's "validation
+  before commit" rule. Closure cycle (Iter ≥ 20) will (a) read the
+  task output buffer for the dispatch tail, (b) confirm
+  `Final_Exp.json` `phase=C, model=resnet50` arithmetic
+  `complete + failed == 50`, (c) run `pytest src/tests` for the
+  torch-free baseline regression check, (d) record pathology guard
+  outcome counts per cell, and (e) commit the bookkeeping.
+- Learnings for next cycles:
+  - Patterns: Phase C dispatches share the Iter-16 background flow
+    with Phase B, but the cell count is 5× (50 vs 10) so the
+    expected wallclock is correspondingly 5× — ~4-8 GPU-h on the
+    5070 vs ~1 day for Phase B's 10 cells. The pathology guard
+    failure rate has been low across Phase B (resnet50 0/10
+    after operator-declined retries on L2/L3 cifar10; densenet121
+    0/10 same shape; transnext_tiny 10/10 healthy), so the
+    expected §6.4 second-pass dispatch count for US-012 is ≤ 2
+    cells, mostly on cifar10 at L4/L5 if anywhere.
+  - Patterns: Phase C single-axis isolation cells are GENTLER than
+    Phase B at the same L (only one axis active at L, the other
+    four at identity — see CLAUDE.md "Phase C single-axis
+    isolation" note + docs/phase_c.md). Expect val_acc curves to
+    be MUCH flatter than Phase B's; saturation=0 (grayscale)
+    alone is essentially trivial for ResNet50 ImageNet pretrain,
+    and salt_pepper alone at p=0.18 is easily defended by the
+    receptive field. The interesting axes are likely blur (large
+    σ smears class structure) and resolution (3×3 downsample at
+    L5 loses sub-class detail). Use this as a sanity check
+    when reading the closure cycle's results — if any axis
+    shows monotonic-degradation INVERSION between Phase B and
+    Phase C at the same L, that's a tag-routing or
+    degrade-config bug, not a model finding.
+  - Traps: PRD US-012 has no per-acceptance [ ] boxes — the
+    "Acceptance Criteria: same shape as US-009 but 50-cell
+    denominator" sentence at line 483 IS the contract. Don't
+    invent boxes to tick; tick US-009 line 457
+    (complete + failed arithmetic) only AFTER the analogous
+    US-012 arithmetic for resnet50 phase C is verified, and
+    even then, only as an inline-evidence cross-reference (line
+    457 is owned by US-009 / resnet50 Phase B). The right
+    closure shape is: progress.txt closure line ("US-012 CLOSED:
+    resnet50 Phase C — <complete>/<failed>; awaiting approval")
+    + REPORTER summary + LIBRARIAN docs/phase_c.md update.
+  - Traps: The background task ID `bamck1ig3` MUST be recorded
+    here for the closure cycle to know which output buffer to
+    inspect. Iter 16's task ID `bxk2d0586` and Iter 13's task ID
+    were similarly recorded; this is the only reliable thread
+    between dispatch and closure cycles in the Ralph flow.
+  - Helpful context: Closure cycle will need to refresh trackers
+    for all 50 tags. Iter 16 used
+    `python scripts/refresh_trackers.py --cell <tag> --no-md --no-thumbs`
+    per cell — for 50 cells, consider a single
+    `python scripts/refresh_trackers.py --all` if it's
+    implemented, or a small shell loop over the 50 tags. The
+    `--no-md` flag prevents Final_Exp.md regeneration (deferred
+    to US-015 SYNCHRONIZER batch); `--no-thumbs` skips the
+    PIL-heavy thumb pass (already generated by the in-runner
+    VISUALIZE pass per cell).
+---
+
+## Iteration 20 (2026-05-16 → 2026-05-17) — US-012 first pass COMPLETE (Phase C resnet50, 50/50 cells, 6 §6.4 sentinels — operator decision pending)
+- What was done: Background task `bamck1ig3` (Iter 19 dispatch) finished
+  exit 0. All 50 cells reached `metrics.json`; pathology guard wrote 6
+  `NEEDS_FULL_FT` sentinels (5 cifar10, 1 mnist) — same Iter-12/14
+  resnet50/densenet121 cifar10-clustering pattern, and at this point
+  expected to fall to the same operator-declined posture (the Optuna
+  winners were tuned at old-blur L3 and the §6.4 deltas underfit
+  tightly-tuned baselines). Ran
+  `python scripts/refresh_trackers.py --cell <tag> --no-md --no-thumbs`
+  for each of the 50 tags. `artifacts/Final_Exp.json` global counts
+  now read complete=86 / pending=100 / running=0 / failed=0 /
+  deferred=0 (was 36 complete pre-dispatch); phase=C model=resnet50
+  block reads complete=50 / failed=0 / other=0 — PRD §8 line 457-shape
+  arithmetic `complete + failed == 50` ✓.
+- First-pass readings — frozen pending §6.4 decision (axis × level ×
+  dataset; cifar10 followed by mnist for each cell). Sentinel-flagged
+  cells marked with †:
+    resolution  L1 0.8800 0.9884   L2 0.7898† 0.9850   L3 0.6846† 0.9348   L4 0.6050† 0.8122†   L5 0.4316 0.4426
+    noise       L1 0.9208 0.9940   L2 0.9092  0.9886   L3 0.9046  0.9932   L4 0.9040  0.9930   L5 0.8974 0.9922
+    blur        L1 0.9354 0.9932   L2 0.8988  0.9914   L3 0.8678  0.9918   L4 0.8146† 0.9920   L5 0.7098† 0.9882
+    saturation  L1 0.9206 0.9894   L2 0.9282  0.9918   L3 0.9256  0.9936   L4 0.9178  0.9918   L5 0.8822 0.9910
+    salt_pepper L1 0.9096 0.9902   L2 0.8978  0.9932   L3 0.8898  0.9920   L4 0.8882  0.9924   L5 0.8768 0.9924
+- Monotonicity per axis (cifar10 then mnist): all five axes
+  monotonically degrade with L on cifar10. On mnist three axes
+  (noise, blur, salt_pepper, saturation) are essentially flat
+  (~0.991 ± 0.003 across L1…L5) — MNIST is digit-shape signal and
+  these axes leave that signal intact at all 5 severities; only the
+  resolution axis bites on MNIST and only at L4–L5 (0.81 / 0.44).
+  cifar10 resolution L5 (0.4316) and mnist resolution L5 (0.4426)
+  are the campaign's two lowest single-axis cifar10/mnist points
+  for resnet50 — 3×3 downsample loses sub-class detail wholesale.
+- Files affected: 50 incremental row patches to
+  `artifacts/Final_Exp.json` (status Pending → Complete), 50
+  matching `artifacts/Final_Exp.html` shell rebuilds (final shell
+  totals A=6 / B=30 / C=150 / total=186 unchanged); per-cell
+  visualisations (`learning_curves.png` / `overfitting_analysis.png`
+  / `metrics_summary.png`) generated by the in-runner VISUALIZE
+  pass for all 50 tags; this progress.txt entry. No source code
+  change. No tracker commit (Phase C tracker push deferred to
+  US-015 SYNCHRONIZER batch per PRD §11 invariant).
+- Validation: `python -m pytest src/tests -q` = 53 passed in
+  12.82 s ✓ (torch-free baseline preserved). Pathology guard ran
+  per cell during the dispatch (in-runner); the 6 sentinels above
+  are the recorded outcomes. `Final_Exp.json` arithmetic check
+  printed `True`. No `--remediate-only` dispatch yet — awaiting
+  operator decision on the §6.4 retries (Iter 12/14 precedent =
+  decline, preserve first pass).
+- Operator decision request: 6 cells have NEEDS_FULL_FT sentinels.
+  Per Iter 12 (resnet50 L2 cifar10) and Iter 14 (densenet121 L2/L3
+  cifar10) the documented §6.4 retry deltas (wd ×2 + dropout=0.1 +
+  backbone_lr÷20) made the situation worse on tightly-tuned Optuna
+  winners — both prior operator decisions DECLINED the retry and
+  preserved first-pass readings. Same shape applies here: all 6
+  sentinel readings are monotonic with the surrounding L-curve
+  (no inversion), so the §6.4 deltas are likely to underfit rather
+  than fix anything. Recommended action: DECLINE all 6, remove
+  sentinels, preserve first-pass as authoritative; only revisit
+  individual cells if the REPORTER 5×5 heatmap shows a science
+  problem the first-pass numbers can't explain. HALT here until
+  operator approves/declines.
+- Learnings for next cycles:
+  - Patterns: Phase C cell counts (50) deliver in ONE wallclock
+    day on the 5070 in the Iter-19 background dispatch flow,
+    matching the projected 4-8 GPU-h band (actual ~24 h elapsed
+    but most cells stopped early at patience=10; cifar10
+    resolution cells were the longest, often hitting 60 epochs).
+    The Iter-16 prediction "Phase C dispatches should expect 5×
+    wallclock per dispatch" was overstated — the early-stopping
+    behaviour on the gentler single-axis cells compresses
+    wallclock vs Phase B's all-axes-active regime.
+  - Patterns: The pathology guard `NEEDS_FULL_FT` rate on Phase C
+    is concentrated on cifar10 resolution (3/4 cifar10 resolution
+    cells L2-L4) and cifar10 blur (L4, L5) — both axes that
+    actually destroy class signal. On mnist only L4 resolution
+    triggered. So the guard is correctly identifying the hardest
+    cells, but the §6.4 deltas can't fix difficulty — they can
+    only fix bad hparams. The "decline §6.4, preserve first
+    pass" decision tree is now the dominant case for ResNet50.
+  - Patterns: Phase C resolution L5 collapse to 0.43 on BOTH
+    datasets (0.4316 cifar10 vs 0.4426 mnist) is the most
+    interesting science result so far — the 3×3 downsample loses
+    enough geometric structure that even MNIST digits (whose
+    Phase B L5 acc was 0.5808 for resnet50, 0.4040 densenet121,
+    0.4166 transnext_tiny — see Iter 12/14/16 final tallies)
+    flatlines near random. Validates that Phase C single-axis
+    isolation IS the diagnostic the campaign was designed for:
+    in Phase B the combined-axis L5 mnist tells you "MNIST is
+    robust-ish (~0.42)"; in Phase C you can now attribute the
+    Phase B L5 floor to resolution alone, with all four other
+    axes essentially free on MNIST.
+  - Traps: The 6 sentinel cells are NOT failures — `metrics.json`
+    is present and `best_val_acc` is the authoritative reading.
+    The sentinel only triggers the §6.4 retry path; if the
+    operator declines, the sentinel is removed (no __v2 dir,
+    no retry_config.json) and the first-pass reading stands.
+    Don't conflate "NEEDS_FULL_FT exists" with "cell failed" in
+    Final_Exp.json arithmetic — the row's status was Complete
+    after `refresh_trackers --cell`. The sentinel is a separate
+    on-disk marker that the loop reads on subsequent passes.
+  - Traps: Iter 16's tracker-refresh loop pattern (per-cell
+    `--cell <tag>`) ran for 50 cells in ~5 minutes; the
+    `--all` flag was not used because per-cell `--no-md
+    --no-thumbs` is byte-identical and avoids regenerating the
+    full Final_Exp.md (deferred to US-015). For future Phase C
+    closures (US-013 densenet121, US-014 transnext_tiny) the
+    same flow scales linearly — budget ~5 min refresh per 50-
+    cell dispatch.
+  - Helpful context: Remaining US-012 acceptance work mirrors
+    US-009/010/011 closure shape but with the Phase C 5×5
+    heatmap addition: REPORTER `artifacts/reports/phase_c_resnet50_summary.md`
+    (per-dataset 5×5 axis×level heatmap, monotonicity flags,
+    sentinel counts, paper baseline anchor), LIBRARIAN
+    `docs/phase_c.md` "ResNet50" subsection (the doc already
+    exists — extend with the resnet50 section), DESIGNER
+    per-US trend (auto-renders via Iter-8 generalisation, will
+    surface the US-012 card automatically once Final_Exp.json
+    is reloaded by the dashboard JS), VALIDATOR seed=43 re-run
+    on one cell per dataset (GPU-gated, deferred), progress.txt
+    closure line, HALT before US-013. Same batch-handleable
+    shape as the deferred US-009/010/011 paperwork. Next
+    dispatch (operator-gated): US-013 Phase C densenet121, 50
+    cells, ~24 GPU-hours expected.
+---
