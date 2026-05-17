@@ -1783,3 +1783,81 @@ US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924; both he
     dispatch (operator-gated): US-013 Phase C densenet121, 50
     cells, ~24 GPU-hours expected.
 ---
+
+US-012 CLOSED: resnet50 Phase C — 50/0; §6.4 retries declined by operator across all 6 sentinel cells (cifar10 resolution L2/L3/L4 + cifar10 blur L4/L5 + mnist resolution L4); first-pass readings preserved as authoritative; awaiting approval to proceed to US-013.
+
+## Iteration 21 (2026-05-17) — US-012 CLOSED via Iter-14 pattern (all 6 §6.4 retries declined)
+- Operator decision: decline the §6.4 retry on all 6 NEEDS_FULL_FT
+  cells (cifar10 resolution L2 +24.4 pp delta vs guard threshold,
+  L3 +similar, L4 +similar; cifar10 blur L4/L5; mnist resolution L4).
+  Same scientific reasoning as Iter 12/14: the §6.4 deltas
+  (wd ×2 + dropout=0.1 + backbone_lr÷20) are too aggressive for
+  tightly-tuned Optuna winners; the demonstrated outcome on
+  resnet50 cifar10 (Iter 12 L2) and densenet121 cifar10 (Iter 14
+  L2/L3) was a healthy-but-underfit trajectory that would invert
+  monotonic-degradation. All 6 first-pass readings here are
+  already monotonic with the surrounding L-curve, so the §6.4
+  deltas cannot meaningfully improve them — they can only break
+  monotonicity.
+- State changes: removed
+  `runs/final/final_C_L2_resolution_resnet50_cifar10/NEEDS_FULL_FT`,
+  `runs/final/final_C_L3_resolution_resnet50_cifar10/NEEDS_FULL_FT`,
+  `runs/final/final_C_L4_blur_resnet50_cifar10/NEEDS_FULL_FT`,
+  `runs/final/final_C_L4_resolution_resnet50_cifar10/NEEDS_FULL_FT`,
+  `runs/final/final_C_L4_resolution_resnet50_mnist/NEEDS_FULL_FT`,
+  `runs/final/final_C_L5_blur_resnet50_cifar10/NEEDS_FULL_FT`. No
+  retry_config.json existed (retry never dispatched). No __v2 dirs
+  created. First-pass metrics.json / history.json / best.pt are
+  authoritative for all 50 cells. Post-cleanup sentinel count for
+  `final_C_*_resnet50_*` = 0 ✓.
+- Tracker state: no refresh needed — `refresh_trackers --cell` ran
+  per cell in Iter 20 and the status was already Complete (sentinel
+  removal does not change Final_Exp.json row status, only the
+  on-disk marker the loop reads on subsequent passes). PRD §8
+  line 457-shape arithmetic for `phase=C, model=resnet50`:
+  complete + failed == 50 ✓ (unchanged from Iter 20).
+- Files affected: 6 sentinel files removed from runs/final
+  (gitignored, not in commit); this progress.txt entry (Iter 21
+  block + US-012 CLOSED marker line). No source code change. No
+  tracker commit (Phase C tracker push deferred to US-015
+  SYNCHRONIZER batch).
+- Validation: `python -m pytest src/tests -q` not re-run — zero
+  Python touched this iteration, prior baseline 53/53 from Iter 20
+  still holds. Sentinel-count check ran inline and returned 0.
+- Learnings for next cycles:
+  - Patterns: "Decline §6.4 retry on tightly-tuned Optuna winners
+    when first-pass readings are already monotonic" is now the
+    dominant operator decision across all three Phase B/C ResNet
+    /DenseNet closures (Iter 12 / Iter 14 / Iter 21). The retry
+    path has not yet improved a single cell in this campaign;
+    consider deprecating it for CNN models with Optuna winners
+    if US-013 / US-014 produce more sentinels. The pattern
+    survives only because TransNeXt was 10/10 healthy on Phase
+    B (Iter 16) — TransNeXt Optuna winners are looser
+    (head LR 2.9e-3, backbone LR 3.0e-5) and may genuinely
+    benefit from a §6.4 retry if Phase C surfaces sentinels.
+  - Patterns: The cleanup-only Ralph cycle shape (this iter)
+    is the minimal closure for a Phase-N execution US that
+    completes with declined §6.4 retries: (a) remove the
+    sentinel files, (b) verify 0 remaining on-disk markers,
+    (c) append the US-N CLOSED marker line to progress.txt,
+    (d) record the operator decision rationale. No tracker
+    refresh, no test run, no commit needed if Final_Exp.json
+    is already correct from the dispatch closure cycle. Same
+    shape will apply to US-013 / US-014 if those produce
+    similar sentinel sets and the operator declines.
+  - Helpful context: Next dispatch (US-013 Phase C densenet121,
+    50 cells) starts in Iter 22; operator-approved alongside
+    this decline. Densenet121's Phase B sentinel rate was 2/10
+    on cifar10 (Iter 14: L2 + L3) — expect similar cifar10
+    clustering on Phase C resolution / blur axes at L2-L5.
+    MNIST should be flat for noise / blur / salt_pepper /
+    saturation per the Phase C resnet50 evidence (Iter 20).
+  - Helpful context: US-012 trailing paperwork (REPORTER 5×5
+    heatmap, LIBRARIAN docs/phase_c.md "ResNet50" subsection,
+    VALIDATOR seed=43 re-run) is now in the same deferred
+    state as the US-009/010/011 paperwork batch. The next
+    non-GPU Ralph cycle could absorb any subset of these via
+    write-only doc creation; current priority is the US-013
+    dispatch.
+---
