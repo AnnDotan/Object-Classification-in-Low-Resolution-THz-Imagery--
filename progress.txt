@@ -2007,3 +2007,71 @@ US-012 CLOSED: resnet50 Phase C — 50/0; §6.4 retries declined by operator acr
     tracker push) and the deferred Phase B/C REPORTER/LIBRARIAN
     paperwork batches are the final remaining work.
 ---
+
+US-013 CLOSED: densenet121 Phase C — 50/0; §6.4 retries declined by operator across all 3 sentinel cells (cifar10 resolution L2/L3 + cifar10 blur L5); first-pass readings preserved as authoritative; awaiting approval to proceed to US-014.
+
+## Iteration 24 (2026-05-18) — US-013 CLOSED + US-014 dispatched (Phase C transnext_tiny, 50 cells, IN FLIGHT)
+- What was done: Operator declined the §6.4 retry on all 3
+  densenet121 cifar10 NEEDS_FULL_FT cells (L2_resolution, L3_resolution,
+  L5_blur) and approved the US-014 launch in the same message.
+  Removed the 3 on-disk sentinels (no retry_config.json existed; no
+  __v2 dirs created; first-pass metrics.json / history.json / best.pt
+  are authoritative for all 50 densenet121 Phase C cells). Post-cleanup
+  sentinel count for `final_C_*_densenet121_*` = 0 ✓.
+  Then dispatched
+  `python scripts/run_ralph_loop.py --plan final --phase C --model transnext_tiny --skip-existing`
+  as background task `b6i4f1wxs` (Iter-19/20/22 flow). Dry-run
+  pre-flight resolved 50 cells (5 axes × 5 levels × 2 datasets, tag
+  prefix
+  `final_C_L{1..5}_{resolution,noise,blur,saturation,salt_pepper}_transnext_tiny_{cifar10,mnist}`).
+  Optuna winners verified:
+  `artifacts/best_hparams/transnext_tiny_{cifar10,mnist}.json` both
+  present (US-002 Stage 1.5 winners, post-blur-scale tune, same
+  winners that drove the Iter-16 Phase B 10/10-healthy result).
+- Files affected: 3 sentinel files removed from runs/final
+  (gitignored, not in commit); this progress.txt entry (Iter 24
+  block + US-013 CLOSED marker line). No source code change.
+- Validation: PENDING for US-014 (background sweep in flight). The
+  US-013 CLOSURE half is a no-validation step — sentinel removal
+  does not change Final_Exp.json (per Iter 21 trap, status was
+  already Complete; sentinels are on-disk markers only).
+  Pre-dispatch pytest = 53/53 from Iter 23; no regression
+  expected since zero Python touched in this iter.
+- Learnings for next cycles:
+  - Patterns: The combined "cleanup + dispatch next" Ralph cycle
+    (Iter 21+22 ran as two separate cycles; this Iter 24 runs as
+    one) is the right shape when operator approves both in a
+    single message. Less ceremony, same artifacts. Future
+    closure-then-dispatch sequences (eg. US-014 CLOSED + US-015
+    SYNCHRONIZER) can follow the same combined-cycle pattern.
+  - Patterns: Three for three — every Phase B/C ResNet/DenseNet
+    closure has now ended with declined §6.4 retries
+    (Iter 12 resnet50 Phase B, Iter 14 densenet121 Phase B,
+    Iter 21 resnet50 Phase C, Iter 24 densenet121 Phase C).
+    The §6.4 retry path has not improved a single cell in this
+    campaign. If US-014 surfaces any sentinels (Iter 23 predicts
+    0-1 max), preliminary recommendation is decline-by-default
+    unless the reading is non-monotonic with a clear hparam
+    explanation. For the FINAL US-015 retrospective, a paragraph
+    in the campaign summary noting the §6.4 path's 0% success
+    rate on Optuna-tuned models would be useful.
+  - Traps: Background task ID `b6i4f1wxs` MUST be recorded here
+    for the closure cycle (Iter ≥ 25) to know which output
+    buffer to inspect (Iter-19/22 trap applies).
+  - Helpful context: Closure cycle expectations for US-014:
+    (a) tail b6i4f1wxs.output, (b) sentinel scan
+    (predict 0-1 cells, almost certainly cifar10 L5 if any),
+    (c) `refresh_trackers --cell` per tag (50 calls,
+    ~5 min wallclock), (d) Final_Exp.json arithmetic
+    complete+failed==50 check, (e) pytest 53/53, (f) commit.
+    If 0 sentinels, this becomes the cleanest single-cycle
+    closure of the campaign (matching Iter 16's transnext_tiny
+    Phase B precedent). If 1 sentinel, present to operator.
+  - Helpful context: After US-014 closes, Final_Exp.json
+    global counts should read complete=186 / pending=0 —
+    the entire 186-cell execution sweep done. Remaining
+    work is US-015 (three SYNCHRONIZER pushes + tracker
+    regen + NOTEBOOKLM_SYNC if MCP available + leak audit)
+    + the deferred Phase B/C REPORTER/LIBRARIAN paperwork
+    batches + GPU-gated VALIDATOR seed=43 re-runs.
+---
