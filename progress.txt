@@ -3229,3 +3229,139 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     commits it as part of US-024 Stage 0 (pre-LaTeX prose).
 ---
 
+## Iteration 35 (2026-05-20) — US-020 pre-flight + dispatch (Phase B v2 re-run, ~17.5 GPU-h in background)
+- What was done:
+  (a) Operator instruction: "run all these yourself" — explicit
+      authorization for the full US-020 pre-flight + dispatch
+      sequence (PRD §US-020 pre-flight steps 2-5 + dispatch).
+  (b) Pre-flight step #1 (HARD GATE / US-019B signature): already
+      green from Iter 34; checklist line 56 matches the regex
+      `^approved by ib94 \d{4}-\d{2}-\d{2}$`.
+  (c) Pre-flight step #3 (PIPELINE_VERSION): verified via
+      `python -c "from src.data.degradation_levels import PIPELINE_VERSION; ..."`
+      → prints `PIPELINE_VERSION=2`; assert passes.
+  (d) Pre-flight step #4 (determinism suite): ran
+      `python -m src.tests.test_degradation_determinism` → 5/5 OK
+      (cifar10@224, mnist@224, lightning cifar10@224, lightning
+      mnist@224, v2 noise pre-upsample lag-1 autocorr=0.993).
+  (e) Pre-flight step #5 (SEED_OFFSET unchanged): grepped
+      `src/data/degrade.py` lines 10-11:
+        SEED_OFFSET_TRAIN = 0
+        SEED_OFFSET_VAL   = 10_000_000
+      `git log -L` on those lines shows their only modification
+      was their introduction in commit e1f24b8 ("feat: Lightning
+      refactor + deterministic degradation + docs sync"). Frozen
+      from the start of the v1 campaign; never touched since.
+      Seed-stability invariant (PRD §7) holds.
+  (f) Pre-flight step #2 (delete stale telemetry): glob-resolved
+      30 `runs/final/final_B_L*_*_*/` directories (exactly 30 —
+      asserted). For each, deleted the quartet
+      {metrics.json, metrics.csv, log.txt, history.json} when
+      present → 120/120 files removed (4 × 30 = 120). Kept
+      best.pt / model_last.pt / *.png / image_quality.json /
+      run_config.txt / lightning_csv/ untouched (PRD §US-020
+      pre-flight #2 explicit: "Keep best.pt / model_last.pt").
+      Post-delete verification: 0 stale files remaining.
+  (g) Dispatch dry-run: `scripts/run_ralph_loop.py --phase B --dry-run`
+      reported "resolved 30 cell(s)" in the canonical L1→L5 ×
+      {resnet50, densenet121, transnext_tiny} × {cifar10, mnist}
+      order. No mis-resolution; ready to dispatch.
+  (h) Live dispatch: launched
+      `nohup .venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py
+       --phase B > artifacts/ralph_logs/us020_phaseB.log 2>&1 &`
+      from the Ralph cycle's bash tool. The bash wrapper completed
+      (exit code 0) but the python process detached and is alive:
+      PID 47216, 2.5 GiB resident at sample time, log growing.
+      First cell (`final_B_L1_resnet50_cifar10`) bootstrapped:
+      Lightning loaded, bfloat16 AMP active, CUDA visible, seed
+      42 set. Expected total: ~17.5 GPU-h (30 cells × ~35 min).
+  (i) Did NOT tick any PRD checkbox. US-020's 5 acceptance criteria
+      are all RUNTIME (cells healthy, 30 metrics.json with
+      pipeline_version=2, Final_Exp.md refreshed, thumbs visibly
+      coarser, html opens) and only become tickable once the
+      dispatch finishes + post-pass artifact refresh runs. A
+      future Ralph cycle (Iter 36+) consumes the completed runs.
+- Files affected:
+  - 120 files deleted under `runs/final/final_B_L*_*_*/`
+    (metrics.json, metrics.csv, log.txt, history.json × 30 dirs).
+    NOT git-tracked (runs/ is gitignored), so no commit-visible
+    diff from the delete — just on-disk hygiene.
+  - artifacts/ralph_logs/us020_phaseB.log: NEW (created by the
+    dispatch's stdout redirect). Will grow throughout the 17.5h
+    run. Gitignored category? — `artifacts/ralph_logs/` is new;
+    check `.gitignore` before committing if needed (none committed
+    here so non-issue this iter).
+  - progress.txt: this Iteration 35 entry.
+  - No PRD ticks (intentional - dispatch is in-flight, not done).
+- Validation:
+  - All 5 PRD §US-020 pre-flight gates green BEFORE dispatch:
+      #1 signature ✓, #2 stale-delete 120/120 ✓, #3 PIPELINE_VERSION=2 ✓,
+      #4 determinism 5/5 ✓, #5 seeds frozen since e1f24b8 ✓.
+  - Dispatch dry-run: 30 cells resolved, expected order.
+  - Process aliveness: tasklist confirms PID 47216 with 2.5 GiB
+    resident at sample time (training process, not just nohup
+    wrapper).
+  - Log shows Lightning successfully bootstrapped on the first
+    cell — no crash on startup.
+- Learnings for next cycles:
+  - Patterns: For long-running GPU dispatches (hours, not minutes),
+    redirect stdout+stderr to `artifacts/ralph_logs/<us>_<phase>.log`
+    via `nohup ... &` so the operator can `tail -f` from any shell
+    without re-attaching to the Ralph session. The cycle that
+    dispatches does NOT consume the result — it ends after
+    aliveness verification. A subsequent Ralph cycle is the right
+    place to evaluate acceptance once runs land.
+  - Patterns: Pre-flight gates run BEFORE destructive actions
+    (the stale-delete) and BEFORE the long-running dispatch. If
+    any gate fails, abort before deleting anything. Iter 35 ran
+    the gates in order #3 → #4 → #5 → #2 (delete) → dispatch
+    so any failure short-circuits before the 120-file delete.
+  - Traps: `nohup ... &` inside a `run_in_background: true` bash
+    tool call creates a grandchild process that survives the
+    bash exit. Confirm aliveness with `tasklist | grep python`
+    (Windows) — don't trust the bash wrapper's exit code as a
+    proxy for the dispatch's health. Iter 35 verified PID 47216
+    explicitly post-dispatch.
+  - Traps: The `--skip-existing` flag is NOT used here — by design.
+    Pre-flight step #2 just deleted the metrics.json files; without
+    those files, `cell_is_complete()` returns False so all 30
+    cells dispatch. If a future cycle re-runs Phase B without
+    re-deleting metrics.json, `--skip-existing` would suppress
+    completed cells, which IS the right behavior for resume-after-
+    crash but wrong for a from-scratch re-run.
+  - Traps: The 120-file delete touches best.pt's siblings but NOT
+    best.pt / model_last.pt themselves. Lightning's
+    _make_unique_run_dir routes the second-pass run into `__v2`
+    when best.pt is already present (Iter 12 pattern). Need to
+    monitor whether Phase B's v2 dispatch routes into base dirs
+    or `__v2` siblings. If `__v2`, the acceptance cycle (Iter
+    36+) needs to teach update_final_exp.py to prefer the `__v2`
+    history (or delete best.pt / model_last.pt up front next
+    time — flagged as ambiguous in PRD §US-020 step #2 wording
+    "Keep best.pt / model_last.pt — they will be replaced by
+    the new Lightning run" — replaced HOW, by overwrite or by
+    `__v2` sibling? Empirical test in Iter 36).
+  - Helpful context: The 17.5-h budget assumes the v1 cell timings
+    carry forward (~35 min/cell across resnet50 + densenet121 +
+    transnext_tiny on the 5070 with bf16-mixed). v2's pre-upsample
+    noise/S&P adds a small per-batch overhead (low_res × low_res
+    randn + scatter) which is negligible vs. the 224×224 forward
+    pass. Wall-clock should remain within ±10% of v1.
+  - Helpful context: To monitor mid-flight from a separate shell:
+        Get-Content artifacts\ralph_logs\us020_phaseB.log -Tail 20 -Wait
+    (PowerShell equivalent of `tail -f`). Cell-boundary signal:
+    each new cell's Lightning init prints "GPU available: True
+    (cuda), used: True" + "LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]"
+    — grep for those to count completed cells.
+  - Helpful context: Post-dispatch acceptance refresh (Iter 36+) per
+    PRD §US-020 Post-pass:
+        python scripts\update_final_exp.py
+        python -m src.tools.render_cell_thumbs --force --phase B
+        python -m src.tools.build_final_exp_json
+        python -m src.tools.build_final_dashboard
+        python scripts\build_final_exp_report.py
+        python scripts\render_final_exp_pdf.py
+    All 6 are short (<5 min). Then tick US-020's 5 acceptance
+    criteria and commit.
+---
+
