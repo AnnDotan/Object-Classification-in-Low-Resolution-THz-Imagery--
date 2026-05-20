@@ -21,16 +21,35 @@ _DEFAULT_SRC = _REPO_ROOT / "docs" / "Final_Exp_Report.md"
 _DEFAULT_OUT = _REPO_ROOT / "artifacts" / "Final_Exp.pdf"
 
 _CSS = """
-body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2530; }
-h1 { color: #0d4f8b; border-bottom: 2px solid #0d4f8b; padding-bottom: 4px; }
-h2 { color: #0d4f8b; border-bottom: 1px solid #cfd6e0; padding-bottom: 2px; margin-top: 18px; }
-h3 { color: #2a3957; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2530;
+       font-size: 11pt; line-height: 1.4;
+       word-wrap: break-word; overflow-wrap: break-word; }
+h1 { color: #0d4f8b; border-bottom: 2px solid #0d4f8b; padding-bottom: 4px;
+     font-size: 20pt; margin-top: 14pt; margin-bottom: 10pt;
+     word-wrap: break-word; overflow-wrap: break-word; }
+h2 { color: #0d4f8b; border-bottom: 1px solid #cfd6e0; padding-bottom: 2px;
+     margin-top: 22pt; font-size: 15pt;
+     word-wrap: break-word; overflow-wrap: break-word; }
+h3 { color: #2a3957; font-size: 12.5pt; margin-top: 16pt; }
+h4 { color: #2a3957; font-size: 11.5pt; margin-top: 12pt; }
+p, li { font-size: 10.5pt; }
 code { background: #f1f3f6; padding: 1px 4px; border-radius: 3px;
-       font-family: Consolas, "Courier New", monospace; font-size: 0.92em; }
-pre { background: #f1f3f6; padding: 8px; border-radius: 4px; overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 0.78em; margin: 8px 0; }
-th, td { border: 1px solid #cfd6e0; padding: 4px 6px; text-align: left; vertical-align: top; }
-th { background: #eef2f7; }
+       font-family: Consolas, "Courier New", monospace; font-size: 9.5pt;
+       word-break: break-all; }
+pre { background: #f1f3f6; padding: 8px; border-radius: 4px;
+      font-size: 9pt; white-space: pre-wrap; word-wrap: break-word; }
+table { border-collapse: collapse; width: 100%;
+        font-size: 9.5pt; margin: 10px 0;
+        table-layout: auto; }
+th, td { border: 1px solid #cfd6e0; padding: 5px 7px;
+         text-align: left; vertical-align: top;
+         /* keep identifiers like `transnext_tiny` on a single line: */
+         word-break: keep-all; }
+th { background: #eef2f7; font-weight: 600; white-space: nowrap; }
+/* Numeric-leaning columns (right-aligned in result tables for legibility) */
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* `code` inside table cells: don't force-break short tags */
+td code, th code { word-break: keep-all; white-space: nowrap; }
 """
 
 
@@ -53,10 +72,17 @@ def render(src: Path, out: Path) -> int:
     md = src.read_text(encoding="utf-8")
 
     pdf = MarkdownPdf(toc_level=2, optimize=True)
-    # A4 landscape so the wide row tables (Phase B / Phase C with 10-11
-    # columns) keep their right-side Duration/Started cells legible.
+    # A3 landscape (1191 x 842 pt = 16.54 x 11.7 inch) gives ~420 mm of
+    # usable width — wide enough that the cross-model L5 axis table
+    # (7 columns) and the full Phase C result table (8 columns) fit
+    # comfortably at 9.5 pt without column truncation.
+    # Borders convention is (left, top, right, bottom) where right/bottom
+    # are NEGATIVE offsets from the opposite page edge — passing
+    # `(36, 36, -36, -36)` yields a 36 pt (~12.7 mm) margin on all four
+    # sides. A previous attempt with positive right/bottom collapsed the
+    # printable area and clipped table columns on the right.
     pdf.add_section(
-        Section(md, paper_size="A4-L", borders=(28, 28, 28, 28)),
+        Section(md, paper_size="A3-L", borders=(36, 36, -36, -36)),
         user_css=_CSS,
     )
     pdf.meta["title"] = "Object Classification in Low-Resolution THz-like Imagery — Final Research Report"

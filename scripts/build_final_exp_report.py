@@ -31,6 +31,21 @@ DATASETS = ["cifar10", "mnist"]
 EM = "—"
 
 
+def _nb(s: Any) -> str:
+    """Keep an identifier on one line in the rendered PDF.
+
+    Markdown-pdf (via PyMuPDF's Story API) treats ``_`` as a soft break
+    point, so model names like ``transnext_tiny`` and axis names like
+    ``salt_pepper`` wrap mid-identifier in narrow table columns. Inline
+    HTML span with ``white-space: nowrap`` is silently dropped by the
+    renderer. The reliable fix is to insert U+2060 (WORD JOINER) on
+    either side of every ``_`` — an invisible no-break joiner that
+    overrides the default break-on-underscore heuristic without
+    changing copy-paste behavior.
+    """
+    return str(s).replace("_", "⁠_⁠")
+
+
 def _fmt_acc(v: Any) -> str:
     return f"{v:.4f}" if isinstance(v, (int, float)) and v >= 0 else EM
 
@@ -66,7 +81,7 @@ def _render_phase_a(idx: dict[tuple, dict]) -> str:
             n += 1
             r = idx.get(("A", model, dataset, None, None), {})
             lines.append(
-                f"| {n} | {model} | {dataset} | {_fmt_acc(r.get('val_acc'))} | "
+                f"| {n} | {_nb(model)} | {_nb(dataset)} | {_fmt_acc(r.get('val_acc'))} | "
                 f"{r.get('epochs_run') or EM} | {_fmt_dur(r.get('runtime_s'))} |"
             )
     return "\n".join(lines)
@@ -83,7 +98,7 @@ def _render_phase_b_curve(idx: dict[tuple, dict]) -> str:
     for model in MODELS:
         for dataset in DATASETS:
             cells = [_fmt_acc(idx.get(("B", model, dataset, lv, None), {}).get("val_acc")) for lv in (1, 2, 3, 4, 5)]
-            lines.append(f"| {model} | {dataset} | " + " | ".join(cells) + " |")
+            lines.append(f"| {_nb(model)} | {_nb(dataset)} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -99,7 +114,7 @@ def _render_phase_b_table(idx: dict[tuple, dict]) -> str:
                 n += 1
                 r = idx.get(("B", model, dataset, level, None), {})
                 lines.append(
-                    f"| {n} | {model} | {dataset} | {LEVEL_NAMES[level]} | "
+                    f"| {n} | {_nb(model)} | {_nb(dataset)} | {_nb(LEVEL_NAMES[level])} | "
                     f"{_fmt_acc(r.get('val_acc'))} | {r.get('epochs_run') or EM} | "
                     f"{_fmt_dur(r.get('runtime_s'))} |"
                 )
@@ -116,7 +131,7 @@ def _render_phase_c_heatmap(idx: dict[tuple, dict], model: str, dataset: str) ->
     ]
     for axis in AXES:
         cells = [_fmt_acc(idx.get(("C", model, dataset, lv, axis), {}).get("val_acc")) for lv in (1, 2, 3, 4, 5)]
-        lines.append(f"| {axis} | " + " | ".join(cells) + " |")
+        lines.append(f"| {_nb(axis)} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -133,7 +148,7 @@ def _render_phase_c_table(idx: dict[tuple, dict]) -> str:
                     n += 1
                     r = idx.get(("C", model, dataset, level, axis), {})
                     lines.append(
-                        f"| {n} | {model} | {dataset} | {LEVEL_NAMES[level]} | {axis} | "
+                        f"| {n} | {_nb(model)} | {_nb(dataset)} | {_nb(LEVEL_NAMES[level])} | {_nb(axis)} | "
                         f"{_fmt_acc(r.get('val_acc'))} | {r.get('epochs_run') or EM} | "
                         f"{_fmt_dur(r.get('runtime_s'))} |"
                     )
@@ -152,7 +167,7 @@ def _render_cross_model_l5(idx: dict[tuple, dict]) -> str:
             for dataset in DATASETS:
                 v = idx.get(("C", model, dataset, 5, axis), {}).get("val_acc")
                 cells.append(_fmt_acc(v))
-        lines.append(f"| {axis} | " + " | ".join(cells) + " |")
+        lines.append(f"| {_nb(axis)} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -361,7 +376,7 @@ At the most aggressive resolution axis level (L5 = 3 × 3 native pixels
 upsampled to 224 × 224 bicubic), every architecture lands within ±3 pp
 on CIFAR-10 and ±1 pp on MNIST:
 
-| Axis @ L5 — resolution | resnet50 | densenet121 | transnext_tiny |
+| Axis @ L5 — resolution | resnet50 | densenet121 | {_nb('transnext_tiny')} |
 |------------------------|----------|-------------|----------------|
 | CIFAR-10 | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"resolution"),{}).get("val_acc"))} |
 | MNIST | {_fmt_acc(idx.get(("C","resnet50","mnist",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","mnist",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","mnist",5,"resolution"),{}).get("val_acc"))} |
@@ -376,7 +391,7 @@ both Phase B (combined) collapses and the campaign's overall worst-case cells.
 At L5 on CIFAR-10, TransNeXt-tiny holds ≥ 0.95 on noise, saturation, and
 salt-and-pepper, while both CNN backbones drop to ~0.87 — a +~8 to +10 pp gap:
 
-| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | transnext_tiny | TransNeXt gap |
+| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | {_nb('transnext_tiny')} | TransNeXt gap |
 |----------------------|----------|-------------|----------------|---------------|
 | noise | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"noise"),{}).get("val_acc"))} | ~+8 pp |
 | saturation | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"saturation"),{}).get("val_acc"))} | ~+7 pp |

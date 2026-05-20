@@ -125,8 +125,8 @@ pair before any THz-like distortion is applied.
 | 2 | resnet50 | mnist | 0.9914 | 21 | 7m |
 | 3 | densenet121 | cifar10 | 0.9356 | 17 | 9m |
 | 4 | densenet121 | mnist | 0.9930 | 29 | 14m |
-| 5 | transnext_tiny | cifar10 | 0.9764 | 15 | 38m |
-| 6 | transnext_tiny | mnist | 0.9924 | 35 | 90m |
+| 5 | transnext⁠_⁠tiny | cifar10 | 0.9764 | 15 | 38m |
+| 6 | transnext⁠_⁠tiny | mnist | 0.9924 | 35 | 90m |
 
 **Reading:** TransNeXt-tiny leads CIFAR-10 by +2.46 pp over ResNet50 and +4.08 pp
 over DenseNet121 at clean baseline; MNIST clusters tight at 0.991-0.993.
@@ -147,8 +147,8 @@ simultaneously.
 | resnet50 | mnist | 0.9918 | 0.9804 | 0.9088 | 0.7426 | 0.3982 |
 | densenet121 | cifar10 | 0.8464 | 0.7558 | 0.6030 | 0.4586 | 0.2572 |
 | densenet121 | mnist | 0.9916 | 0.9830 | 0.9220 | 0.7824 | 0.4040 |
-| transnext_tiny | cifar10 | 0.9404 | 0.8550 | 0.7174 | 0.5500 | 0.2908 |
-| transnext_tiny | mnist | 0.9910 | 0.9824 | 0.9160 | 0.7676 | 0.4166 |
+| transnext⁠_⁠tiny | cifar10 | 0.9404 | 0.8550 | 0.7174 | 0.5500 | 0.2908 |
+| transnext⁠_⁠tiny | mnist | 0.9910 | 0.9824 | 0.9160 | 0.7676 | 0.4166 |
 
 **Reading:** Strictly monotonic on CIFAR-10 across all three architectures (no
 inversions). MNIST holds ≥ 0.98 through L2 for all models, then falls fast at
@@ -162,32 +162,32 @@ L4 / L5 — driven by the resolution axis (see Phase C).
 | 8 | resnet50 | mnist | L1 Mild | 0.9918 | 24 | 24m |
 | 9 | densenet121 | cifar10 | L1 Mild | 0.8464 | 46 | 57m |
 | 10 | densenet121 | mnist | L1 Mild | 0.9916 | 54 | 66m |
-| 11 | transnext_tiny | cifar10 | L1 Mild | 0.9404 | 17 | 52m |
-| 12 | transnext_tiny | mnist | L1 Mild | 0.9910 | 26 | 79m |
+| 11 | transnext⁠_⁠tiny | cifar10 | L1 Mild | 0.9404 | 17 | 52m |
+| 12 | transnext⁠_⁠tiny | mnist | L1 Mild | 0.9910 | 26 | 79m |
 | 13 | resnet50 | cifar10 | L2 Light | 0.7344 | 47 | 47m |
 | 14 | resnet50 | mnist | L2 Light | 0.9804 | 21 | 21m |
 | 15 | densenet121 | cifar10 | L2 Light | 0.7558 | 39 | 49m |
 | 16 | densenet121 | mnist | L2 Light | 0.9830 | 33 | 42m |
-| 17 | transnext_tiny | cifar10 | L2 Light | 0.8550 | 21 | 64m |
-| 18 | transnext_tiny | mnist | L2 Light | 0.9824 | 26 | 80m |
+| 17 | transnext⁠_⁠tiny | cifar10 | L2 Light | 0.8550 | 21 | 64m |
+| 18 | transnext⁠_⁠tiny | mnist | L2 Light | 0.9824 | 26 | 80m |
 | 19 | resnet50 | cifar10 | L3 Moderate | 0.5590 | 13 | 14m |
 | 20 | resnet50 | mnist | L3 Moderate | 0.9088 | 26 | 27m |
 | 21 | densenet121 | cifar10 | L3 Moderate | 0.6030 | 44 | 57m |
 | 22 | densenet121 | mnist | L3 Moderate | 0.9220 | 19 | 25m |
-| 23 | transnext_tiny | cifar10 | L3 Moderate | 0.7174 | 14 | 43m |
-| 24 | transnext_tiny | mnist | L3 Moderate | 0.9160 | 16 | 49m |
+| 23 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | 0.7174 | 14 | 43m |
+| 24 | transnext⁠_⁠tiny | mnist | L3 Moderate | 0.9160 | 16 | 49m |
 | 25 | resnet50 | cifar10 | L4 Severe | 0.4174 | 13 | 14m |
 | 26 | resnet50 | mnist | L4 Severe | 0.7426 | 12 | 13m |
 | 27 | densenet121 | cifar10 | L4 Severe | 0.4586 | 14 | 19m |
 | 28 | densenet121 | mnist | L4 Severe | 0.7824 | 14 | 19m |
-| 29 | transnext_tiny | cifar10 | L4 Severe | 0.5500 | 13 | 40m |
-| 30 | transnext_tiny | mnist | L4 Severe | 0.7676 | 13 | 41m |
+| 29 | transnext⁠_⁠tiny | cifar10 | L4 Severe | 0.5500 | 13 | 40m |
+| 30 | transnext⁠_⁠tiny | mnist | L4 Severe | 0.7676 | 13 | 41m |
 | 31 | resnet50 | cifar10 | L5 Extreme | 0.2684 | 12 | 13m |
 | 32 | resnet50 | mnist | L5 Extreme | 0.3982 | 12 | 13m |
 | 33 | densenet121 | cifar10 | L5 Extreme | 0.2572 | 14 | 19m |
 | 34 | densenet121 | mnist | L5 Extreme | 0.4040 | 14 | 19m |
-| 35 | transnext_tiny | cifar10 | L5 Extreme | 0.2908 | 14 | 44m |
-| 36 | transnext_tiny | mnist | L5 Extreme | 0.4166 | 13 | 41m |
+| 35 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | 0.2908 | 14 | 44m |
+| 36 | transnext⁠_⁠tiny | mnist | L5 Extreme | 0.4166 | 13 | 41m |
 
 ---
 
@@ -214,7 +214,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9208 | 0.9092 | 0.9046 | 0.9040 | 0.8974 |
 | blur | 0.9354 | 0.8988 | 0.8678 | 0.8146 | 0.7098 |
 | saturation | 0.9206 | 0.9282 | 0.9256 | 0.9178 | 0.8822 |
-| salt_pepper | 0.9096 | 0.8978 | 0.8898 | 0.8882 | 0.8768 |
+| salt⁠_⁠pepper | 0.9096 | 0.8978 | 0.8898 | 0.8882 | 0.8768 |
 
 #### resnet50 · mnist
 
@@ -224,7 +224,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9940 | 0.9886 | 0.9932 | 0.9930 | 0.9922 |
 | blur | 0.9932 | 0.9914 | 0.9918 | 0.9920 | 0.9882 |
 | saturation | 0.9894 | 0.9918 | 0.9936 | 0.9918 | 0.9910 |
-| salt_pepper | 0.9902 | 0.9932 | 0.9920 | 0.9924 | 0.9924 |
+| salt⁠_⁠pepper | 0.9902 | 0.9932 | 0.9920 | 0.9924 | 0.9924 |
 
 #### DenseNet121
 
@@ -236,7 +236,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9136 | 0.9050 | 0.8984 | 0.8930 | 0.8774 |
 | blur | 0.9054 | 0.9040 | 0.8644 | 0.8204 | 0.7142 |
 | saturation | 0.9184 | 0.9142 | 0.9166 | 0.9130 | 0.8834 |
-| salt_pepper | 0.9006 | 0.8942 | 0.8900 | 0.8756 | 0.8694 |
+| salt⁠_⁠pepper | 0.9006 | 0.8942 | 0.8900 | 0.8756 | 0.8694 |
 
 #### densenet121 · mnist
 
@@ -246,7 +246,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9934 | 0.9936 | 0.9922 | 0.9896 | 0.9930 |
 | blur | 0.9906 | 0.9934 | 0.9896 | 0.9928 | 0.9846 |
 | saturation | 0.9932 | 0.9924 | 0.9926 | 0.9928 | 0.9914 |
-| salt_pepper | 0.9918 | 0.9906 | 0.9916 | 0.9930 | 0.9894 |
+| salt⁠_⁠pepper | 0.9918 | 0.9906 | 0.9916 | 0.9930 | 0.9894 |
 
 #### TransNeXt-tiny
 
@@ -258,7 +258,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9726 | 0.9720 | 0.9682 | 0.9652 | 0.9608 |
 | blur | 0.9766 | 0.9724 | 0.9496 | 0.9088 | 0.8244 |
 | saturation | 0.9792 | 0.9778 | 0.9754 | 0.9756 | 0.9534 |
-| salt_pepper | 0.9738 | 0.9720 | 0.9696 | 0.9618 | 0.9602 |
+| salt⁠_⁠pepper | 0.9738 | 0.9720 | 0.9696 | 0.9618 | 0.9602 |
 
 #### transnext_tiny · mnist
 
@@ -268,7 +268,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9890 | 0.9938 | 0.9932 | 0.9916 | 0.9910 |
 | blur | 0.9924 | 0.9896 | 0.9914 | 0.9928 | 0.9906 |
 | saturation | 0.9936 | 0.9896 | 0.9918 | 0.9924 | 0.9904 |
-| salt_pepper | 0.9918 | 0.9914 | 0.9930 | 0.9910 | 0.9928 |
+| salt⁠_⁠pepper | 0.9918 | 0.9914 | 0.9930 | 0.9910 | 0.9928 |
 
 ### Full Phase C Result Table
 
@@ -278,152 +278,152 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 38 | resnet50 | mnist | L1 Mild | resolution | 0.9884 | 13 | 6m |
 | 39 | densenet121 | cifar10 | L1 Mild | resolution | 0.8652 | 35 | 26m |
 | 40 | densenet121 | mnist | L1 Mild | resolution | 0.9922 | 41 | 31m |
-| 41 | transnext_tiny | cifar10 | L1 Mild | resolution | 0.9514 | 16 | 41m |
-| 42 | transnext_tiny | mnist | L1 Mild | resolution | 0.9914 | 29 | 74m |
+| 41 | transnext⁠_⁠tiny | cifar10 | L1 Mild | resolution | 0.9514 | 16 | 41m |
+| 42 | transnext⁠_⁠tiny | mnist | L1 Mild | resolution | 0.9914 | 29 | 74m |
 | 43 | resnet50 | cifar10 | L1 Mild | noise | 0.9208 | 15 | 10m |
 | 44 | resnet50 | mnist | L1 Mild | noise | 0.9940 | 31 | 21m |
 | 45 | densenet121 | cifar10 | L1 Mild | noise | 0.9136 | 41 | 39m |
 | 46 | densenet121 | mnist | L1 Mild | noise | 0.9934 | 25 | 24m |
-| 47 | transnext_tiny | cifar10 | L1 Mild | noise | 0.9726 | 13 | 36m |
-| 48 | transnext_tiny | mnist | L1 Mild | noise | 0.9890 | 14 | 39m |
+| 47 | transnext⁠_⁠tiny | cifar10 | L1 Mild | noise | 0.9726 | 13 | 36m |
+| 48 | transnext⁠_⁠tiny | mnist | L1 Mild | noise | 0.9890 | 14 | 39m |
 | 49 | resnet50 | cifar10 | L1 Mild | blur | 0.9354 | 60 | 39m |
 | 50 | resnet50 | mnist | L1 Mild | blur | 0.9932 | 31 | 20m |
 | 51 | densenet121 | cifar10 | L1 Mild | blur | 0.9054 | 24 | 22m |
 | 52 | densenet121 | mnist | L1 Mild | blur | 0.9906 | 20 | 19m |
-| 53 | transnext_tiny | cifar10 | L1 Mild | blur | 0.9766 | 15 | 41m |
-| 54 | transnext_tiny | mnist | L1 Mild | blur | 0.9924 | 27 | 74m |
+| 53 | transnext⁠_⁠tiny | cifar10 | L1 Mild | blur | 0.9766 | 15 | 41m |
+| 54 | transnext⁠_⁠tiny | mnist | L1 Mild | blur | 0.9924 | 27 | 74m |
 | 55 | resnet50 | cifar10 | L1 Mild | saturation | 0.9206 | 14 | 7m |
 | 56 | resnet50 | mnist | L1 Mild | saturation | 0.9894 | 13 | 7m |
 | 57 | densenet121 | cifar10 | L1 Mild | saturation | 0.9184 | 37 | 28m |
 | 58 | densenet121 | mnist | L1 Mild | saturation | 0.9932 | 28 | 22m |
-| 59 | transnext_tiny | cifar10 | L1 Mild | saturation | 0.9792 | 17 | 44m |
-| 60 | transnext_tiny | mnist | L1 Mild | saturation | 0.9936 | 30 | 77m |
-| 61 | resnet50 | cifar10 | L1 Mild | salt_pepper | 0.9096 | 21 | 12m |
-| 62 | resnet50 | mnist | L1 Mild | salt_pepper | 0.9902 | 21 | 12m |
-| 63 | densenet121 | cifar10 | L1 Mild | salt_pepper | 0.9006 | 48 | 41m |
-| 64 | densenet121 | mnist | L1 Mild | salt_pepper | 0.9918 | 29 | 25m |
-| 65 | transnext_tiny | cifar10 | L1 Mild | salt_pepper | 0.9738 | 14 | 37m |
-| 66 | transnext_tiny | mnist | L1 Mild | salt_pepper | 0.9918 | 46 | 2.0h |
+| 59 | transnext⁠_⁠tiny | cifar10 | L1 Mild | saturation | 0.9792 | 17 | 44m |
+| 60 | transnext⁠_⁠tiny | mnist | L1 Mild | saturation | 0.9936 | 30 | 77m |
+| 61 | resnet50 | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9096 | 21 | 12m |
+| 62 | resnet50 | mnist | L1 Mild | salt⁠_⁠pepper | 0.9902 | 21 | 12m |
+| 63 | densenet121 | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9006 | 48 | 41m |
+| 64 | densenet121 | mnist | L1 Mild | salt⁠_⁠pepper | 0.9918 | 29 | 25m |
+| 65 | transnext⁠_⁠tiny | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9738 | 14 | 37m |
+| 66 | transnext⁠_⁠tiny | mnist | L1 Mild | salt⁠_⁠pepper | 0.9918 | 46 | 2.0h |
 | 67 | resnet50 | cifar10 | L2 Light | resolution | 0.7898 | 22 | 11m |
 | 68 | resnet50 | mnist | L2 Light | resolution | 0.9850 | 37 | 18m |
 | 69 | densenet121 | cifar10 | L2 Light | resolution | 0.7960 | 52 | 39m |
 | 70 | densenet121 | mnist | L2 Light | resolution | 0.9862 | 52 | 40m |
-| 71 | transnext_tiny | cifar10 | L2 Light | resolution | 0.8862 | 20 | 51m |
-| 72 | transnext_tiny | mnist | L2 Light | resolution | 0.9808 | 20 | 51m |
+| 71 | transnext⁠_⁠tiny | cifar10 | L2 Light | resolution | 0.8862 | 20 | 51m |
+| 72 | transnext⁠_⁠tiny | mnist | L2 Light | resolution | 0.9808 | 20 | 51m |
 | 73 | resnet50 | cifar10 | L2 Light | noise | 0.9092 | 14 | 9m |
 | 74 | resnet50 | mnist | L2 Light | noise | 0.9886 | 13 | 9m |
 | 75 | densenet121 | cifar10 | L2 Light | noise | 0.9050 | 41 | 39m |
 | 76 | densenet121 | mnist | L2 Light | noise | 0.9936 | 41 | 39m |
-| 77 | transnext_tiny | cifar10 | L2 Light | noise | 0.9720 | 12 | 33m |
-| 78 | transnext_tiny | mnist | L2 Light | noise | 0.9938 | 23 | 63m |
+| 77 | transnext⁠_⁠tiny | cifar10 | L2 Light | noise | 0.9720 | 12 | 33m |
+| 78 | transnext⁠_⁠tiny | mnist | L2 Light | noise | 0.9938 | 23 | 63m |
 | 79 | resnet50 | cifar10 | L2 Light | blur | 0.8988 | 17 | 11m |
 | 80 | resnet50 | mnist | L2 Light | blur | 0.9914 | 24 | 16m |
 | 81 | densenet121 | cifar10 | L2 Light | blur | 0.9040 | 44 | 41m |
 | 82 | densenet121 | mnist | L2 Light | blur | 0.9934 | 24 | 23m |
-| 83 | transnext_tiny | cifar10 | L2 Light | blur | 0.9724 | 14 | 38m |
-| 84 | transnext_tiny | mnist | L2 Light | blur | 0.9896 | 17 | 47m |
+| 83 | transnext⁠_⁠tiny | cifar10 | L2 Light | blur | 0.9724 | 14 | 38m |
+| 84 | transnext⁠_⁠tiny | mnist | L2 Light | blur | 0.9896 | 17 | 47m |
 | 85 | resnet50 | cifar10 | L2 Light | saturation | 0.9282 | 14 | 7m |
 | 86 | resnet50 | mnist | L2 Light | saturation | 0.9918 | 21 | 11m |
 | 87 | densenet121 | cifar10 | L2 Light | saturation | 0.9142 | 41 | 32m |
 | 88 | densenet121 | mnist | L2 Light | saturation | 0.9924 | 22 | 17m |
-| 89 | transnext_tiny | cifar10 | L2 Light | saturation | 0.9778 | 13 | 33m |
-| 90 | transnext_tiny | mnist | L2 Light | saturation | 0.9896 | 14 | 36m |
-| 91 | resnet50 | cifar10 | L2 Light | salt_pepper | 0.8978 | 17 | 10m |
-| 92 | resnet50 | mnist | L2 Light | salt_pepper | 0.9932 | 37 | 22m |
-| 93 | densenet121 | cifar10 | L2 Light | salt_pepper | 0.8942 | 36 | 31m |
-| 94 | densenet121 | mnist | L2 Light | salt_pepper | 0.9906 | 30 | 26m |
-| 95 | transnext_tiny | cifar10 | L2 Light | salt_pepper | 0.9720 | 15 | 40m |
-| 96 | transnext_tiny | mnist | L2 Light | salt_pepper | 0.9914 | 34 | 1.5h |
+| 89 | transnext⁠_⁠tiny | cifar10 | L2 Light | saturation | 0.9778 | 13 | 33m |
+| 90 | transnext⁠_⁠tiny | mnist | L2 Light | saturation | 0.9896 | 14 | 36m |
+| 91 | resnet50 | cifar10 | L2 Light | salt⁠_⁠pepper | 0.8978 | 17 | 10m |
+| 92 | resnet50 | mnist | L2 Light | salt⁠_⁠pepper | 0.9932 | 37 | 22m |
+| 93 | densenet121 | cifar10 | L2 Light | salt⁠_⁠pepper | 0.8942 | 36 | 31m |
+| 94 | densenet121 | mnist | L2 Light | salt⁠_⁠pepper | 0.9906 | 30 | 26m |
+| 95 | transnext⁠_⁠tiny | cifar10 | L2 Light | salt⁠_⁠pepper | 0.9720 | 15 | 40m |
+| 96 | transnext⁠_⁠tiny | mnist | L2 Light | salt⁠_⁠pepper | 0.9914 | 34 | 1.5h |
 | 97 | resnet50 | cifar10 | L3 Moderate | resolution | 0.6846 | 23 | 11m |
 | 98 | resnet50 | mnist | L3 Moderate | resolution | 0.9348 | 49 | 24m |
 | 99 | densenet121 | cifar10 | L3 Moderate | resolution | 0.6768 | 19 | 14m |
 | 100 | densenet121 | mnist | L3 Moderate | resolution | 0.9360 | 53 | 41m |
-| 101 | transnext_tiny | cifar10 | L3 Moderate | resolution | 0.7964 | 37 | 1.6h |
-| 102 | transnext_tiny | mnist | L3 Moderate | resolution | 0.9248 | 16 | 41m |
+| 101 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | resolution | 0.7964 | 37 | 1.6h |
+| 102 | transnext⁠_⁠tiny | mnist | L3 Moderate | resolution | 0.9248 | 16 | 41m |
 | 103 | resnet50 | cifar10 | L3 Moderate | noise | 0.9046 | 27 | 18m |
 | 104 | resnet50 | mnist | L3 Moderate | noise | 0.9932 | 33 | 23m |
 | 105 | densenet121 | cifar10 | L3 Moderate | noise | 0.8984 | 41 | 39m |
 | 106 | densenet121 | mnist | L3 Moderate | noise | 0.9922 | 23 | 22m |
-| 107 | transnext_tiny | cifar10 | L3 Moderate | noise | 0.9682 | 19 | 52m |
-| 108 | transnext_tiny | mnist | L3 Moderate | noise | 0.9932 | 42 | 1.9h |
+| 107 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | noise | 0.9682 | 19 | 52m |
+| 108 | transnext⁠_⁠tiny | mnist | L3 Moderate | noise | 0.9932 | 42 | 1.9h |
 | 109 | resnet50 | cifar10 | L3 Moderate | blur | 0.8678 | 31 | 21m |
 | 110 | resnet50 | mnist | L3 Moderate | blur | 0.9918 | 31 | 22m |
 | 111 | densenet121 | cifar10 | L3 Moderate | blur | 0.8644 | 36 | 35m |
 | 112 | densenet121 | mnist | L3 Moderate | blur | 0.9896 | 23 | 22m |
-| 113 | transnext_tiny | cifar10 | L3 Moderate | blur | 0.9496 | 15 | 41m |
-| 114 | transnext_tiny | mnist | L3 Moderate | blur | 0.9914 | 22 | 61m |
+| 113 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | blur | 0.9496 | 15 | 41m |
+| 114 | transnext⁠_⁠tiny | mnist | L3 Moderate | blur | 0.9914 | 22 | 61m |
 | 115 | resnet50 | cifar10 | L3 Moderate | saturation | 0.9256 | 17 | 8m |
 | 116 | resnet50 | mnist | L3 Moderate | saturation | 0.9936 | 19 | 10m |
 | 117 | densenet121 | cifar10 | L3 Moderate | saturation | 0.9166 | 45 | 34m |
 | 118 | densenet121 | mnist | L3 Moderate | saturation | 0.9926 | 37 | 29m |
-| 119 | transnext_tiny | cifar10 | L3 Moderate | saturation | 0.9754 | 14 | 36m |
-| 120 | transnext_tiny | mnist | L3 Moderate | saturation | 0.9918 | 22 | 57m |
-| 121 | resnet50 | cifar10 | L3 Moderate | salt_pepper | 0.8898 | 18 | 11m |
-| 122 | resnet50 | mnist | L3 Moderate | salt_pepper | 0.9920 | 35 | 21m |
-| 123 | densenet121 | cifar10 | L3 Moderate | salt_pepper | 0.8900 | 43 | 37m |
-| 124 | densenet121 | mnist | L3 Moderate | salt_pepper | 0.9916 | 30 | 26m |
-| 125 | transnext_tiny | cifar10 | L3 Moderate | salt_pepper | 0.9696 | 16 | 42m |
-| 126 | transnext_tiny | mnist | L3 Moderate | salt_pepper | 0.9930 | 30 | 80m |
+| 119 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | saturation | 0.9754 | 14 | 36m |
+| 120 | transnext⁠_⁠tiny | mnist | L3 Moderate | saturation | 0.9918 | 22 | 57m |
+| 121 | resnet50 | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.8898 | 18 | 11m |
+| 122 | resnet50 | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9920 | 35 | 21m |
+| 123 | densenet121 | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.8900 | 43 | 37m |
+| 124 | densenet121 | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9916 | 30 | 26m |
+| 125 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.9696 | 16 | 42m |
+| 126 | transnext⁠_⁠tiny | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9930 | 30 | 80m |
 | 127 | resnet50 | cifar10 | L4 Severe | resolution | 0.6050 | 60 | 29m |
 | 128 | resnet50 | mnist | L4 Severe | resolution | 0.8122 | 43 | 21m |
 | 129 | densenet121 | cifar10 | L4 Severe | resolution | 0.5776 | 17 | 13m |
 | 130 | densenet121 | mnist | L4 Severe | resolution | 0.8132 | 30 | 23m |
-| 131 | transnext_tiny | cifar10 | L4 Severe | resolution | 0.6840 | 33 | 84m |
-| 132 | transnext_tiny | mnist | L4 Severe | resolution | 0.8008 | 16 | 41m |
+| 131 | transnext⁠_⁠tiny | cifar10 | L4 Severe | resolution | 0.6840 | 33 | 84m |
+| 132 | transnext⁠_⁠tiny | mnist | L4 Severe | resolution | 0.8008 | 16 | 41m |
 | 133 | resnet50 | cifar10 | L4 Severe | noise | 0.9040 | 49 | 33m |
 | 134 | resnet50 | mnist | L4 Severe | noise | 0.9930 | 36 | 25m |
 | 135 | densenet121 | cifar10 | L4 Severe | noise | 0.8930 | 42 | 40m |
 | 136 | densenet121 | mnist | L4 Severe | noise | 0.9896 | 18 | 17m |
-| 137 | transnext_tiny | cifar10 | L4 Severe | noise | 0.9652 | 15 | 41m |
-| 138 | transnext_tiny | mnist | L4 Severe | noise | 0.9916 | 23 | 63m |
+| 137 | transnext⁠_⁠tiny | cifar10 | L4 Severe | noise | 0.9652 | 15 | 41m |
+| 138 | transnext⁠_⁠tiny | mnist | L4 Severe | noise | 0.9916 | 23 | 63m |
 | 139 | resnet50 | cifar10 | L4 Severe | blur | 0.8146 | 44 | 31m |
 | 140 | resnet50 | mnist | L4 Severe | blur | 0.9920 | 34 | 25m |
 | 141 | densenet121 | cifar10 | L4 Severe | blur | 0.8204 | 41 | 41m |
 | 142 | densenet121 | mnist | L4 Severe | blur | 0.9928 | 44 | 44m |
-| 143 | transnext_tiny | cifar10 | L4 Severe | blur | 0.9088 | 29 | 81m |
-| 144 | transnext_tiny | mnist | L4 Severe | blur | 0.9928 | 36 | 1.7h |
+| 143 | transnext⁠_⁠tiny | cifar10 | L4 Severe | blur | 0.9088 | 29 | 81m |
+| 144 | transnext⁠_⁠tiny | mnist | L4 Severe | blur | 0.9928 | 36 | 1.7h |
 | 145 | resnet50 | cifar10 | L4 Severe | saturation | 0.9178 | 18 | 9m |
 | 146 | resnet50 | mnist | L4 Severe | saturation | 0.9918 | 13 | 7m |
 | 147 | densenet121 | cifar10 | L4 Severe | saturation | 0.9130 | 35 | 27m |
 | 148 | densenet121 | mnist | L4 Severe | saturation | 0.9928 | 45 | 35m |
-| 149 | transnext_tiny | cifar10 | L4 Severe | saturation | 0.9756 | 14 | 36m |
-| 150 | transnext_tiny | mnist | L4 Severe | saturation | 0.9924 | 19 | 49m |
-| 151 | resnet50 | cifar10 | L4 Severe | salt_pepper | 0.8882 | 29 | 17m |
-| 152 | resnet50 | mnist | L4 Severe | salt_pepper | 0.9924 | 31 | 19m |
-| 153 | densenet121 | cifar10 | L4 Severe | salt_pepper | 0.8756 | 39 | 33m |
-| 154 | densenet121 | mnist | L4 Severe | salt_pepper | 0.9930 | 36 | 31m |
-| 155 | transnext_tiny | cifar10 | L4 Severe | salt_pepper | 0.9618 | 14 | 37m |
-| 156 | transnext_tiny | mnist | L4 Severe | salt_pepper | 0.9910 | 18 | 48m |
+| 149 | transnext⁠_⁠tiny | cifar10 | L4 Severe | saturation | 0.9756 | 14 | 36m |
+| 150 | transnext⁠_⁠tiny | mnist | L4 Severe | saturation | 0.9924 | 19 | 49m |
+| 151 | resnet50 | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.8882 | 29 | 17m |
+| 152 | resnet50 | mnist | L4 Severe | salt⁠_⁠pepper | 0.9924 | 31 | 19m |
+| 153 | densenet121 | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.8756 | 39 | 33m |
+| 154 | densenet121 | mnist | L4 Severe | salt⁠_⁠pepper | 0.9930 | 36 | 31m |
+| 155 | transnext⁠_⁠tiny | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.9618 | 14 | 37m |
+| 156 | transnext⁠_⁠tiny | mnist | L4 Severe | salt⁠_⁠pepper | 0.9910 | 18 | 48m |
 | 157 | resnet50 | cifar10 | L5 Extreme | resolution | 0.4316 | 15 | 7m |
 | 158 | resnet50 | mnist | L5 Extreme | resolution | 0.4426 | 20 | 10m |
 | 159 | densenet121 | cifar10 | L5 Extreme | resolution | 0.4432 | 19 | 14m |
 | 160 | densenet121 | mnist | L5 Extreme | resolution | 0.4540 | 21 | 16m |
-| 161 | transnext_tiny | cifar10 | L5 Extreme | resolution | 0.4624 | 13 | 33m |
-| 162 | transnext_tiny | mnist | L5 Extreme | resolution | 0.4486 | 17 | 44m |
+| 161 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | resolution | 0.4624 | 13 | 33m |
+| 162 | transnext⁠_⁠tiny | mnist | L5 Extreme | resolution | 0.4486 | 17 | 44m |
 | 163 | resnet50 | cifar10 | L5 Extreme | noise | 0.8974 | 56 | 38m |
 | 164 | resnet50 | mnist | L5 Extreme | noise | 0.9922 | 33 | 22m |
 | 165 | densenet121 | cifar10 | L5 Extreme | noise | 0.8774 | 37 | 35m |
 | 166 | densenet121 | mnist | L5 Extreme | noise | 0.9930 | 25 | 24m |
-| 167 | transnext_tiny | cifar10 | L5 Extreme | noise | 0.9608 | 16 | 44m |
-| 168 | transnext_tiny | mnist | L5 Extreme | noise | 0.9910 | 25 | 69m |
+| 167 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | noise | 0.9608 | 16 | 44m |
+| 168 | transnext⁠_⁠tiny | mnist | L5 Extreme | noise | 0.9910 | 25 | 69m |
 | 169 | resnet50 | cifar10 | L5 Extreme | blur | 0.7098 | 39 | 30m |
 | 170 | resnet50 | mnist | L5 Extreme | blur | 0.9882 | 31 | 24m |
 | 171 | densenet121 | cifar10 | L5 Extreme | blur | 0.7142 | 21 | 22m |
 | 172 | densenet121 | mnist | L5 Extreme | blur | 0.9846 | 19 | 20m |
-| 173 | transnext_tiny | cifar10 | L5 Extreme | blur | 0.8244 | 22 | 62m |
-| 174 | transnext_tiny | mnist | L5 Extreme | blur | 0.9906 | 60 | 2.8h |
+| 173 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | blur | 0.8244 | 22 | 62m |
+| 174 | transnext⁠_⁠tiny | mnist | L5 Extreme | blur | 0.9906 | 60 | 2.8h |
 | 175 | resnet50 | cifar10 | L5 Extreme | saturation | 0.8822 | 16 | 8m |
 | 176 | resnet50 | mnist | L5 Extreme | saturation | 0.9910 | 13 | 7m |
 | 177 | densenet121 | cifar10 | L5 Extreme | saturation | 0.8834 | 37 | 28m |
 | 178 | densenet121 | mnist | L5 Extreme | saturation | 0.9914 | 20 | 16m |
-| 179 | transnext_tiny | cifar10 | L5 Extreme | saturation | 0.9534 | 44 | 1.9h |
-| 180 | transnext_tiny | mnist | L5 Extreme | saturation | 0.9904 | 18 | 46m |
-| 181 | resnet50 | cifar10 | L5 Extreme | salt_pepper | 0.8768 | 24 | 14m |
-| 182 | resnet50 | mnist | L5 Extreme | salt_pepper | 0.9924 | 33 | 20m |
-| 183 | densenet121 | cifar10 | L5 Extreme | salt_pepper | 0.8694 | 44 | 38m |
-| 184 | densenet121 | mnist | L5 Extreme | salt_pepper | 0.9894 | 16 | 14m |
-| 185 | transnext_tiny | cifar10 | L5 Extreme | salt_pepper | 0.9602 | 15 | 40m |
-| 186 | transnext_tiny | mnist | L5 Extreme | salt_pepper | 0.9928 | 31 | 83m |
+| 179 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | saturation | 0.9534 | 44 | 1.9h |
+| 180 | transnext⁠_⁠tiny | mnist | L5 Extreme | saturation | 0.9904 | 18 | 46m |
+| 181 | resnet50 | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.8768 | 24 | 14m |
+| 182 | resnet50 | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9924 | 33 | 20m |
+| 183 | densenet121 | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.8694 | 44 | 38m |
+| 184 | densenet121 | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9894 | 16 | 14m |
+| 185 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.9602 | 15 | 40m |
+| 186 | transnext⁠_⁠tiny | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9928 | 31 | 83m |
 
 ---
 
@@ -435,7 +435,7 @@ At the most aggressive resolution axis level (L5 = 3 × 3 native pixels
 upsampled to 224 × 224 bicubic), every architecture lands within ±3 pp
 on CIFAR-10 and ±1 pp on MNIST:
 
-| Axis @ L5 — resolution | resnet50 | densenet121 | transnext_tiny |
+| Axis @ L5 — resolution | resnet50 | densenet121 | transnext⁠_⁠tiny |
 |------------------------|----------|-------------|----------------|
 | CIFAR-10 | 0.4316 | 0.4432 | 0.4624 |
 | MNIST | 0.4426 | 0.4540 | 0.4486 |
@@ -450,7 +450,7 @@ both Phase B (combined) collapses and the campaign's overall worst-case cells.
 At L5 on CIFAR-10, TransNeXt-tiny holds ≥ 0.95 on noise, saturation, and
 salt-and-pepper, while both CNN backbones drop to ~0.87 — a +~8 to +10 pp gap:
 
-| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | transnext_tiny | TransNeXt gap |
+| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | transnext⁠_⁠tiny | TransNeXt gap |
 |----------------------|----------|-------------|----------------|---------------|
 | noise | 0.8974 | 0.8774 | 0.9608 | ~+8 pp |
 | saturation | 0.8822 | 0.8834 | 0.9534 | ~+7 pp |
@@ -480,7 +480,7 @@ CIFAR-10 natural-image class signal.
 | noise | 0.8974 | 0.9922 | 0.8774 | 0.9930 | 0.9608 | 0.9910 |
 | blur | 0.7098 | 0.9882 | 0.7142 | 0.9846 | 0.8244 | 0.9906 |
 | saturation | 0.8822 | 0.9910 | 0.8834 | 0.9914 | 0.9534 | 0.9904 |
-| salt_pepper | 0.8768 | 0.9924 | 0.8694 | 0.9894 | 0.9602 | 0.9928 |
+| salt⁠_⁠pepper | 0.8768 | 0.9924 | 0.8694 | 0.9894 | 0.9602 | 0.9928 |
 
 ---
 
