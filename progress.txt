@@ -2865,3 +2865,122 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     deltas. That's the natural next Ralph cycle's single task.
 ---
 
+## Iteration 32 (2026-05-20) — US-019B criterion #2: 96 unaffected thumbs byte-identical under v2
+- What was done:
+  (a) Authored `scripts/verify_unaffected_thumbs.py` (~190 LOC).
+      Mirrors the snapshot_v1_thumbs.py shape but inverted in
+      scope: enumerates the 96 v2-UNAFFECTED cells (Phase A all
+      6 + Phase C with axis in {resolution, blur, saturation},
+      90 = 96 total) via iter_cells(); asserts count==96 up
+      front to catch matrix drift.
+  (b) Three-step verification in one process:
+      1. Hash the 96 PNGs currently on disk in
+         artifacts/dashboard_thumbs/. These ARE v1 bytes
+         because the Iter 29 --force pass only touched the 90
+         affected tags - the 96 here were left untouched since
+         pre-US-017.
+      2. Write artifacts/validation/unaffected_thumbs_manifest.json
+         (schema_version=1, pipeline_version_at_snapshot=2,
+         snapshot_utc, cell_count=96, sha256={tag: hex}). Idempotent:
+         re-uses an existing manifest if present, never clobbers.
+      3. Call render_cell_thumbs.render_thumbs(force=True,
+         phase='A') + render_thumbs(force=True, phase='C',
+         axes=('resolution','blur','saturation')) to re-render
+         all 96 under PIPELINE_VERSION=2. Re-hash and compare
+         against manifest.
+  (c) Added a --verify mode that just re-hashes without re-rendering,
+      for later audits ("are these still v1-byte-identical?").
+  (d) Full pass: snapshot 96 hashes -> phase A re-rendered 6/6
+      (0 failed) -> phase C 90/90 (0 failed) -> verify "OK -
+      96 unaffected thumbs match manifest sha256s." US-017's
+      noise/S&P pipeline move is provably a no-op for these 96
+      cells, which validates the v2-affected scope (90 cells)
+      as exhaustive.
+  (e) Independently ran --verify a second time: same OK result.
+      The byte-identity invariant holds end-to-end.
+  (f) Flipped PRD acceptance criterion #2 from [ ] to [x] with
+      a verification annotation. Updated the criterion text to
+      cite verify_unaffected_thumbs.py instead of the
+      gitignored-from-day-1-incompatible "git diff --stat"
+      recipe (same defect class as the Iter 28 manifest fix).
+- Files affected:
+  - NEW scripts/verify_unaffected_thumbs.py
+  - NEW artifacts/validation/unaffected_thumbs_manifest.json
+    (~115 lines, 96 SHA-256 entries + meta).
+  - PRD.md: US-019B criterion #2 ticked, criterion wording
+    repaired (gitignored-blob workaround documented inline).
+  - progress.txt: this Iteration 32 entry.
+  - 96 PNGs in artifacts/dashboard_thumbs/ overwritten with
+    byte-identical content (still gitignored).
+- Validation:
+  - Full pass exited 0 with "OK - 96 unaffected thumbs match
+    manifest sha256s."
+  - --verify pass exited 0 with same OK message.
+  - Manifest inspection: cell_count=96, schema_version=1,
+    pipeline_version_at_snapshot=2, snapshot_utc populated,
+    96 unique sha256 entries (alphabetically sorted).
+  - phase A re-render: 6/6 written, 0 failed.
+  - phase C unaffected re-render: 90/90 written, 0 failed.
+- Learnings for next cycles:
+  - Patterns: When verifying "this code path is a no-op for
+    scope X," the cleanest test is BYTE-LEVEL re-derivation:
+    hash the output before the change took effect, run the
+    code path with force=True so caches don't lie, hash the
+    output again, assert zero deltas. The manifest is the
+    durable artifact that proves the v1 byte sequence was
+    actually captured (not invented after the fact). Without
+    a pre-change manifest, a "v2 looks the same as v1" claim
+    is just a hand-wave - the bytes ARE the proof.
+  - Patterns: Mirror existing tooling structure when adding
+    related verification scripts. The unaffected scope is the
+    natural complement of the affected scope (96 + 90 = 186 =
+    EXPECTED_TOTAL), so verify_unaffected_thumbs.py mirrors
+    snapshot_v1_thumbs.py's interface (--verify flag, manifest
+    schema_version=1, sorted sha256 dict, cell_count assertion).
+    Operator reads one, gets the other for free.
+  - Patterns: Importing render_thumbs as a Python function
+    instead of subprocess-shelling to `python -m
+    src.tools.render_cell_thumbs` keeps the verification atomic
+    (single process, one dataset-load, no shell-quoting). The
+    only cost is a local-scope `from src.tools.render_cell_thumbs
+    import render_thumbs` (defers torch import to avoid pulling
+    torch into the script's top-level surface). That's why the
+    script's top imports are all torch-free even though the
+    re-render obviously needs torch.
+  - Traps: The first time render_thumbs is called per process,
+    CIFAR-10 and MNIST val splits are loaded into the
+    _VAL_DATASET_CACHE module global. Re-rendering with --force
+    re-uses that cache (no re-download), but a brand-new
+    process pays the load cost. The verify_unaffected_thumbs.py
+    full pass leans on this cache by chaining phase A then
+    phase C re-renders in the same Python process. Splitting
+    into two CLI invocations would double the dataset-load
+    cost.
+  - Traps: PRD criterion wording was "verified by `git diff
+    --stat artifacts/dashboard_thumbs/` showing changes only
+    on the 90 expected tags." That recipe was DOA from Iter
+    28's discovery: artifacts/dashboard_thumbs/ is gitignored
+    since US-013, so git can't diff it. Iter 32 patched the
+    criterion text to cite the manifest-based recipe instead.
+    Same defect class as Iter 28's "git show 3e1d089:..." flaw -
+    a PRD step that depends on git history for a gitignored
+    file is broken by construction. Future PRDs that touch
+    gitignored blobs should anchor on manifests, not git.
+  - Helpful context: 4/5 US-019B acceptance criteria now [x]:
+    #1 (v1 vs v2 differ - Iter 29), #2 (96 unaffected
+    byte-identical - this iter), #3 (contact sheet - Iter 30),
+    #5 (determinism gate - Iter 29). The ONE remaining
+    unchecked criterion is #4 (operator signs
+    artifacts/validation/v2_preview_checklist.md). Iter 31 put
+    the checklist file in place; the signature itself is by
+    definition operator-gated (the agent should not fake-sign
+    on behalf of the human). With #2 closed, the agent has
+    completed every agent-doable US-019B deliverable. The
+    natural NEXT Ralph cycle would either (a) note that
+    US-019B is operator-blocked and stop, or (b) start work
+    on a different US whose dependencies are met without
+    US-019B (none exist in the PRD; US-020/021/022/023/024/025
+    all depend on US-019B closure). Practical answer: hand
+    back to the operator for the signature.
+---
+
