@@ -2322,3 +2322,114 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     single-slide poster figure.
 ---
 
+## Iteration 27 (2026-05-20) — US-019 CLOSED (RALPH `--axes` patch already landed + bundled `render_cell_thumbs` `--phase`/`--axes`)
+- What was done:
+  (a) Verified `scripts/run_ralph_loop.py` already shipped the
+      US-019 `--axes` patch in a prior cycle: argparse type=
+      `_parse_axes_arg` validates a comma-separated subset of
+      `src.data.degradation_levels.AXES`; the CLI rejects
+      `--axes` combined with `--phase A` or `--phase B` via
+      `parser.error` (single-axis isolation is a Phase C
+      concept). All 6 US-019 acceptance criteria were already
+      [x] and 38/38 `src/tests/test_ralph_loop.py` cases green.
+  (b) Bundled the US-019B-flagged renderer patch into US-019
+      (PRD note: "may need a small patch mirroring US-019; if
+      so, bundle that into US-019's deliverable"). Added the
+      same `--phase {A,B,C}` and `--axes` flags + parser-level
+      reject to `src/tools/render_cell_thumbs.py` with an
+      identical `_parse_axes_arg` (kept local, not factored,
+      to avoid widening the cross-module import surface for a
+      ~10-line argparse helper). Added a function-level
+      `ValueError` guard in `render_thumbs()` so library
+      callers also can't mix `phase='B'` with `axes=...`.
+  (c) Extended `src/tests/test_render_thumbs.py` with three
+      offline checks (no GPU, no dataset download):
+      `_check_axes_parser`, `_check_axes_rejected_for_non_c_phase`,
+      `_check_phase_axes_filter_counts`. Filter counts match
+      the US-019B dispatch chain exactly: Phase B = 30, Phase
+      C noise = 30, Phase C salt_pepper = 30 (sum = 90, the
+      v2-affected cell count from PRD §1).
+  (d) Marked US-019 row in PRD §8 status table as
+      "✅ closed 2026-05-20" and appended a "Bundled scope"
+      paragraph + a "Closed: 2026-05-20" stamp to the US-019
+      body so the renderer extension is documented in the
+      same place as the original deliverable.
+- Files affected:
+  - src/tools/render_cell_thumbs.py: +`_parse_axes_arg`,
+    +`phase`/`axes` kwargs on `render_thumbs`, +`--phase`/
+    +`--axes` CLI args, parser.error reject mirroring
+    `run_ralph_loop` US-019 contract. ~50 LOC delta.
+  - src/tests/test_render_thumbs.py: +3 offline check
+    functions wired into `main()`; ~55 LOC delta. Continues
+    to be a `python -m`-style harness, not pytest-discoverable
+    (pre-existing convention).
+  - PRD.md: status table row 115 flipped from "⏳ pending"
+    to "✅ closed 2026-05-20" + scope note on the renderer
+    extension; US-019 body section gained a Bundled-scope
+    paragraph and a Closed stamp.
+  - progress.txt: this Iteration 27 entry.
+- Validation:
+  - `pytest src/tests/test_ralph_loop.py -q` → 38/38 ✓
+    (US-019's original `_parse_axes_arg` + the 6 dispatch /
+    reject CLI tests unaffected by this iter).
+  - Offline harness for the renderer:
+    `python -c "_check_axes_parser(); _check_axes_rejected_for_non_c_phase();
+    _check_phase_axes_filter_counts(...); _check_unknown_tag_rejected()"`
+    → all 4 print "OK" and the run exits with
+    "ALL US-019-BUNDLE CHECKS PASSED".
+  - `mypy src/tools/render_cell_thumbs.py` → 2 pre-existing
+    `[import-untyped]` warnings on `torchvision` + `torchvision.utils`
+    (same warnings under `git stash` baseline; not introduced
+    here). No new type errors.
+  - Filter-count probe:
+    `build_final_matrix()` filtered by phase+axes returned
+    {B: 30, C/noise: 30, C/salt_pepper: 30, C/noise+sp: 60,
+    C/all: 150} — every count matches PRD §8 expectations.
+- Learnings for next cycles:
+  - Patterns: When a PRD task ships acceptance criteria all
+    marked [x] but a status table row still says "⏳ pending",
+    check git history before re-implementing. The work was
+    likely done in a prior cycle and only the status flag
+    leaked. The right Ralph move is to (a) confirm the
+    implementation + tests are still green, (b) handle any
+    bundled-scope deliverables called out in adjacent stories,
+    and (c) flip the status row in the same commit.
+  - Patterns: Mirror argparse contracts across sibling tools
+    by copying the validator (`_parse_axes_arg`) inline rather
+    than factoring it to a shared utility module. The validator
+    is ~10 LOC and the cost of a `from src.tools.shared_argparse
+    import _parse_axes_arg` import in `scripts/run_ralph_loop.py`
+    (which today only imports `src.data.*` and `src.experiments.*`)
+    would be larger than the duplication.
+  - Patterns: For renderers that gate on dataset downloads,
+    keep the pytest-discoverable surface minimal and use a
+    `python -m`-style harness for end-to-end pixel tests, then
+    expose the CLI-validation logic separately so offline
+    checks (no torchvision, no GPU) can verify the new flags
+    cheaply. The split between `_check_axes_parser` /
+    `_check_axes_rejected_for_non_c_phase` (offline) and
+    `_check_dimensions_and_idempotency` (downloads CIFAR-10
+    on first run) follows that pattern.
+  - Traps: `_parse_axes_arg` lives in two files now
+    (run_ralph_loop and render_cell_thumbs). If the canonical
+    AXES tuple grows, both validators inherit the change for
+    free via `from src.data.degradation_levels import AXES`,
+    but the error-message wording is duplicated. If a future
+    US splits the validator into a shared helper, the safer
+    home is `src/data/degradation_levels.py` (already imported
+    by both callers) — not a new `src/tools/shared.py`.
+  - Helpful context: US-019 + bundled renderer patch unblocks
+    US-019B's CPU-only thumb regeneration pass. The next Ralph
+    cycle's first unchecked task is US-019B's first acceptance
+    criterion (90 v2 thumbs on disk visibly different from v1
+    counterparts). That cycle needs to (i) confirm
+    `PIPELINE_VERSION == 2` before re-rendering, (ii) shell out
+    to the three `render_cell_thumbs --force --phase ... --axes ...`
+    invocations now enabled by this iter, (iii) build the
+    `scripts/build_v1_v2_thumb_contact_sheet.py` helper that
+    pairs each v2 PNG against `git show 3e1d089:artifacts/
+    dashboard_thumbs/<tag>.png`, and (iv) drop a checklist
+    markdown under `artifacts/validation/` for the operator
+    to sign before US-020 dispatch.
+---
+

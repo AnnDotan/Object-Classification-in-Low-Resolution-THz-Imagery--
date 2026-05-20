@@ -1,543 +1,387 @@
-# PRD: RTX 5070 RALPH Loop — Autonomous 186-Cell Execution Phase
+# PRD v2 — Noise/S&P Pipeline Fix, 90-Cell Re-run, IEEEtran Scientific Report
 
 **Project:** p-2026-061 — Object Classification in Low-Resolution THz Imagery
-**Phase Mapping:** Full 186-cell Final Research Phase (`runs/final/`) — Phase A (6) + Phase B (30) + Phase C (150), three models × two datasets across the 5-level degradation curve.
-**Continues:** [PHASE_B_RUN.md](PHASE_B_RUN.md) US-020..US-030 — the CNN-only Phase B campaign now extends to TransNeXt (un-quarantined, **trained at 224×224 like the CNNs**) and to Phase C single-axis isolation. User-story numbering resumes at **US-040**.
-**Operator runbook:** [docs/runbooks/PHASE_B_EXECUTION.md](docs/runbooks/PHASE_B_EXECUTION.md) (Stage -1 / Stage 1 stages still apply); a new Stage 4 — RALPH self-correction loop — is documented here.
-**Date:** 2026-05-13
-**Target hardware:** NVIDIA RTX 5070 (12 GB GDDR7 VRAM, sm_120 / CUDA 12.8+).
+**Branch:** `noise_fix`
+**Supersedes:** PRD v1 (RTX 5070 RALPH Loop, 2026-05-13; closed 2026-05-20 with the 186/186 v1 campaign). v1 PRD preserved in git history at commit `3e1d089`.
+**Date:** 2026-05-20
+**Author:** Itamar Bahat (ib94)
+**Target hardware:** NVIDIA RTX 5070 (12 GiB GDDR7, sm_120 / CUDA 12.8+, bf16-mixed Blackwell tensor cores).
 
 ---
 
 ## 1. Introduction
 
-The repo has shipped the **infrastructure** for the 186-cell final research matrix (visual core, lazy curve drawer, incremental tracker, priors validation, INTERRUPTED sentinel) and the **CNN-only Phase B** fast-tune stage on an RTX 4050 Laptop (6 GB VRAM). The remaining work is the actual *campaign execution* — every cell trained to convergence with paper-anchored hparams — on a stronger GPU.
+The v1 186-cell campaign closed 2026-05-20 with all cells `healthy` per the §6.3 pathology guard and the comprehensive report rendered to [`artifacts/Final_Exp.pdf`](artifacts/Final_Exp.pdf). Post-mortem inspection of the Phase C `noise` axis numbers (TransNeXt-tiny holding ≥ 0.95 on CIFAR-10 across L1→L5 with `noise_std` up to 0.22) raised the question: *why is additive Gaussian noise barely denting accuracy?*
 
-This PRD covers the **RTX 5070 RALPH Loop**: an autonomous, self-correcting, sequential execution of all 186 cells on a single RTX 5070 box. "RALPH" (Run-And-Loop-with-Patch-and-Heal) is the convention adopted from the `.claude/skills/prd/SKILL.md` planning skill — each cell is one ~10-minute RALPH iteration (or, where convergence demands, one multi-hour iteration with a single in-loop decision point at the end). The loop:
+**Root cause confirmed 2026-05-20** ([src/data/degrade.py](src/data/degrade.py) pre-US-017): Gaussian noise and salt-and-pepper were applied AFTER the bicubic upsample to 224×224. Each `torch.randn` sample landed on a single output pixel, so the perceived noise at the underlying low_res scale was a tiny fraction of the configured `noise_std`. The bug spanned every cell whose `noise_std > 0` or `salt_pepper > 0` — i.e., all of Phase B and the Phase C `noise` + `salt_pepper` axes (90 cells).
 
-1. **Resets** prior partial state (Final_Exp, Optuna DB, artifacts) to a known clean baseline.
-2. **Optimizes** hyperparameters per `(model, dataset)` pair on L3 Moderate using paper-derived priors only.
-3. **Executes** each cell to convergence (60 epochs / patience 10) under the locked protocol.
-4. **Self-corrects** on detected pathology (failed convergence, divergence, severe overfit) by re-running that single cell once under Full FT with adjusted hparams.
-5. **Refreshes** the dashboard incrementally and pushes tracker artifacts only at phase boundaries.
+The fix moves both stochastic pixel-level perturbations to run BEFORE the upsample: noise is drawn at `low_res`, salt-and-pepper paints `low_res^2` pixels, then bicubic spreads each sample across a kernel footprint at 224. This produces the sensor-realistic *coarse-grain* noise structure that a true low-resolution detector (THz or otherwise) would record. The lag-1 spatial autocorrelation of the residual jumps from ~0 (v1) to **0.993** (v2 at low_res=8, out_size=224, verified by [src/tests/test_degradation_determinism.py:_check_v2_noise_is_pre_upsample](src/tests/test_degradation_determinism.py)).
 
-The loop is single-GPU sequential by design — the 12 GB VRAM ceiling forecloses naive parallelism, and per-cell determinism (seed=42, workers=True) is non-negotiable for the fair-comparison invariant.
-
-**Resolution policy (ratified 2026-05-13).** Every model — ResNet50, DenseNet121, **TransNeXt** — trains at **224×224**. The earlier V3 native-resolution refactor (TransNeXt at 32, MNIST padded 28→32) was rolled back; the fair-comparison invariant is back to *same tensor shape* across architectures. TransNeXt loads its 224-pretrained checkpoint and trains under the same differential-LR full-FT regime as the CNNs (head 5e-4 / backbone 5e-5).
+This PRD covers the **noise_fix follow-up**: re-running the 90 invalidated cells under pipeline v2, refreshing every downstream artifact in lockstep, and producing a publishable-quality IEEEtran scientific report as the project's final external deliverable. The 96 cells whose `noise_std == 0 AND salt_pepper == 0` (Phase A clean + Phase C `resolution` / `blur` / `saturation`) are unaffected and not re-run.
 
 ---
 
-## 2. Goals
+## 2. Goals (v2)
 
-- **G1.** Wipe four stateful artifacts (`Final_Exp.md`, `Final_Exp.json`, `optuna_thz.db`, runtime caches under `artifacts/`) to a verified clean baseline without losing the priors JSON, the lock file, or the frozen Phase A clean-baseline run dirs.
-- **G2.** Bring up the RTX 5070 with `torch.cuda.is_available() == True` on the **cu128** wheel index, freeze `requirements.lock.txt`, and pass the determinism gate ([test_degradation_determinism.py](src/tests/test_degradation_determinism.py)) with MSE = 0 at out_size=224 for both datasets.
-- **G3.** Train **TransNeXt at 224×224** with the upstream pretrained checkpoint, lifting the legacy US-014 quarantine and matching the CNN training regime end-to-end.
-- **G4.** Execute Optuna pre-tune (Stage 1 fast rank, Stage 1.5 top-3 validate at full convergence) for **all 6** `(model, dataset)` pairs at L3 Moderate, freezing winner JSONs to `artifacts/best_hparams/`.
-- **G5.** Run all 186 cells to convergence under the RALPH self-correction loop, producing `metrics.json` + `image_quality.json` + `history.json` + visual-core thumb per cell.
-- **G6.** End-state: `Final_Exp.md` reads `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186`; dashboard renders all 186 rows; single per-phase boundary push at A-close, B-close, C-close.
+1. **G1 — Corrected v2 results.** All 90 noise/S&P cells re-run under pipeline v2; `runs/final/<tag>/metrics.json` overwritten in place (no archive — v1 numbers stay only in git history per operator decision 2026-05-20).
+2. **G2 — Lockstep artifact freshness.** After every RALPH pass the four downstream artifacts ([Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf)) plus the 60 affected dashboard thumbnails are regenerated and committed in the same operator action. The dashboard is monitorable mid-campaign.
+3. **G3 — Scientific deliverable.** A new `docs/Final_Report.tex` (IEEEtran journal-class, hand-authored, ~1.5–2.5K lines including auto-generated tables) → `artifacts/Final_Report.pdf`. Contains abstract, methodology, full results (Phase A/B/C tables + 6 per-(model, dataset) Phase C heatmaps), discussion of v2 findings, references in BibTeX. Supersedes the markdown-pdf [`artifacts/Final_Exp.pdf`](artifacts/Final_Exp.pdf) as the canonical publishable artifact.
 
 ---
 
 ## 3. Non-Goals
 
-- **NG1.** No multi-GPU or DDP. Single RTX 5070, sequential cells.
-- **NG2.** No new degradation axes, no new dataset, no new model family. The 186-cell matrix shape is locked by [`src/experiments/cells.py`](src/experiments/cells.py).
-- **NG3.** No live ensembling, no test-time augmentation, no model-soup post-processing — the campaign measures *training-time* robustness only.
-- **NG4.** No paper figures, no LaTeX, no poster export in this PRD — synthesis is a downstream PRD (post-Phase-C).
-- **NG5.** No reading/copying of `*.ckpt`/`*.pt`/`*.pth` (CLAUDE.md "Weight Privacy"). The loop produces them locally and never stages them.
-- **NG6.** No `--mode pilot` against `--plan final`. The existing assertion in [`run_all_phases.py`](run_all_phases.py) blocks the combination.
-- **NG7.** **No native-resolution TransNeXt path.** The 32×32 / 28→32-pad variants and the asymmetric-resolution insurance trial were ruled out 2026-05-13. The matrix denominator is 186 (no insurance trial outside it).
+- **No re-tuning** of `artifacts/best_hparams/*.json`. The priors-anchored Optuna winners were tuned at L3 Moderate on v1 pipeline; the v2 fix changes the noise *spatial structure* but not its *severity envelope*, and the winners remain the operator-locked frozen set. Re-tuning is explicitly deferred to a future US.
+- **No model swaps** or architecture changes. ResNet50 / DenseNet121 / TransNeXt-tiny stay.
+- **No new datasets.** CIFAR-10 + MNIST remain the only two.
+- **No blur or saturation pipeline changes.** Blur stays post-upsample (kernels were calibrated for 224); saturation stays pre-downsample (RGB-correct luminance computation). Only noise and S&P move.
+- **No v1 archive.** Operator declined archival 2026-05-20; v1 metrics for the 90 cells are overwritten and exist only in git history.
 
 ---
 
-## 4. The Reset Protocol — DONE 2026-05-12 (legacy US-040)
+## 4. Pipeline v2 Specification
 
-Optuna DB and pre-5070 `best_hparams/*.json` archived to `*.pre-5070.bak` / `_archive_pre_5070/` (paths preserved as comparison witnesses); `Final_Exp.json` / `.html` / `validation/` rebuilt empty-but-valid; priors + lock file untouched. Operator runbook: [`scripts/reset_state.py`](scripts/reset_state.py).
-
----
-
-## 5. Environment & Architecture Specs
-
-### 5.1 RTX 5070 (12 GB GDDR7) — CUDA Workspace
-
-| Setting | Value | Reason |
-|---|---|---|
-| CUDA toolkit | 12.8+ | sm_120 (Blackwell) is exposed only on cu128 wheels. |
-| PyTorch wheel | `torch==2.11.* +cu128` | First wheel index with RTX 5070 support. Lock via `pip install --index-url https://download.pytorch.org/whl/cu128`. |
-| TF32 (matmul / cudnn) | `True` / `True` | Free 1.3× throughput on FP32 paths; trains within the convergence-quality envelope per the determinism gate (MSE = 0 across runs, validated post-toggle). |
-| `cudnn.benchmark` | `True` (training) | All cells have fixed input shape (224×224 after upsample); autotuner picks once and caches. |
-| `cudnn.deterministic` | `False` (training), `True` (val) | Determinism gate runs against val pixels — already byte-identical via per-sample seed offset. Training-time non-determinism is documented as a known design choice. |
-| `precision` | `bf16-mixed` (Blackwell native) | RTX 5070 supports bf16 at sm_120 with no accumulator drift; the prior `16-mixed` (fp16) is retained as fallback. |
-| `torch.compile` | `none` (all models) | TransNeXt's `attention_native` path is uncompilable; the CNN compile path is unvalidated. |
-| Pinned memory + persistent workers | `True` | Removes the 5-15% per-epoch dataloader stall measured on the 4050. |
-| `CUDA_LAUNCH_BLOCKING` | unset | Set to `1` only when debugging OOM. |
-| `PYTORCH_CUDA_ALLOC_CONF` | `max_split_size_mb:512,expandable_segments:True` | Reduces fragmentation under TransNeXt's bursty allocation. |
-| VRAM headroom budget | 1.5 GB reserve | Leaves room for the `cudnn.benchmark` autotuner + a single fallback batch retry on OOM. |
-
-### 5.2 Batch Sizing (224×224, uniform)
-
-| Model | Default batch | OOM-fallback batch |
-|---|---|---|
-| ResNet50 | 32 | 16 |
-| DenseNet121 | 32 | 16 |
-| TransNeXt-tiny  | 32 | 16 |
-
-Batch 32 is the project's locked default per CLAUDE.md. If a `(model, dataset)` pair OOMs at 32, the bootstrap probe in [`scripts/setup_gpu_env.py`](scripts/setup_gpu_env.py) re-tries at 16 with grad-accum 2 so the effective batch stays 32. The winning batch is frozen into `artifacts/best_hparams/{m}_{d}.json` under `effective_batch_size`. Subsequent cells of the same `(model, dataset)` pair don't re-probe. Peak VRAM for TransNeXt-tiny at batch 32 / 224×224 is ~7 GB (vs ~9 GB for the retired `transnext_small` and ~11 GB for `transnext_base`), so the OOM-fallback path is very unlikely to fire on the 12 GB RTX 5070.
-
-### 5.3 TransNeXt 224×224 — Un-quarantine (replaces the V3 native plan)
-
-The vendored upstream TransNeXt assumes a 224×224 input with `patch_size=4`. The project's data pipeline already upsamples CIFAR (32) / MNIST (28) → 224 via bicubic, so TransNeXt receives 224×224 tensors end-to-end. Pretrained checkpoint loading is exact (no shape mismatch, no random-init of position embeddings or CPB MLPs).
-
-| Variant | `img_size` | `patch_size` | `embed_dims` | `depths` | Approx params | Approx peak VRAM @ batch 32 / 224×224 |
-|---|---|---|---|---|---|---|
-| `transnext_micro` | 224 | 4 | [48, 96, 192, 384] | [2, 2, 15, 2] | ~12 M | ~5 GB |
-| `transnext_tiny`  | 224 | 4 | [72, 144, 288, 576] | [2, 2, 15, 2] | ~28 M | ~7 GB |
-| `transnext_small` | 224 | 4 | [72, 144, 288, 576] | [5, 5, 22, 5] | ~50 M | ~9 GB |
-| `transnext_base`  | 224 | 4 | [96, 192, 384, 768] | [5, 5, 23, 5] | ~89 M | ~11 GB |
-
-`transnext_tiny` is the canonical campaign variant (swapped from `transnext_small` by US-016 on 2026-05-14 for tighter capacity match to ResNet50 ~25M and ~310 GPU-h saved across the 62 TransNeXt rows vs small — see §12 D9; predecessor base→small swap was US-004 same day, see §12 D8). The matrix's `MODELS` tuple in [`src/experiments/cells.py`](src/experiments/cells.py) is `("resnet50", "densenet121", "transnext_tiny")`. Other sizes (`micro`, `small`, `base`) are reachable via the wrapper for ad-hoc smoke tests but are not part of the 186-cell denominator.
-
-Implementation lives in [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py). The wrapper's `_TRANSNEXT_SPECS` dict carries all four upstream architecture rows (micro / tiny / small / base) — no `_native` aliases, no `default_*` overrides. The training mode is **full-FT with differential LR** (head 5e-4, backbone 5e-5), matching the CNN convention and the CLAUDE.md training table.
-
-Acceptance for the un-quarantine: [`src/tests/test_quarantine_transnext.py`](src/tests/test_quarantine_transnext.py) asserts (a) `is_quarantined` is a permanent no-op, (b) `iter_cells()` dispatches all 186 (62 TransNeXt + 124 CNN), (c) `tune_all`'s default sweep includes `transnext_tiny`, (d) `run_final_plan --dry-run --model transnext_tiny` resolves a 224-shape CellSpec.
-
----
-
-## 6. Autonomous Logic — The RALPH Loop
-
-### 6.1 Sequential Execution Order
-
-The 186 cells are executed in a fixed, dependency-ordered sweep. The order is encoded by [`src/experiments/cells.py:iter_cells()`](src/experiments/cells.py) (already torch-free; no edit needed). The RALPH loop driver — `scripts/run_ralph_loop.py` (new, see §8 user stories) — iterates this generator and dispatches each cell through `run_systematic.run_cell()`.
+**File of record:** [src/data/degrade.py:degrade_image](src/data/degrade.py) (refactored 2026-05-20 as part of US-017).
+**Pipeline-version constant:** `src.data.degradation_levels.PIPELINE_VERSION = 2`.
 
 ```
-Phase A  (6 cells)   ─► clean baselines        ─► no tuning required
-Phase B  (30 cells)  ─► combined degradation   ─► tuned at L3 (Stage 1 + 1.5)
-Phase C  (150 cells) ─► single-axis isolation  ─► reuses Phase B winners
+Original ([C, H, W], H/W ∈ {32, 28})
+   ↓ Saturation lerp:  (1−s)·gray + s·img            ← at native resolution
+   ↓ Downsample to low_res (bilinear)                 ← skipped if low_res == out_size
+   ↓ Additive Gaussian noise (at low_res)             ← v2 MOVED HERE
+   ↓ Salt-and-pepper noise (at low_res)               ← v2 MOVED HERE
+   ↓ Upsample to out_size = 224 (bicubic)
+   ↓ Gaussian blur (separable conv, kernels calibrated for 224×224)
+   ↓ Clamp [0, 1]
+   → ImageNet normalization (in the DataModule, unchanged)
+Model input (224×224×3)
 ```
 
-Per-cell timeline:
+**Identity rules (unchanged from US-003, 2026-05-14):**
+- `low_res = 224` → downsample skipped; upsample still runs to bring native 32/28 input up to 224.
+- `blur_kernel ≤ 1` → blur skipped.
+- `gaussian_noise_std = 0` → noise step skipped.
+- `salt_pepper = 0` → S&P step skipped.
+- `saturation = 1.0` → lerp skipped.
 
-1. **Probe.** Re-read `artifacts/best_hparams/{m}_{d}.json`. Crash if missing for Phase B/C cells (Phase A reads paper-defaults).
-2. **Plan.** Compute `DegradeConfig` via [`degradation_levels.py:level_params`](src/data/degradation_levels.py); confirm SHA against `metrics.json.degradation_levels_hash` of any sibling cell (drift detector).
-3. **Train.** `Trainer.fit` with the locked protocol — 60 epochs, patience 10, monitor val_acc, gradient clip 1.0, AdamW + cosine, 224×224.
-4. **Score.** `_measure_image_quality_for_cell` writes `image_quality.json`; `HistoryJSONCallback` flushes `history.json`.
-5. **Diagnose.** The RALPH guard reads `metrics.json` and the last 10 entries of `history.json`. If the pathology matrix (see §6.3) triggers, mark the cell **needs-Full-FT** and write `runs/final/<tag>/NEEDS_FULL_FT` sentinel — do **not** re-run inline; queue it for the post-phase remediation pass.
-6. **Refresh.** `scripts/refresh_trackers.py --cell <tag>` patches the single row in `Final_Exp.json`; dashboard auto-polls.
-7. **Advance.** Next cell.
+**Determinism contract preserved:** per-sample local `torch.Generator` seeded by `idx + SEED_OFFSET_*`; moving the noise/S&P consumers earlier in the function changes the number of random draws (low_res² vs out_size²) but the per-seed reproducibility still holds. Gate: [src/tests/test_degradation_determinism.py](src/tests/test_degradation_determinism.py) — five checks: intra/inter/batch/histogram equality, train/val disjointness, and the v2-specific `_check_v2_noise_is_pre_upsample` invariant (lag-1 autocorrelation > 0.5).
 
-A SIGINT mid-cell still drops `runs/final/<tag>/INTERRUPTED` (US-016 contract preserved). On loop resume, `run_ralph_loop.py --skip-existing` re-attempts INTERRUPTED cells and skips Complete ones.
+**Seed contract (load-bearing for the research — operator-locked 2026-05-20):**
+- The **same `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants** used by v1 carry forward verbatim into v2. `degrade_image(idx, ...)` for a given `(idx, split)` must consume randomness from a `torch.Generator` seeded by `idx + SEED_OFFSET_*` — exactly as in v1. No additional global RNG draws may be introduced between the per-sample seed and the noise/S&P calls.
+- v1↔v2 are pixel-incomparable (different number of draws at different stages — see §4 above), but **within v2** the seed contract guarantees: (a) the *same `idx`* always produces the *same noise pattern* across re-runs, dataloader-worker counts, and machine restarts; (b) train/val seeded sample sets remain disjoint; (c) shuffling `idx` order does not change per-sample noise.
+- Owner: DATA_ARCHITECT (per agent spec: "index-based seeding contract"). Any change here is P0 and MUST be blocked by VALIDATOR.
+- Gate: the existing `test_degradation_determinism.py` five-check suite (MSE = 0 intra/inter on val for both datasets) is the byte-level proof that the seed contract holds under v2.
 
-### 6.2 Mandatory Optuna HPO Stage (per `(model, dataset)` pair)
-
-Source-of-truth for the search space: the **`papers/`** directory. The priors loader at [`tune_all.py:load_priors`](tune_all.py) already enforces a **decade bound** (`MAX_LOGUNIFORM_RATIO = 100`) so no axis can drift more than one order of magnitude from the paper's reported value. No "blind" exploration is permitted.
-
-Per pair:
-
-- **Stage 1 — Fast Rank.** 20 Optuna trials at proxy budget (5 epochs, 2k train / 1k val subsets). Pruner: median pruner with patience 2. Cost ≈ 90 GPU-min on the 5070.
-- **Stage 1.5 — Top-3 Validate.** [`scripts/validate_top3.py`](scripts/validate_top3.py) pulls the top 3 trials by Stage-1 val_acc and re-trains each at the production protocol (60 epochs, patience 10, full train/val). The best-by-converged-val_acc wins and is frozen with `validated_at_full_convergence: true`. Cost ≈ 180 GPU-min per pair.
-
-Coverage: **6 pairs** (resnet50, densenet121, transnext_tiny) × (cifar10, mnist) = 6 winner JSONs at `artifacts/best_hparams/{m}_{d}.json`.
-
-Acceptance: every JSON includes `lr_head`, `lr_backbone`, `weight_decay`, `label_smoothing`, `batch_size`, `effective_batch_size`, `study_name`, `best_value`, `n_trials_completed` ≥ 18, `priors_file_hash`, `validated_at_full_convergence: true`.
-
-### 6.3 Scientific Self-Correction Protocol
-
-The RALPH guard inspects each completed cell and decides between three outcomes:
-
-| Verdict | Triggers (any one is sufficient) | Remediation |
-|---|---|---|
-| **Healthy** | • `best_val_acc` within 5pp of the L3 sweep's median for the pair, **and**<br>• `epochs_run` ≤ 55 (i.e. converged before max-epochs cap), **and**<br>• `val_acc[-1] - val_acc[-5]` ≥ -0.5pp (no late-stage divergence), **and**<br>• `train_acc - val_acc` < 12pp at best-epoch (generalization gap) | None. Mark **Complete**. |
-| **Failed Convergence** | • `best_val_acc` < 1.3× `random_baseline` (i.e. < 13% on 10-class), **or**<br>• `epochs_run` == `max_epochs` AND val_acc still rising at +0.3pp/epoch (under-trained: hit the cap), **or**<br>• loss is NaN/Inf in `history.json` after epoch 2 | Re-run **once** under **Full FT** (see §6.4) with `lr_head` ÷ 3, `weight_decay` × 1.5, `label_smoothing` += 0.05 (capped at 0.15). |
-| **Overfitting** | • `train_acc - val_acc` ≥ 18pp at the best-val epoch, **or**<br>• val_acc peaks before epoch 15 AND then drops > 4pp from peak over the next 10 epochs, **or**<br>• `best_val_acc - val_acc[-1]` > 6pp (i.e. early-stop fired but the drift is large enough to suggest spurious peak) | Re-run **once** under **Full FT** with `lr_backbone` ÷ 2, `weight_decay` × 2, `dropout` += 0.1 (cap 0.3), `mixup_alpha` = 0.2 if not already set. |
-
-**Each cell is re-runnable at most once.** A second failure leaves the cell with a `runs/final/<tag>/QUARANTINED_AFTER_RETRY` sentinel and a `metrics.json.remediation_attempted: "full_ft", final_status: "failed_after_retry"` field — the dashboard renders it as Failed with a quarantine tooltip; the row is excluded from headline accuracy curves but kept in the 186 denominator (mirroring the US-014 deferral convention).
-
-### 6.4 "Full FT" Switch
-
-For cells already trained under differential-LR full FT (the default for every model at 224×224), the Full FT retry switch:
-
-1. Re-uses `freeze_backbone = False` (already set) and tightens the differential ratio: `lr_backbone = lr_head / 10`.
-2. Disables label smoothing for the retry (`label_smoothing = 0.0`) on the **Failed Convergence** branch only; preserves on **Overfitting**.
-3. Re-uses the Optuna-winner `batch_size` and `effective_batch_size` — does not re-probe VRAM.
-4. Writes the modified config snapshot to `runs/final/<tag>/retry_config.json` so the retry's `metrics.json` is round-trip-comparable to the original.
-5. Emits a one-line entry to `progress.txt`: `RALPH retry <tag> reason=<failed_convergence|overfitting> full_ft=true`.
-
-### 6.5 Loop Termination
-
-The loop terminates cleanly when:
-
-- All 186 rows in `Final_Exp.json` show `status ∈ {Complete, Failed}`, AND
-- The end-of-phase verify story (US-014, was US-047) confirms `complete + failed == 186`, AND
-- The single per-phase boundary push has succeeded (`sync_trackers_git push_ok=True`).
-
-A SIGINT at any point leaves the on-disk state safely resumable per the fail-soft contract inherited from [PHASE_B_RUN.md §5](PHASE_B_RUN.md).
+**v1 vs v2 incomparability:** the level *values* in `DEGRADATION_LEVELS` are unchanged, but the *order of operations* differs. For any cell with `noise_std > 0` OR `salt_pepper > 0`, v1 and v2 metrics are NOT directly comparable. The 90 invalidated cells are exhaustively re-run under v2; the remaining 96 are unaffected because the moved steps are no-ops at their identity values.
 
 ---
 
-## 7. Technical Constraints & Guardrails (THz Protocol)
+## 5. Environment & Hardware
 
-- **Deterministic Integrity.** Per-sample seeded degradation (`seed = idx + SEED_OFFSET_VAL`) gives byte-identical val pixels at out_size=224 (MSE = 0). The reset of [`src/data/degradation_levels.py`](src/data/degradation_levels.py) on 2026-05-12 (severity bump) is itself a determinism event — the gate must re-pass with the *new* table before any 5070 cell is launched. The hash recorded in every `metrics.json.degradation_levels_hash` will rotate; cross-batch comparisons across the table change are explicitly disallowed.
-- **Weight Isolation.** No story below opens a weight binary. `runs/final/**`, `artifacts/optuna_thz.db`, `artifacts/weights/` remain gitignored + claudeignored. Verified by [`src/tests/test_sync_trackers_git.py`](src/tests/test_sync_trackers_git.py) and [`src/tests/test_ignores.py`](src/tests/test_ignores.py).
-- **The 5x5 Matrix.** Phase B uses all 5 axes at one level; Phase C pins 4 axes to L1 and varies one. Single source of truth: [`degradation_levels.py:level_params`](src/data/degradation_levels.py) (severity-bumped 2026-05-12).
-- **Metric Synthesis.** Every cell produces `(best_val_acc, PSNR_mean ± std, SSIM_mean ± std)`; PSNR/SSIM is auto-written by `_measure_image_quality_for_cell` (US-016).
-- **Convergence-First.** 60 epochs / patience 10 / monitor val_acc. Frozen in CLAUDE.md. `run_all_phases.py` rejects `--mode pilot` against `--plan final`.
-- **Git/Sync Hygiene.** Tracker writes through [`scripts/refresh_trackers.py`](scripts/refresh_trackers.py); commits through [`scripts/sync_trackers_git.py`](scripts/sync_trackers_git.py) (FORBIDDEN_FLAGS = `{--force, --no-verify, -f, -i}` enforced). One per-phase boundary push.
-- **Uniform 224×224.** Every cell — CNN or TransNeXt — uses `out_size=img_size=224`, `patch_size=4`, `pretrain_size=224` (TransNeXt only). No native-resolution branch exists in the code. Verified by `test_degradation_determinism` (single-group invariants) and the matrix's `CellSpec` defaults.
-- **Plan-Mode Authority.** Per AGENTS.md, MASTER approval is required before any code change. This PRD itself is the approval submission.
+Unchanged from v1 PRD. The RTX 5070 / cu128 / bf16-mixed setup section is preserved verbatim in [README.md](README.md) §"Hardware Setup — RTX 5070" and applies to all v2 work. No env regressions expected; the v2 refactor is a pure Python-level reordering with no new dependencies.
+
+**Reproducibility audit trail:** add a `pipeline_version` field to `runs/final/<tag>/metrics.json` (write-side in the Lightning training callback) so v1 vs v2 cells can be filtered programmatically. Concretely: import `from src.data.degradation_levels import PIPELINE_VERSION` and emit `metrics["pipeline_version"] = int(PIPELINE_VERSION)` alongside the existing `degradation_levels_hash` documentary field. Backfill is not required for the 90 re-run cells (they will be overwritten); the 96 non-re-run cells get a one-time `pipeline_version` patch via `scripts/update_final_exp.py` if desired (cosmetic only).
 
 ---
 
-## 8. Implementation Plan (User Stories)
+## 6. RALPH Loop (carried over from v1)
 
-Numbering: legacy US-040…US-043 (DONE/CLOSED 2026-05-12 ⇒ 2026-05-13) are listed as one-line stubs; the active series is the renumbered US-001…US-014 below.
-
-### Legacy (closed) — historical reference only
-
-- **US-040** — State Reset: Optuna DB + pre-5070 `best_hparams` archived; trackers rebuilt empty; priors + lock preserved. **DONE 2026-05-12**.
-- **US-041** — RTX 5070 cu128 bootstrap + bf16 smoke test + lock re-freeze; determinism gate green at out_size=224. **DONE 2026-05-12**.
-- **US-042** — TransNeXt 224×224 un-quarantine: four upstream `_TRANSNEXT_SPECS` rows only (no `_native` aliases, no `mnist_pad_to_32`); test_quarantine_transnext + test_degradation_determinism green. **DONE 2026-05-12**.
-- **US-043** — Optuna tune `resnet50 × {cifar10, mnist}`: both winner JSONs frozen with `validated_at_full_convergence: true` (cifar10 best=0.5624 trial #2; mnist best=0.8660 + Stage 1.5). **CLOSED 2026-05-13**.
+§6.1 (RALPH iteration shape), §6.2 (single-GPU sequential by design), §6.3 (pathology guard — overfit / underfit / divergence detectors), and §6.4 (single retry pass with `wd × 2`, `dropout = 0.1`, `backbone_lr ÷ 20`) are unchanged from the v1 PRD. The v1 §6.4 13-retries-all-declined empirical history (operator declined all 13 retry deltas across the v1 campaign; zero improved cells) carries the same operational lesson into v2: surface every flagged cell to operator and do **not** auto-accept the retry.
 
 ---
 
-## 8.bis Renumbering (2026-05-13, extended 2026-05-14, US-016 added same day)
+## 7. Constraints & Guardrails
 
-The remaining 4 open stories (legacy US-044…US-047) were **renumbered to a fresh US-001…US-014 series** on 2026-05-13. On 2026-05-14 a new **US-004 (TransNeXt base→small variant swap)** was inserted (all subsequent stories shifted forward by one to US-001…US-015). Later the same day a follow-up **US-016 (TransNeXt small→tiny variant swap)** was appended after the in-flight `transnext_small_cifar10_L3` Stage 1 anchor data point showed 57.8 min/trial, prompting a tighter capacity match to ResNet50 ~25M. US-002 was retargeted in-place twice in one day: first `transnext_base` → `transnext_small` (US-004), then `transnext_small` → `transnext_tiny` (US-016). Legacy IDs in the dependency diagram (§10) and commit history are preserved for traceability; the new IDs are authoritative for all tracker rows and commit messages from 2026-05-13 onward.
+Carried over from v1: weight-privacy contract (gitignore + claudeignore + `scripts/check_ignores.sh`); `pl.seed_everything(42, workers=True)` reproducibility lock; `--plan final --mode pilot` assertion; the fair-comparison invariant (same protocol, same dataset, same degradation across all three models).
 
-| New | Legacy | Title |
-|---|---|---|
-| US-001 | US-044 | Close densenet121 Optuna tune (Stage 1.5 mnist remaining) |
-| US-002 | US-045 | **transnext_tiny** Optuna tune (cifar10 + mnist) — *retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day* |
-| US-003 | (new) | Phase C single-axis correction — inactive axes → identity (0/no-op) |
-| US-004 | (new 2026-05-14) | TransNeXt **base→small variant swap** (in-place repo retargeting: matrix tags, priors, tests, docs) |
-| US-005 | US-046 (infra) | RALPH Loop Driver Framework — `scripts/run_ralph_loop.py` + pathology guard + retry pass + tests |
-| US-006 | US-046 (split) | Phase A execution — resnet50 × {cifar10, mnist} (2 cells) + analysis halt |
-| US-007 | US-046 (split) | Phase A execution — densenet121 × {cifar10, mnist} (2 cells) + halt |
-| US-008 | US-046 (split) | Phase A execution — transnext_tiny × {cifar10, mnist} (2 cells) + halt |
-| US-009 | US-046 (split) | Phase B execution — resnet50 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-010 | US-046 (split) | Phase B execution — densenet121 × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-011 | US-046 (split) | Phase B execution — transnext_tiny × L1…L5 × {cifar10, mnist} (10 cells) + halt |
-| US-012 | US-046 (split) | Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-013 | US-046 (split) | Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-014 | US-046 (split) | Phase C execution — transnext_tiny × 5 axes × L1…L5 × {cifar10, mnist} (50 cells) + halt |
-| US-015 | US-047 | End-of-Campaign verification + 3 phase-boundary pushes (Phase A / B / C) |
-| US-016 | (new 2026-05-14) | TransNeXt **small→tiny variant swap** (in-place repo retargeting: matrix tags, priors, tests, docs) |
+**New (US-017 onward):** *artifact-freshness rule.* After every RALPH pass that touches one or more cells, the operator MUST regenerate [Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf), and the affected `artifacts/dashboard_thumbs/<tag>.png` files before opening the next pass. Drift between `runs/final/` and these artifacts is forbidden and detectable via `python scripts/update_final_exp.py --check`.
 
-Cell-denominator unchanged: 6 + 30 + 150 = 186.
+**New (US-019B onward):** *visual pre-flight gate.* Before ANY of the 90 v2 training runs are dispatched (US-020/021/022), the affected 90 `artifacts/dashboard_thumbs/<tag>.png` files MUST be re-rendered against the v2 pipeline and reviewed by the operator. Burning ~53 GPU-h on a subtly-wrong pipeline is the failure mode this gate prevents. See US-019B for the protocol.
+
+**New (US-017 onward):** *seed-stability invariant.* The `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants in [src/data/degrade.py](src/data/degrade.py) are frozen for the entire v2 campaign. Any PR that touches those constants, the per-sample `torch.Generator` construction, or the global RNG state in `degrade_image` is rejected automatically (DATA_ARCHITECT owns, VALIDATOR gates).
+
+**Multi-agent protocol (carried over from v1).** Every code-touching US is dispatched through MASTER (see [agents/MASTER.md](agents/MASTER.md)). MASTER reviews the plan, delegates to the named sub-agent per their `agents/<NAME>.md` scope, and VALIDATOR signs off before LIBRARIAN/SYNCHRONIZER synchronize the narrative artifacts. The owner column in §8 is binding — agents may not write outside their declared file-system scope without a MASTER scope-extension note in the US.
 
 ---
 
-## 8.5 Agent Integration Matrix
+## 8. User Stories (v2 active set)
 
-Every open story carries a fixed contract over the 12 agent specs in [`agents/`](agents/). The matrix below lists which agents are active per story; full role definitions live in each `agents/<NAME>.md` file.
+Ten stories, dependency-ordered. US-017 and US-018 are already closed in the current session (2026-05-20) and listed here for completeness. US-019 through US-025 are unstarted and will be executed in a follow-up RALPH session. **Every owner below is a sub-agent defined in [agents/](agents/);** MASTER dispatches each US per [agents/MASTER.md](agents/MASTER.md).
 
-| US | MASTER | DATA_ARCHITECT | OPTIMIZER | EXECUTOR | DEBUGGER | VALIDATOR | REPORTER | LIBRARIAN | SYNCHRONIZER | NOTEBOOKLM_SYNC | DESIGNER | SECURITY |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| US-001 | approve | — | tune | run | triage | sign-off | — | — | — | — | — | — |
-| US-002 | approve | — | tune | run | triage | sign-off | — | — | — | — | — | — |
-| US-003 | approve | **owns** | — | — | — | gate | — | docs | — | sources | dashboard tag rename | — |
-| US-004 | approve | **owns matrix** | validates priors decade-bound | — | — | dry-run + test_quarantine | — | CLAUDE.md + README | — | sources | dashboard model-tag refresh | — |
-| US-005 | approve | gate Phase C | — | **owns driver** | hook + log | pathology fixture | — | — | — | — | — | — |
-| US-006…US-014 | approve | — | — | **owns runs** | first-responder | sign-off | **summary doc** | **docs/<phase>.md** | — | sources | dashboard graph | — |
-| US-015 | approve | — | — | — | — | final reproducibility | — | final docs | **3 pushes** | sources | — | leak audit |
-
-Activation rules:
-
-- **MASTER**: Plan-Mode review at the start of every US; arbitrates DEBUGGER ↔ OPTIMIZER conflicts; signs off on LIBRARIAN doc changes.
-- **DATA_ARCHITECT**: owns `src/data/` and `src/experiments/`. Primary deliverable on US-003 (Phase C single-axis correction) and US-004 (TransNeXt base→small swap — owns the `MODELS` tuple in [`cells.py`](src/experiments/cells.py)). Re-validates the determinism gate after US-003 lands.
-- **OPTIMIZER**: re-reads `papers/` if a Stage 1.5 winner blows the decade bound on US-001/US-002. Validates the `transnext_small.json` priors mirror on US-004 (every distribution must still hit the decade bound — same band as the retired `transnext_base.json` since priors are paper-derived, not architecture-derived).
-- **EXECUTOR**: exclusive holder of `python scripts/run_ralph_loop.py …` invocations. Never edits source.
-- **DEBUGGER**: hooked into the driver via `on_cell_failure(tag, traceback) → runs/final/<tag>/debugger.log`. 3-attempt cap per cell.
-- **VALIDATOR**: runs determinism gate + reproducibility re-runs; gates promotion to "Complete".
-- **REPORTER**: writes `artifacts/reports/<phase>_<model>_summary.md` at the close of every execution US (US-005…US-013).
-- **LIBRARIAN**: updates `docs/<phase>.md`, `README.md` "Best Results So Far", `CLAUDE.md` result tables after every validated US.
-- **SYNCHRONIZER**: enforces tracker-pathspec-only pushes at US-014 phase boundaries; flags stale sources mid-campaign.
-- **NOTEBOOKLM_SYNC**: refreshes the THz Project notebook after every closed US.
-- **DESIGNER**: extends `src/tools/build_final_dashboard.py` once in US-003 (Phase C tag/labels) and again in US-005 (per-US trend graph).
-- **SECURITY**: final leak audit at US-014; gates the 3 pushes.
+| Story | Title | Owner (sub-agent) | Status |
+|---|---|---|---|
+| **US-017** | Pipeline v2 refactor + new invariant test | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) | ✅ **closed 2026-05-20** |
+| **US-018** | PRD v2 authoring (this document) | [MASTER](agents/MASTER.md) | ✅ **closed 2026-05-20** |
+| **US-019** | RALPH loop `--axes` filter patch (+ bundled `render_cell_thumbs` `--phase`/`--axes`) | [OPTIMIZER](agents/OPTIMIZER.md) (MASTER-approved scope extension to `scripts/run_ralph_loop.py` and `src/tools/render_cell_thumbs.py`) | ✅ **closed 2026-05-20** |
+| **US-019B** | **v2 degradation thumbnail preview (operator visual gate)** | [DESIGNER](agents/DESIGNER.md) (renders) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (verifies seed/noise structure) | ⏳ pending |
+| **US-020** | Phase B re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) (runs) + [DEBUGGER](agents/DEBUGGER.md) (on failure) + [VALIDATOR](agents/VALIDATOR.md) (gate) | ⏳ pending |
+| **US-021** | Phase C `noise` axis re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-022** | Phase C `salt_pepper` axis re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-023** | Post-campaign content sync (README + Final_Exp_Report.md + progress.txt) | [SYNCHRONIZER](agents/SYNCHRONIZER.md) + [LIBRARIAN](agents/LIBRARIAN.md) + [REPORTER](agents/REPORTER.md) | ⏳ pending |
+| **US-024** | IEEEtran scientific report (`docs/Final_Report.tex` → `artifacts/Final_Report.pdf`) | [REPORTER](agents/REPORTER.md) (LaTeX/prose, owns `docs/`) + [DESIGNER](agents/DESIGNER.md) (heatmap tooling under `src/tools/`) | ⏳ pending |
+| **US-025** | Final verification + ship-readiness audit | [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
 
 ---
 
-### US-001: Close densenet121 Optuna tune (legacy US-044) — **CLOSED 2026-05-13**
+### US-017 — Pipeline v2 refactor + new invariant test
 
-**Description:** Complete Stage 1.5 mnist for `densenet121`. Stage 1.5 cifar10 already frozen (trial #10, best_value=0.6024). Re-train top-3 mnist Stage-1 trials at production protocol, pick best by converged val_acc, write `artifacts/best_hparams/densenet121_mnist.json` with `validated_at_full_convergence: true`.
+**Goal.** Move noise + S&P from post-upsample to pre-upsample in `degrade_image`; preserve all other pipeline behavior; gate the change with a new determinism-suite invariant.
 
-**Owner agents:** EXECUTOR (run `scripts/validate_top3.py --model densenet121 --dataset mnist`), VALIDATOR (sign-off on winner JSON shape).
+**Files modified.**
+- [src/data/degrade.py](src/data/degrade.py) — `degrade_image` split downsample/upsample, moved noise + S&P between the two interpolations, updated docstring + step-order comments. Final `clamp(0, 1)` consolidated at function exit.
+- [src/data/degradation_levels.py](src/data/degradation_levels.py) — added `PIPELINE_VERSION: int = 2` constant with v1→v2 rationale comment.
+- [src/tests/test_degradation_determinism.py](src/tests/test_degradation_determinism.py) — added `_check_v2_noise_is_pre_upsample`: builds a constant-0.5 image, runs `degrade_image` with `low_res=8, out_size=224, noise_std=0.2, degradation_type='all'`, asserts (a) residual lag-1 horizontal autocorrelation > 0.5 (proves noise has bicubic-spread structure), (b) byte-identical re-run under same seed (proves determinism preserved).
 
-**Acceptance Criteria:**
-- [x] (cifar10) Stage 1.5 winner JSON present with `validated_at_full_convergence: true`.
-- [x] (mnist) `artifacts/best_hparams/densenet121_mnist.json` written with all required fields (`lr_head`, `lr_backbone`, `weight_decay`, `label_smoothing`, `batch_size`, `effective_batch_size`, `study_name`, `best_value`, `n_trials_completed ≥ 18`, `priors_file_hash`, `validated_at_full_convergence: true`). *(winner trial #2, best_value=0.9192)*
-- [x] `priors_file_hash` round-trips against `tune_all.priors_file_hash("densenet121")`.
-- [x] `progress.txt` line: `US-001: densenet121_mnist winner frozen (best_value=0.9192, trials=20)`.
-- [x] Typecheck passes (`mypy src scripts`); torch-free pytest green. *(21 passed)*
+**Acceptance criteria.**
+- [x] `python -m src.tests.test_degradation_determinism` exits 0 — 5/5 checks green: cifar10@224, mnist@224, lightning cifar10@224, lightning mnist@224, v2-noise-pre-upsample.
+- [x] v2 invariant test reports lag-1 autocorrelation ≥ 0.5 (observed: **0.993**).
+- [x] No regression on the four pre-existing determinism checks (MSE = 0, histograms equal, train/val disjoint).
 
----
-
-### US-002: transnext_tiny Optuna tune (legacy US-045 — retargeted from `transnext_small` by US-016 on 2026-05-14; predecessor base→small swap was US-004 same day) — **CLOSED 2026-05-14**
-
-**Description:** Run Stage 1 (20 trials, 5-epoch proxy) + Stage 1.5 (top-3 at 60-epoch production) for `transnext_tiny` × {cifar10, mnist}. Uses `artifacts/priors/transnext_tiny.json`. cifar10 pair first, mnist second.
-
-The variant was swapped twice on 2026-05-14: `transnext_base` (~89M) → `transnext_small` (~50M) by US-004 for capacity match to ResNet50 / DenseNet121 and dataset size; then `transnext_small` → `transnext_tiny` (~28M) by US-016 for an even tighter capacity match to ResNet50 (~25M) and ~310 GPU-h savings across the 62 TransNeXt rows of the 186-cell campaign. The pre-swap in-flight `transnext_small_cifar10_L3` Stage 1 study (10/20 trials, best=0.6150) was halted; the orphaned study stays in `artifacts/optuna_thz.db` as historical data (no cleanup). Priors band is unchanged across both swaps — `transnext_tiny.json` is a content-mirror of the retired `transnext_small.json` with `"model": "transnext_tiny"` — since LR / WD / warmup decade bounds are paper-derived, not architecture-derived.
-
-**Owner agents:** OPTIMIZER (validates priors against `papers/TransNeXt.pdf` if Stage 1 best blows the decade bound), EXECUTOR, VALIDATOR.
-
-**Acceptance Criteria:**
-- [x] Two winner JSONs: `artifacts/best_hparams/transnext_tiny_cifar10.json`, `…_mnist.json`. Same field set as US-001. *(cifar10 winner=trial#16 best_value=0.7336 — fast-rank-2→full-rank-1 swap; mnist winner=trial#12 best_value=0.9176 — no re-ranking)*
-- [x] `effective_batch_size` populated by the bootstrap probe. Peak VRAM at batch=32 / 224×224 for TransNeXt-tiny is ~7 GB, so the OOM-fallback (batch=16 + grad_accum=2 → effective_batch_size=32) is very unlikely to fire on the 12 GB RTX 5070; still record whichever path succeeds. *(both pairs: effective_batch_size=32; OOM fallback did not fire)*
-- [x] No mid-trial NaN/Inf in the Optuna DB (visible via `optuna.load_study(...).trials`). *(both studies: 20/20 complete, 0 failed, 0 pruned)*
-- [x] `progress.txt`: one line per pair (`US-002: transnext_tiny_<d> winner frozen (best_value=<x>, trials=<n>)`).
-- [x] Typecheck passes; torch-free pytest green. *(pytest 21/21, mypy clean on cells.py + tune_all.py; pre-existing PyTorch-Lightning Literal-precision typing errors in lightning/* unchanged from baseline)*
-
-**Gate to US-005+:** with US-001 mnist + US-002 both closed (and US-004 already closed), all 6 winner JSONs carry `validated_at_full_convergence: true` and the production runs are unblocked.
+**Closed:** 2026-05-20.
 
 ---
 
-### US-003: Phase C single-axis correction (NEW) — **CLOSED 2026-05-14**
+### US-018 — PRD v2 authoring
 
-**Description:** Change Phase C isolation semantics. **Old:** named axis at L<level>, every other axis pinned to **L1 mild** values. **New:** named axis at L<level>, every other axis at **identity (no degradation)**. This isolates each axis cleanly so Phase C results reflect the named axis only.
+**Goal.** Replace v1 PRD with a v2 PRD reflecting the closed 186-cell campaign + the noise-fix follow-up + the new IEEEtran deliverable. v1 PRD content preserved only in git history (commit `3e1d089`).
 
-**Inactive-axis identity values** (operator-confirmed):
+**Acceptance criteria.**
+- [x] [PRD.md](PRD.md) rewritten end-to-end; nine v2 user stories defined; v1 stories US-001..US-016 referenced as "closed; see git history."
+- [x] PRD v2 enumerates pipeline-v2 specification (§4), goals (§2), non-goals (§3), constraints (§7), and an explicit dependency-ordered story map (§10).
 
-| Axis | Identity (inactive) value |
-|---|---|
-| `resolution` (low_res) | 224 (no downsample; matches out_size) |
-| `blur` | kernel=1, σ=0.0 (identity convolution) |
-| `noise` | std=0.0 |
-| `salt_pepper` | prob=0.0 |
-| `saturation` | 1.0 (full color) |
-
-**Owner agents:** DATA_ARCHITECT (primary), DESIGNER (dashboard tag/labels), LIBRARIAN (docs sync), VALIDATOR (re-run determinism gate), NOTEBOOKLM_SYNC (re-upload modified files).
-
-**Files to modify:**
-- [`src/data/degradation_levels.py`](src/data/degradation_levels.py) — `level_params(level, axis=…)` returns identity tuple for inactive axes when `axis` is set.
-- [`src/experiments/matrix.py`](src/experiments/matrix.py) — Phase C `CellSpec.degrade_config` reflects identity inactive axes; `degradation_levels_hash` rotates.
-- [`src/tests/test_matrix.py`](src/tests/test_matrix.py) — **remove** the "Phase C L1 → Phase B L1 collapse (30 cells match)" invariant (no longer holds: Phase B L1 has all 5 axes at L1; Phase C L1 has only one). Replace with: "every Phase C cell has exactly one non-identity axis" + "the non-identity axis matches the cell's `axis` field at the cell's level".
-- [`src/tests/test_degradation_determinism.py`](src/tests/test_degradation_determinism.py) — re-pass at out_size=224 against the new hash.
-- [`src/data/degrade.py`](src/data/degrade.py) — verify `DegradeConfig` handles `low_res=224` no-op, `blur σ=0`, etc.; add identity short-circuits if numerical artifacts emerge.
-- [`src/tools/build_final_dashboard.py`](src/tools/build_final_dashboard.py) — Phase C tile labels reflect "single axis only".
-- [`CLAUDE.md`](CLAUDE.md) — update the Phase C section accordingly.
-- `docs/phase_c.md` (new, via LIBRARIAN) — record the scientific rationale.
-
-**Acceptance Criteria:**
-- [x] `level_params(level=L, axis="noise")` returns inactive axes at identity per the table above. *(IDENTITY_VALUES added to degradation_levels.py)*
-- [x] `build_final_matrix()` still emits 186 cells; Phase C cells have **exactly one** non-identity axis (asserted in `test_matrix.py`). *(`_check_phase_c_isolates_single_axis` — `OK [isolation] all 150 Phase C cells isolate exactly one axis`)*
-- [x] `degradation_levels_hash` in `metrics.json` for any new Phase C cell differs from the prior hash; cross-batch comparisons against pre-US-003 cells are explicitly forbidden in `docs/phase_c.md`. *(forbidden in `docs/phase_c.md` "Consequences" section; no pre-US-003 Phase C run dirs exist on 5070A so no cleanup needed)*
-- [x] `test_degradation_determinism.py` green (MSE=0) at out_size=224 for both cifar10 and mnist against the new table. *(both groups PASS)*
-- [x] CLAUDE.md "Phase C single-axis isolation" line updated to: "named axis at level L, every other axis at identity (no degradation)".
-- [x] LIBRARIAN-owned `docs/phase_c.md` + `README.md` "186-cell plan" reflect the change.
-- [ ] NOTEBOOKLM_SYNC re-uploads `degradation_levels.py`, `matrix.py`, `CLAUDE.md`, `docs/phase_c.md`. *(deferred — NotebookLM MCP not available in this session; queued as follow-up alongside US-001/US-002 closures)*
-- [x] Typecheck passes; pytest green. *(mypy: 3 files no issues; pytest: 21 passed; test_matrix direct: counts/uniqueness/isolation/format all OK)*
+**Closed:** 2026-05-20.
 
 ---
 
-### US-004: TransNeXt base→small variant swap (new 2026-05-14) — **CLOSED 2026-05-14**
+### US-019 — RALPH loop `--axes` filter patch
 
-**Description:** Repo-wide retargeting of the canonical TransNeXt variant from `transnext_base` (~89M params) to `transnext_small` (~50M params). Motivation: capacity-match to ResNet50 (~25M) / DenseNet121 (~8M) — the prior `_base` choice was over-parameterized for CIFAR-10 / MNIST (10K train × 10 classes), and `_small` strengthens the fair-comparison invariant rather than weakening it. Secondary wins: ~40% fewer params → faster per-cell wall time (frees days of GPU time before the 2026-05-31 poster deadline) and ~9 GB peak VRAM at batch 32 / 224×224 (vs ~11 GB for base) so the OOM-fallback path is unlikely to fire on the 12 GB RTX 5070.
+**Goal.** Enable a single-axis subset re-run in [scripts/run_ralph_loop.py](scripts/run_ralph_loop.py) without requiring an explicit tag list. Today the script filters only by `--phase` / `--model` / `--dataset`; we need axis-level granularity for US-021 and US-022.
 
-The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt rows in the matrix stay in the 186 denominator; their tags rotate from `…transnext_base…` to `…transnext_small…`. No prior TransNeXt cell results are invalidated (none ran). US-002 is retargeted in-place by this story (new title: `transnext_small Optuna tune`).
+**Deliverables.**
+- Add `--axes` argument (comma-separated, validated against `src.data.degradation_levels.AXES`).
+- When `--axes` is supplied AND `--phase C` is selected, restrict the dispatched cell tags to those whose axis is in the set.
+- When `--axes` is supplied with `--phase A` or `--phase B`, raise `argparse.ArgumentError` (axes are a Phase C concept).
+- Idempotent: `--skip-existing` still respected.
+- One-line dry-run preview: `python scripts/run_ralph_loop.py --phase C --axes noise --dry-run` prints the 30 tags it would dispatch.
 
-**Owner agents:** DATA_ARCHITECT (owns `MODELS` tuple in [`cells.py`](src/experiments/cells.py)), OPTIMIZER (priors mirror + decade-bound re-validation), VALIDATOR (test_quarantine_transnext + dry-run the matrix), LIBRARIAN (CLAUDE.md + README + PRIORS_SOURCES.md sync), SYNCHRONIZER (no push here — tracker pushes deferred to US-015).
+**Acceptance criteria.**
+- [x] `--phase C --axes noise` dispatches exactly 30 tags (3 models × 2 datasets × 5 levels × 1 axis).
+- [x] `--phase C --axes noise,salt_pepper` dispatches 60 tags.
+- [x] `--phase B --axes noise` raises ArgumentError with a clear message.
+- [x] `--phase C --axes BOGUS` raises ArgumentError listing valid axes.
+- [x] Existing `--phase C` (no `--axes`) behavior unchanged: dispatches all 150.
 
-**Files modified:**
-- [`src/experiments/cells.py`](src/experiments/cells.py) — `MODELS` tuple: `transnext_base` → `transnext_small`.
-- [`tune_all.py`](tune_all.py) — `SUPPORTED_MODELS`: `transnext_base` → `transnext_small`.
-- [`run_all_phases.py`](run_all_phases.py) — `--model` help-text example.
-- `artifacts/priors/transnext_small.json` (new) — mirror of git-resident `transnext_base.json` (the on-disk base file was deleted by operator pre-swap); same paper-derived decade bounds; `"model": "transnext_small"` + a `notes` line documenting the swap rationale and the depth difference (small: `depths=[5,5,22,5]`; base: `depths=[5,5,23,5]`).
-- [`scripts/validate_top3.py`](scripts/validate_top3.py) — `DEFAULT_PAIRS`, `--model choices`.
-- [`scripts/update_final_exp.py`](scripts/update_final_exp.py) — docstring + Final_Exp.md template (also strips the stale post-US-042 "TransNeXt is quarantined" paragraph that was already false; legacy `QUARANTINE_REASON` constant retained for per-cell defensive use).
-- [`src/tests/test_matrix.py`](src/tests/test_matrix.py) — canonical-tag fixtures.
-- [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) — example paths point at the new on-disk priors / weight filenames.
-- [`artifacts/priors/PRIORS_SOURCES.md`](artifacts/priors/PRIORS_SOURCES.md) — file-index + paper-attribution table.
-- [`CLAUDE.md`](CLAUDE.md) — Models table row + Optuna priors path reference.
-- [`README.md`](README.md) — campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting row, model-enumeration table.
-- [`PRD.md`](PRD.md) — §5.2, §5.3, §6.2, §8.bis, §8.5, US-002 retarget, this US-004 insertion, §10 dep map, §11 DoD, §12 D8.
+**Bundled scope (US-019B note):** `src/tools/render_cell_thumbs.py` gained the same `--phase` and `--axes` filters (with the identical Phase-A/B reject and AXES-subset validation), so the US-019B dispatch commands (`--phase B`, `--phase C --axes noise`, `--phase C --axes salt_pepper`) work without touching the renderer again. Filter math verified: Phase B = 30, Phase C noise = 30, Phase C salt_pepper = 30 — exactly the 90 v2-affected cells.
 
-**Files NOT touched (deliberate):**
-- [`src/models/transnext_wrapper.py`](src/models/transnext_wrapper.py) `_TRANSNEXT_SPECS` — keeps all four upstream rows (`micro / tiny / small / base`); the dispatch supports any of them. Only the matrix selects which is canonical.
-- [`src/models/transnext_weights.py`](src/models/transnext_weights.py) `_DEFAULT_URLS` — same: keeps both URLs; the auto-downloader picks the right one based on the requested variant.
-- [`src/lightning/module.py`](src/lightning/module.py) / [`src/runner.py`](src/runner.py) `TRANSNEXT_NAMES` sets — same.
-- `src/models/transnext_official/**` — vendored upstream code; never modified.
-- `docs/prds/archive/**` — historical PRDs preserved verbatim for traceability.
+**Owner:** [OPTIMIZER](agents/OPTIMIZER.md), under a MASTER-approved scope extension to `scripts/run_ralph_loop.py` and `src/tools/render_cell_thumbs.py` (outside OPTIMIZER's default `src/models/` + `src/runner.py` write scope). **Dependencies:** US-017 (pipeline must be v2 before any re-runs are valid).
 
-**Acceptance Criteria:**
-- [x] [`src/experiments/cells.py`](src/experiments/cells.py) `MODELS` tuple ends in `"transnext_small"`. `iter_cells()` emits 62 cell tags whose model component is `transnext_small`. Total still 186.
-- [x] [`tune_all.py`](tune_all.py) `SUPPORTED_MODELS` ends in `"transnext_small"`. *(line 33 updated)*
-- [x] `artifacts/priors/transnext_small.json` exists, parses, mirrors the git-resident `transnext_base.json` schema, decade-bound is preserved on every distribution. *(file written 2026-05-14; band identical to the retired base prior)*
-- [x] All 35 grep hits for `transnext_base` across the live repo classified: 8 production touch-points updated, the rest are intentionally retained (vendored upstream code under `src/models/transnext_official/`, dispatch sets that accept any TransNeXt variant, archived PRDs / progress logs, the quarantine utility's example tag).
-- [x] [`scripts/validate_top3.py`](scripts/validate_top3.py) `DEFAULT_PAIRS` + `--model` choices: `transnext_base` → `transnext_small`. *(line 46, 49, 55, 83)*
-- [x] [`src/tests/test_matrix.py`](src/tests/test_matrix.py) canonical-tag fixture list reflects `transnext_small`. *(line 104, 106, 108)*
-- [x] [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) example paths point at the new on-disk filenames (`transnext_small_224_1k.pth`, `transnext_small.json`). *(weight-privacy contract still green: priors file tracked, weight binary ignored)*
-- [x] [`CLAUDE.md`](CLAUDE.md) "Models" row + Optuna priors path reflect TransNeXt-small as canonical.
-- [x] [`README.md`](README.md) campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting, model table — all reflect TransNeXt-small.
-- [x] [`PRD.md`](PRD.md) renumbering complete: 15 active USs (US-001 … US-015); US-002 body retargeted; new US-004 entry present; old US-004…US-014 are now US-005…US-015 with `transnext_base` → `transnext_small` substitution everywhere; §5.2 / §5.3 / §6.2 / §8.bis / §8.5 / §10 / §11 / §12 reflect the swap; D8 added.
-- [x] `Final_Exp.md` regenerated by `python scripts/update_final_exp.py`; all 62 TransNeXt rows show `transnext_small` in their tags; total still 186; statuses still `Pending` (no run-dir migrations performed). *(verified at US-004 close 2026-05-14; subsequently superseded same day by US-016 rotating tags to `transnext_tiny`)*
-- [x] `artifacts/weights/transnext_small_224_1k.pth` pre-staged via `python scripts/fetch_transnext_weights.py --sizes small` (mandatory — operator deleted the base `.pth` pre-swap; no on-disk fallback). *(present at 199,287,035 bytes; retained on disk per US-016 — dispatch references `transnext_tiny_224_1k.pth` now)*
-- [x] `pytest src/tests` green; `mypy src scripts` green. *(pytest src/tests = 21 passed; mypy on cells.py / tune_all.py / scripts clean — pre-existing duplicate-module errors under vendored `transnext_official/` unrelated to the swap)*
-- [x] `progress.txt`: `US-004 CLOSED: TransNeXt base→small swap landed; cells.py / tune_all.py / priors / PRD all updated; 62 TransNeXt rows pending under new tags.` *(entry recorded at progress.txt line 189 et seq.)*
-
-**Gate to US-005+:** with US-004 closed, US-002 unblocks (retargeted small tune) and US-005 RALPH driver can proceed in parallel. US-006…US-008 (Phase A execution) remain gated on US-002 + US-005.
+**Closed:** 2026-05-20.
 
 ---
 
-### US-005: RALPH Loop Driver Framework (legacy US-046 — infra only)
+### US-019B — v2 degradation thumbnail preview (operator visual gate)
 
-**Description:** `scripts/run_ralph_loop.py` (new) — thin wrapper over `run_systematic.run_cell()` providing (a) sequential dispatch over `iter_cells()` filtered by `--phase`/`--model`/`--dataset`, (b) pathology guard evaluating §6.3 verdicts after each `Trainer.fit`, (c) sentinel writes (`NEEDS_FULL_FT`, `INTERRUPTED`, `QUARANTINED_AFTER_RETRY`), (d) `--remediate-only` second-pass mode under §6.4 Full FT, (e) DEBUGGER hook with 3-attempt cap. **No production runs in this story** — framework + tests only.
+**Goal.** Before any of the 90 GPU re-runs are dispatched, regenerate the affected `artifacts/dashboard_thumbs/<tag>.png` images against the v2 pipeline so the operator can **visually confirm** that the noise/S&P fix produces the expected coarse-grain structure. This is the cheap, single-CPU-pass insurance policy against burning ~53 GPU-h on a subtly-wrong pipeline. The thumbnail renderer ([src/tools/render_cell_thumbs.py](src/tools/render_cell_thumbs.py)) only re-runs `degrade_image` on a fixed grid of sample indices — it does **not** touch model weights or training — so this US is GPU-free and takes minutes, not hours.
 
-**Owner agents:** EXECUTOR (driver), DEBUGGER (hook + log + fix catalog), VALIDATOR (pathology fixture-based test), DATA_ARCHITECT (Phase C gate).
+**Deliverables.**
+- All 90 v2 thumbs re-rendered: 30 `final_B_L{1..5}_{model}_{dataset}.png` + 30 `final_C_L{1..5}_noise_{model}_{dataset}.png` + 30 `final_C_L{1..5}_salt_pepper_{model}_{dataset}.png`.
+- A side-by-side contact sheet `artifacts/validation/v1_vs_v2_thumbs.html` (or `.md`) that pairs each v2 thumb against its v1 counterpart from git history (`git show 3e1d089:artifacts/dashboard_thumbs/<tag>.png`) so the visual diff is one click, not a manual hunt.
+- A short markdown checklist `artifacts/validation/v2_preview_checklist.md` enumerating the **smoking-gun visual expectations** the operator must sign off on:
+  - L5 noise at low_res=3 shows ~74-px blob structure (single low_res samples bicubically spread across 224/3 ≈ 74-px footprints), NOT 1-px white speckles.
+  - L5 salt_pepper at low_res=3 shows large bright/dark blobs in ~9 distinct cells (low_res² = 9 pixels painted at low_res then bicubically spread), NOT 1-px speckles.
+  - L1 thumbs are nearly indistinguishable from v1 (mild noise_std=0.04 with low_res=18 → still fine grain).
+  - Saturation/blur/resolution axes are byte-identical to v1 (sanity check: those 96 cells are unaffected by US-017).
+  - All thumbs deterministic across two re-runs of the renderer (proves the seed contract from §4 holds).
 
-**Acceptance Criteria:**
-- [x] `python scripts/run_ralph_loop.py --plan final --phase A --dry-run` prints the resolved cell dispatch order and exits 0 without launching `Trainer.fit`. *(smoke-tested 2026-05-14 — listed 6 Phase A tags, exit 0)*
-- [x] Pathology guard implements all three §6.3 verdicts. Test fixture in `src/tests/test_ralph_loop.py`:
-  - Synthetic `history.json` with NaN loss at epoch 2 → guard returns `failed_convergence`, writes `NEEDS_FULL_FT`.
-  - Synthetic history with `train_acc − val_acc = 22pp` at best-epoch → guard returns `overfitting`, writes `NEEDS_FULL_FT`.
-  - Healthy history (converged, gap < 12pp, no late drift) → guard returns `healthy`, no sentinel. *(`evaluate_pathology` + `run_dispatch` integration covered; 29/29 fixture tests pass)*
-- [x] `--remediate-only` consumes `NEEDS_FULL_FT` sentinels, builds the Full-FT config per §6.4 (failed_convergence: `lr_head ÷ 3`, `weight_decay × 1.5`, `label_smoothing += 0.05`; overfitting: `lr_backbone ÷ 2`, `weight_decay × 2`, `dropout += 0.1`), writes `retry_config.json`, dispatches via `run_cell()`. Test fixture verifies the config snapshot round-trips. *(`build_retry_config` + `write_retry_config` + `read_retry_config`; round-trip test green)*
-- [x] DEBUGGER hook: on `Trainer.fit` raising `torch.cuda.OutOfMemoryError`, the driver writes `runs/final/<tag>/debugger.log` with the exception fingerprint and applies the first OOM fix from [`agents/DEBUGGER.md`](agents/DEBUGGER.md) (batch ÷ 2 + grad_accum × 2). Stops after 3 failed fix attempts per cell. *(`apply_oom_fix` halves batch + doubles grad_accum; `MAX_OOM_ATTEMPTS=3` cap fixture-verified)*
-- [x] `--skip-existing` reads `runs/final/<tag>/metrics.json.best_val_acc ≥ 0` to skip completed cells; INTERRUPTED cells are re-attempted. *(both branches fixture-covered)*
-- [x] A cell already carrying `QUARANTINED_AFTER_RETRY` is skipped on `--remediate-only` (asserted in test). *(`test_remediate_skips_quarantined`)*
-- [x] `--plan final --mode pilot` rejected via `assert` (CLAUDE.md invariant). *(`test_cli_rejects_plan_final_with_mode_pilot` + manual CLI exit=1)*
-- [x] Typecheck passes; new `src/tests/test_ralph_loop.py` green (torch-free fixtures only). *(mypy on scripts/run_ralph_loop.py + src/tests/test_ralph_loop.py: 0 errors in the new files; 90 pre-existing errors in `run_systematic.py` / `src/lightning/` / `src/runner.py` are out of scope. pytest src/tests = 50/50 ✓)*
+**Pre-flight.**
+1. Confirm `degradation_levels.PIPELINE_VERSION == 2`.
+2. Confirm pytest determinism suite green (US-017 acceptance).
+3. **Do NOT delete** the 90 stale `metrics.json` files yet — that happens in US-020 pre-flight. Only the thumbs are touched here.
 
-**Reuses (do not re-implement):** [`src/experiments/cells.py:iter_cells()`](src/experiments/cells.py), `run_systematic.run_cell()`, [`scripts/refresh_trackers.py`](scripts/refresh_trackers.py), `src/lightning/HistoryJSONCallback`, `_measure_image_quality_for_cell`.
+**Dispatch (CPU-only, no GPU needed).**
+```powershell
+.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase B
+.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase C --axes noise
+.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase C --axes salt_pepper
+.\.venv-gpu\Scripts\python.exe scripts\build_v1_v2_thumb_contact_sheet.py   # new helper
+```
+(The `--axes` flag on `render_cell_thumbs` may need a small patch mirroring US-019; if so, bundle that into US-019's deliverable.)
 
----
+**Acceptance criteria.**
+- [ ] 90 v2 thumbs present on disk and visibly differ from their v1 git-history counterparts on the noise/S&P axes.
+- [ ] 96 unaffected thumbs (Phase A clean + Phase C resolution/blur/saturation) byte-identical to v1 — verified by `git diff --stat artifacts/dashboard_thumbs/` showing changes only on the 90 expected tags.
+- [ ] Contact sheet `artifacts/validation/v1_vs_v2_thumbs.html` opens cleanly and shows all 90 pairs.
+- [ ] **Operator signs `artifacts/validation/v2_preview_checklist.md`** (writes "approved by ib94 YYYY-MM-DD" on the last line and commits). Without this signature, US-020 dispatch is forbidden.
+- [ ] Re-running the renderer with no other changes produces byte-identical PNGs (seed determinism gate).
 
-### US-006: Phase A execution — resnet50 × {cifar10, mnist}
-
-**Description:** Run the 2 ResNet50 Phase A clean baselines (`final_clean_resnet50_cifar10`, `final_clean_resnet50_mnist`) via the US-005 driver. After both complete, REPORTER drafts the summary, VALIDATOR signs off, LIBRARIAN updates `docs/phase_a.md`. **Hard halt** for operator approval before US-007.
-
-**Owner agents:** EXECUTOR, DEBUGGER, VALIDATOR (reproducibility — re-run one cell with seed=43, compare within ±0.5pp), REPORTER, LIBRARIAN, DESIGNER, NOTEBOOKLM_SYNC.
-
-**Acceptance Criteria:**
-- [x] `python scripts/run_ralph_loop.py --plan final --phase A --model resnet50 --skip-existing` completes both cells with `Final_Exp.json.status == "Complete"`. *(both `final_clean_resnet50_{cifar10,mnist}` already show `status: "Complete"` in Final_Exp.json from the legacy 4050 baselines preserved across the reset; `--dry-run` resolves the 2 cells; `--skip-existing` short-circuits at `cell_is_complete` since `metrics.json.best_val_acc ≥ 0`.)*
-- [ ] Each cell has `metrics.json`, `image_quality.json`, `history.json`, and a side-by-side thumb under `artifacts/dashboard_thumbs/<tag>.png`. *(metrics.json + history.json + thumb present for both; `image_quality.json` is intentionally absent — `_measure_image_quality_for_cell` only writes it for Phase B/C cells per `run_systematic.py:407` since Phase A is clean-vs-clean. Criterion conflict noted in `artifacts/reports/phase_a_resnet50_summary.md` — pending operator resolution: relax the criterion text for Phase A, or write a trivial PSNR=∞ / SSIM=1.0 stub.)*
-- [x] Pathology guard verdict for both cells: `healthy`. *(`evaluate_pathology` from `scripts/run_ralph_loop.py` returns `healthy` on the legacy histories: best_val_acc 0.9518 / 0.9914, gap < 12 pp, no NaN.)*
-- [ ] VALIDATOR re-runs `final_clean_resnet50_cifar10` with seed=43 in a side dir; best_val_acc within ±0.5pp of seed=42.
-- [x] REPORTER `artifacts/reports/phase_a_resnet50_summary.md`: (a) val_acc + PSNR + SSIM table for both cells, (b) gap to paper baseline (TResNet paper), (c) NaN/divergence flags, (d) ≤200-word narrative. *(written 2026-05-14; narrative = 139 words; PSNR/SSIM marked N/A with justification; TResNet baseline anchored qualitatively against the ImageNet-pretrained CIFAR-10 fine-tuning band of 96–97 % at 224 input.)*
-- [x] LIBRARIAN updates `docs/phase_a.md` "ResNet50" subsection + README "Best Results So Far" row. *(Iteration 7, 2026-05-15 — `docs/phase_a.md` created with a ResNet50 subsection citing best_val_acc 0.9518 / 0.9914, hparams, pathology=healthy; README "Best Results So Far" section added under Campaign Status with the ResNet50 row.)*
-- [x] DESIGNER adds an "Execution US Trend" section to `Final_Exp.html` for the 2 ResNet50 rows. *(Iteration 8, 2026-05-15 — collapsible `<details class="us-trend-section">` rendered after the stats-bar; `renderExecutionUsTrend` (called from `ingest()`) filters Complete rows by `EXECUTION_US_GROUPS` (US-006…US-014), emits one card per US with ≥ 1 Complete cell, sorts cells clean → L1…L5 with dataset tiebreak. US-006 card shows `cifar10 clean 95.18%`, `mnist clean 99.14%`; US-008 PARTIAL card also surfaces with the 2 transnext_tiny rows; pending USs are skipped silently. Dashboard rebuilt; pytest 50/50 ✓; mypy clean.)*
-- [ ] `progress.txt`: `US-006 CLOSED: resnet50 Phase A — cifar10=<acc>, mnist=<acc>; awaiting operator approval to proceed to US-007.`
-- [ ] **HALT** — do not start US-007 without explicit operator approval.
+**Owner:** [DESIGNER](agents/DESIGNER.md) (owns `src/tools/` per agent spec, renders the contact sheet) with **[DATA_ARCHITECT](agents/DATA_ARCHITECT.md)** verifying the seed contract held end-to-end (lag-1 autocorrelation re-spot-checked on the rendered PNGs). **Dependencies:** US-017, US-019 (the `--axes` filter on the renderer).
 
 ---
 
-### US-007: Phase A execution — densenet121 × {cifar10, mnist}
+### US-020 — Phase B re-run (30 cells)
 
-Same shape as US-006, `--model densenet121`. 2 cells, same deliverable set. **HALT** before US-008.
+**Goal.** Re-run all 30 Phase B cells under pipeline v2, with overwrite-in-place semantics. Each cell trains to convergence under the locked protocol (60 ep / patience 10 / bf16-mixed / AdamW + cosine / paper-anchored hparams from `artifacts/best_hparams/{model}_{dataset}.json`).
 
----
+**Pre-flight (operator-executed before dispatch).**
+1. **HARD GATE — US-019B must be closed with operator signature on `artifacts/validation/v2_preview_checklist.md`.** No dispatch without it.
+2. Delete the 30 stale `runs/final/final_B_L*_{model}_{dataset}/metrics.json` files (and `metrics.csv`, `log.txt`, `history.json` for full hygiene). Keep `best.pt` / `model_last.pt` — they are local-only and will be replaced by the new Lightning run.
+3. Confirm `degradation_levels.PIPELINE_VERSION == 2`.
+4. Confirm pytest determinism suite green (US-017 acceptance).
+5. Confirm `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants unchanged since the v1 campaign (seed-stability invariant, §7).
 
-### US-008: Phase A execution — transnext_tiny × {cifar10, mnist} — **PARTIAL 2026-05-15**
+**Dispatch.**
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase B
+```
 
-Same shape, `--model transnext_tiny`. 2 cells. Closes Phase A. **No SYNCHRONIZER push here** — the Phase A boundary push happens once at US-015. **HALT** before US-009.
+**Post-pass (mandatory artifact refresh — Constraint §7).**
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\update_final_exp.py
+.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase B
+.\.venv-gpu\Scripts\python.exe -m src.tools.build_final_exp_json
+.\.venv-gpu\Scripts\python.exe -m src.tools.build_final_dashboard
+.\.venv-gpu\Scripts\python.exe scripts\build_final_exp_report.py
+.\.venv-gpu\Scripts\python.exe scripts\render_final_exp_pdf.py
+```
 
-**Acceptance Criteria** (mirrors US-006):
-- [x] `python scripts/run_ralph_loop.py --plan final --phase A --model transnext_tiny --skip-existing` completes both cells with `Final_Exp.json.status == "Complete"`. *(both `final_clean_transnext_tiny_{cifar10,mnist}` show `status: "Complete"` after refresh_trackers; runtime cifar10=38.3 m, mnist=89.6 m on the 5070.)*
-- [x] Each cell has `metrics.json`, `history.json`, and a side-by-side thumb under `artifacts/dashboard_thumbs/<tag>.png`. *(history.json carries 15 / 35 epoch entries; thumbs were pre-rendered alongside the other 60 transnext_tiny tags on 2026-05-14; image_quality.json intentionally absent — Phase A clean is identity, see US-006 line 413 note.)*
-- [x] Pathology guard verdict for both cells: `healthy`. *(`evaluate_pathology` returns `healthy` on both: cifar10 best=0.9764 @ ep5 / 15 trained, mnist best=0.9924 @ ep25 / 35 trained; gap < 12 pp, no NaN at epoch ≥ 2.)*
-- [ ] VALIDATOR re-runs `final_clean_transnext_tiny_cifar10` with seed=43 in a side dir; best_val_acc within ±0.5pp of seed=42. *(GPU-gated, deferred to a follow-on Ralph cycle.)*
-- [x] REPORTER `artifacts/reports/phase_a_transnext_tiny_summary.md`. *(written 2026-05-15; narrative = 154 words; cross-model comparison table shows transnext_tiny tops cifar10 by +2.46 pp over resnet50 and +4.08 pp over densenet121; mnist clusters tight at 0.991–0.993.)*
-- [x] LIBRARIAN updates `docs/phase_a.md` "TransNeXt-tiny" subsection + README "Best Results So Far" row. *(Iteration 15, 2026-05-15 — `docs/phase_a.md` TransNeXt-tiny subsection already populated in Iteration 7; this pass added the `transnext_tiny | 0.9764 | 0.9924 | US-008 (PARTIAL — seed=43 re-run pending)` row to README Best Results table and trimmed the trailing note to reference only the still-pending densenet121 row. Outstanding-for-US-008 line in `docs/phase_a.md` updated to drop LIBRARIAN from the pending set.)*
-- [x] DESIGNER adds an "Execution US Trend" section to `Final_Exp.html` for the 2 transnext_tiny rows. *(Iteration 17, 2026-05-16 — verified the Iteration-8 `EXECUTION_US_GROUPS` generalisation already surfaces the US-008 card automatically: `build_final_dashboard.py:991-1019` filters `phase==='A' && model==='transnext_tiny' && status==='Complete'`; both `final_clean_transnext_tiny_{cifar10,mnist}` rows in `Final_Exp.json` carry `status="Complete"` (val_acc 0.9764 / 0.9924), so the `renderExecutionUsTrend` call at `:1166` emits a `US-008 — Phase A · transnext_tiny` card with `cifar10 clean 97.64%` / `mnist clean 99.24%` rows on every poll. No code change required. pytest 53/53 ✓.)*
-- [x] `progress.txt`: `US-008 PARTIAL: transnext_tiny Phase A — cifar10=0.9764, mnist=0.9924; both healthy; awaiting VALIDATOR seed=43 + LIBRARIAN docs.` *(Iteration 18, 2026-05-16 — appended as a standalone marker line after the Iter 17 entry. The "LIBRARIAN docs" pending clause was already resolved by Iter 15 and "DESIGNER per-US trend" by Iter 17, so the appended line reflects the current pending set: VALIDATOR seed=43 only.)*
-- [ ] **HALT** — do not start US-009 without explicit operator approval.
+**Sentinel handling.** §6.3 pathology guard fires → surface to operator for §6.4 retry decision. Carry forward v1's empirical default (decline retry unless the cell breaks monotonicity vs neighbors). Track tally for the campaign summary.
 
----
+**Acceptance criteria.**
+- [ ] 30/30 cells `healthy` per §6.3 guard (or operator-accepted sentinel deferral).
+- [ ] All 30 `metrics.json` files written with `pipeline_version: 2` field.
+- [ ] [Final_Exp.md](Final_Exp.md) reflects 30 v2 Phase B rows; `python scripts/update_final_exp.py --check` exits 0.
+- [ ] 30 dashboard thumbs at `artifacts/dashboard_thumbs/final_B_L*_*_*.png` show visibly coarser noise grain than the v1 thumbs (smoking-gun visual check).
+- [ ] [artifacts/Final_Exp.html](artifacts/Final_Exp.html) opens cleanly; Phase B tab shows 30 v2 `val_acc` values.
 
-### US-009: Phase B execution — resnet50 × L1…L5 × {cifar10, mnist}
-
-**Description:** 10 cells = 5 levels × 2 datasets. Tags `final_B_L{1..5}_resnet50_{cifar10,mnist}`. All 5 axes active at the same L per cell.
-
-**Owner agents:** EXECUTOR, DEBUGGER, VALIDATOR (one cell per dataset re-run for reproducibility), REPORTER, LIBRARIAN, DESIGNER, NOTEBOOKLM_SYNC + active OPTIMIZER on pathology retries.
-
-**Acceptance Criteria:**
-- [ ] First pass: 10/10 cells dispatched via `run_ralph_loop.py --plan final --phase B --model resnet50 --skip-existing`.
-- [ ] Pathology guard outcomes recorded: counts of `healthy` / `needs_full_ft (failed_convergence)` / `needs_full_ft (overfitting)`.
-- [ ] Second pass (only if sentinels exist): `--remediate-only --model resnet50 --phase B`. No cell runs more than twice.
-- [ ] `Final_Exp.json` `counts` for `phase=B, model=resnet50`: `complete + failed == 10`.
-- [ ] VALIDATOR reproducibility re-run on **one** cell per dataset (random pick).
-- [ ] REPORTER `artifacts/reports/phase_b_resnet50_summary.md`: val_acc vs L1…L5 curve per dataset, PSNR/SSIM at L3, retry counts.
-- [ ] LIBRARIAN `docs/phase_b.md` "ResNet50" subsection updated.
-- [ ] DESIGNER adds the per-US trend graph to `Final_Exp.html`.
-- [ ] `progress.txt`: `US-009 CLOSED: resnet50 Phase B — <complete>/<failed>; awaiting approval.`
-- [ ] **HALT** before US-010.
+**GPU budget:** ~30 cells × ~35 min = **~17.5 GPU-h**. **Owner:** [EXECUTOR](agents/EXECUTOR.md) (dispatches runs verbatim), [DEBUGGER](agents/DEBUGGER.md) (first responder on failure), [VALIDATOR](agents/VALIDATOR.md) (signs off cells before LIBRARIAN updates `runs/official/`). **Dependencies:** US-019, **US-019B (operator visual gate)**.
 
 ---
 
-### US-010: Phase B execution — densenet121 × L1…L5 × {cifar10, mnist}
+### US-021 — Phase C `noise` axis re-run (30 cells)
 
-Same shape as US-009, `--model densenet121`, 10 cells. **HALT** before US-011.
+**Goal.** Re-run all 30 Phase C cells whose axis is `noise` under pipeline v2. Single-axis isolation semantics (US-003): the noise axis active at level L, every other axis at identity.
 
----
+**Pre-flight.** Identical to US-020 but scoped to the 30 `runs/final/final_C_L*_noise_{model}_{dataset}/` directories.
 
-### US-011: Phase B execution — transnext_tiny × L1…L5 × {cifar10, mnist}
+**Dispatch.**
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase C --axes noise
+```
 
-Same shape, `--model transnext_tiny`, 10 cells. Closes Phase B. **HALT** before US-012.
+**Post-pass artifact refresh.** Same chain as US-020 with `--phase C --axes noise` filter on `render_cell_thumbs`.
 
----
+**Acceptance criteria.**
+- [ ] 30/30 cells `healthy` (or operator-deferred).
+- [ ] Phase C `noise` rows in [Final_Exp.md](Final_Exp.md) carry v2 `pipeline_version` + new `val_acc`.
+- [ ] L5 noise val_acc expected to drop substantially vs v1 baseline (v1 transnext_tiny L5 cifar10 noise was 0.9608 — implausibly high; v2 prediction is materially lower, but the exact number is the empirical question this US answers).
+- [ ] Dashboard thumb `final_C_L5_noise_transnext_tiny_cifar10.png` visibly shows blob-shaped noise (single low_res samples upsampled into ~74×74 patches at low_res=3).
 
-### US-012: Phase C execution — resnet50 × 5 axes × L1…L5 × {cifar10, mnist}
-
-**Description:** 50 cells = 5 axes × 5 levels × 2 datasets. Tags `final_C_L{1..5}_{axis}_resnet50_{cifar10,mnist}` for `axis ∈ {resolution, noise, blur, saturation, salt_pepper}`. Inactive axes at identity (per US-003).
-
-**Acceptance Criteria:** same shape as US-009 but 50-cell denominator. REPORTER summary breaks results down by axis: a 5×5 heatmap (axis × level) per dataset. LIBRARIAN `docs/phase_c.md` updated. **HALT** before US-013.
-
----
-
-### US-013: Phase C execution — densenet121 × 5 axes × L1…L5 × {cifar10, mnist}
-
-Same, `--model densenet121`, 50 cells. **HALT** before US-014.
+**GPU budget:** ~17.5 GPU-h. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-020 (sequential to keep dashboard monotonically updated; not strictly required but operationally cleaner).
 
 ---
 
-### US-014: Phase C execution — transnext_tiny × 5 axes × L1…L5 × {cifar10, mnist}
+### US-022 — Phase C `salt_pepper` axis re-run (30 cells)
 
-Same, `--model transnext_tiny`, 50 cells. Closes Phase C. **HALT** before US-015.
+**Goal.** Re-run all 30 Phase C cells whose axis is `salt_pepper` under pipeline v2. Salt-and-pepper now paints `low_res²` pixels and the bicubic upsample spreads each into a small blob.
+
+**Pre-flight.** Same protocol as US-020/021, scoped to the 30 `runs/final/final_C_L*_salt_pepper_{model}_{dataset}/` directories.
+
+**Dispatch.**
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase C --axes salt_pepper
+```
+
+**Post-pass artifact refresh.** Same chain.
+
+**Acceptance criteria.**
+- [ ] 30/30 cells `healthy` (or operator-deferred).
+- [ ] L5 salt_pepper val_acc expected to be materially lower than v1 (v1 transnext_tiny L5 cifar10 salt_pepper was 0.9602 — same implausibility class as noise).
+- [ ] Dashboard thumb `final_C_L5_salt_pepper_transnext_tiny_cifar10.png` shows large bright/dark blobs (not 1-pixel speckles).
+
+**GPU budget:** ~17.5 GPU-h. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-021.
+
+**Total US-020 + US-021 + US-022 budget:** ~53 GPU-h on the RTX 5070.
 
 ---
 
-### US-015: End-of-Campaign Verification + Three Phase-Boundary Pushes (legacy US-047)
+### US-023 — Post-campaign content sync
 
-**Description:** After all 9 execution stories close (US-006…US-014), refresh trackers and push the tracker pathspec via [`scripts/sync_trackers_git.py`](scripts/sync_trackers_git.py) exactly three times — once per phase boundary. No per-cell or per-US pushes during US-006…US-014.
+**Goal.** Update narrative artifacts to reflect the v2 numbers across the whole campaign. Runs AFTER all three RALPH passes complete.
 
-**Owner agents:** SYNCHRONIZER (the 3 pushes), SECURITY (final leak audit), LIBRARIAN (final docs sweep), MASTER (sign-off), NOTEBOOKLM_SYNC.
+**Files modified.**
+- [README.md](README.md):
+  - §"Final Results — 186 / 186 cells" — Phase B table (lines 95-100) refreshed with v2 numbers; Phase C L5 headline table (lines 108-112) `noise` and `salt_pepper` rows refreshed.
+  - §"Headline Research Findings" — re-derive Finding #2 (TransNeXt robustness gap on perturbation axes) and Finding #3 (MNIST robustness floor) under v2 data. The v1 qualitative claims (TransNeXt holds ≥ 0.95 on noise/salt_pepper) are likely to invert or weaken; rewrite as needed without forcing the v1 narrative.
+  - §"Recent scientific changes" — add a 2026-05-?? entry documenting the v2 pipeline move, the 90-cell re-run, the `PIPELINE_VERSION = 2` bump, and the v1↔v2 incomparability rule.
+- [docs/Final_Exp_Report.md](docs/Final_Exp_Report.md) — auto-regenerated by `scripts/build_final_exp_report.py` from the refreshed `artifacts/Final_Exp.json`; manually review the headline-findings prose section and rewrite if v1 claims no longer hold.
+- [progress.txt](progress.txt) — append "Iteration 27 — v2 noise-fix follow-up" summarizing: (a) full v1 186-cell campaign closure highlights (8-12 bullets covering Phase A/B/C completion dates, winner JSONs, headline findings, §6.4 13-retries-all-declined tally); (b) the v2 90-cell re-run scope and outcomes; (c) US-017..US-025 progress. This is the user-requested "everything done so far" summary.
 
-**Acceptance Criteria:**
-- [x] `Final_Exp.md` reads `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186` (any retries-after-retry counted as `Failed`, never `Pending`). *(Iteration 26, 2026-05-20 — regenerated via `python scripts/update_final_exp.py` after the US-014 sentinel cleanup; tracker Status Summary reads exactly those four lines + `Last updated: 2026-05-20`.)*
-- [ ] Three commits on `origin/5070A`: `chore(trackers): refresh after Phase A (6 cells)`, `…Phase B (30 cells)`, `…Phase C (150 cells)`. Each commit's `git log --name-only -1` shows only the tracker pathspec.
-- [x] SECURITY leak audit: `git grep -E '\.(ckpt|pt|pth)$'` over the three pushed pathspecs returns empty. *(Iteration 26, 2026-05-20 — `git grep -E '\.(ckpt|pt|pth)$' -- Final_Exp.md artifacts/Final_Exp.json artifacts/Final_Exp.html docs/Final_Exp_Report.md` returned exit 1 (no matches) — zero weight paths leaked into any of the tracker pathspecs.)*
-- [x] [`src/tests/test_sync_trackers_git.py`](src/tests/test_sync_trackers_git.py) and [`src/tests/test_ignores.py`](src/tests/test_ignores.py) green after all three pushes. *(Iteration 26 — both green inside the full `pytest src/tests -q` = 53 passed in 3.43 s sweep; verified before any push so the green state pre-dates the (still-deferred) three SYNCHRONIZER pushes.)*
-- [ ] `progress.txt` final entry: `RTX 5070 RALPH closed — 186/186 cells, 6 winners frozen, 3 phase-boundary pushes OK at <shaA> <shaB> <shaC>.`
-- [ ] NOTEBOOKLM_SYNC `push` brings the THz Project notebook to byte-aligned state.
-- [x] Typecheck passes. *(Iteration 26, 2026-05-20 — `mypy --explicit-package-bases scripts/build_final_exp_report.py scripts/render_final_exp_pdf.py scripts/update_final_exp.py` = "Success: no issues found in 3 source files". The three scripts covered are the entire PDF-pipeline added/touched in US-015.)*
+**Acceptance criteria.**
+- [ ] [README.md](README.md) Phase B + Phase C L5 tables show v2 numbers and reference `PIPELINE_VERSION = 2`.
+- [ ] Finding #2 + Finding #3 narratives re-derived from v2 data; no orphan v1 claims left in prose.
+- [ ] `progress.txt` iteration 27 entry committed; serves as the canonical session summary.
+- [ ] `Final_Exp_Report.md` regenerated; the existing markdown-pdf `Final_Exp.pdf` rebuilt as a side-effect of the per-pass refresh in US-020/021/022.
+
+**Owner:** [SYNCHRONIZER](agents/SYNCHRONIZER.md) (context-alignment, stale-source detection), [LIBRARIAN](agents/LIBRARIAN.md) (owns `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/`), [REPORTER](agents/REPORTER.md) (`docs/Final_Exp_Report.md` prose + headline-findings rewrite). **Dependencies:** US-020, US-021, US-022 all closed.
 
 ---
 
-### US-016: TransNeXt small→tiny variant swap (new 2026-05-14, same day as US-004) — **CLOSED 2026-05-14**
+### US-024 — IEEEtran scientific report
 
-**Description:** Repo-wide retargeting of the canonical TransNeXt variant from `transnext_small` (~50M params) to `transnext_tiny` (~28M params). Triggered mid-flight in US-002 Stage 1 cifar10 (10/20 trials, 57.8 min/trial median) by the projection that the 186-cell campaign under `small` would overrun the 2026-07-26 final deadline at the pessimistic end. Motivation: tighter capacity-match to ResNet50 (~25M), ~310 GPU-h saved across the 62 TransNeXt rows of the matrix, and ~7 GB peak VRAM (vs ~9 GB for small) leaving 5 GB headroom on the 12 GB RTX 5070.
+**Goal.** Author a publishable LaTeX scientific report rendered to `artifacts/Final_Report.pdf` via `tectonic` (preferred — self-contained, downloads packages on demand) or `pdflatex` + `bibtex` fallback.
 
-The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt rows in the matrix stay in the 186 denominator; their tags rotate from `…transnext_small…` to `…transnext_tiny…`. No prior TransNeXt cell results are invalidated (none ran). The in-flight `transnext_small_cifar10_L3` Stage 1 study (10 trials, best #0 val_acc=0.6150) is halted and left orphaned in `artifacts/optuna_thz.db` (no cleanup; new `transnext_tiny_cifar10_L3` study is independent). US-002 is retargeted in-place by this story (new title: `transnext_tiny Optuna tune`).
+**New files.**
+- `docs/Final_Report.tex` — IEEEtran journal-class document, hand-authored. Structure:
+  - `\documentclass[journal]{IEEEtran}`; packages: `graphicx`, `booktabs`, `amsmath`, `amssymb`, `hyperref`, `cite`, `subcaption`, `siunitx`.
+  - **Abstract** (~200 words): three contributions — v2 pipeline + bug story, 186-cell campaign findings under corrected protocol, universal 3×3-downsample bottleneck.
+  - **§I Introduction** — motivation, THz-imaging analogy, related-work pointer to TransNeXt / DenseNet / TResNet (papers already in `papers/`).
+  - **§II Methodology** — datasets, models, degradation pipeline v2 (with figure of the v2 pipeline diagram), 5-level table, Optuna pre-tuning protocol.
+  - **§III Experimental Design** — 186-cell matrix, Phase A/B/C, RALPH loop + §6.3 + §6.4, reproducibility contract.
+  - **§IV Results** — three subsections each with a booktabs table auto-generated from `Final_Exp.json`:
+    - Tab. I: Phase A clean baselines.
+    - Tab. II: Phase B combined degradation + L1→L5 line plots per `(model, dataset)`.
+    - Tab. III: Phase C single-axis isolation + 6 per-(model, dataset) 5×5 heatmaps (axis × level).
+  - **§V Discussion** — v2 findings, universal resolution bottleneck, attention vs convolutional robustness, MNIST geometric-axis floor.
+  - **§VI Conclusion** — limitations + future work (multi-axis interactions, larger backbones, real THz data).
+- `docs/references.bib` — BibTeX with TransNeXt (Shi 2024), DenseNet (Huang 2017), TResNet (Ridnik 2020), EfficientNetV2, NASNet, CIFAR-10, MNIST.
+- `scripts/render_final_report_tex.py` — two-stage builder:
+  1. Reads `artifacts/Final_Exp.json`; emits `\input{}`-able booktabs snippets to `docs/_autogen/{phase_a_table,phase_b_table,phase_c_l5_table,phase_c_full_table}.tex`.
+  2. Invokes `tectonic docs/Final_Report.tex --outdir artifacts/` (preferred) with `pdflatex` + `bibtex` + `pdflatex ×2` fallback. Output: `artifacts/Final_Report.pdf`.
+- `src/tools/render_phase_c_heatmaps.py` — matplotlib helper emitting 6 PNG heatmaps to `docs/_autogen/figs/phase_c_heatmap_{model}_{dataset}.png` keyed by (model, dataset), each a 5 × 5 axis-by-level grid colored by v2 `val_acc`. The hand-authored `Final_Report.tex` `\includegraphics`'s these.
 
-**Owner agents:** DATA_ARCHITECT (owns `MODELS` tuple in [`cells.py`](src/experiments/cells.py)), OPTIMIZER (priors mirror + decade-bound re-validation), VALIDATOR (test_quarantine_transnext + dry-run the matrix), LIBRARIAN (CLAUDE.md + README + PRIORS_SOURCES.md sync), SYNCHRONIZER (no push here — tracker pushes deferred to US-015).
+**LaTeX toolchain prerequisite.** Confirm `tectonic` or `pdflatex` on PATH on the 5070 box before execution. If neither is available, install `tectonic` via `winget install --id TectonicProject.Tectonic` or download a portable build to the venv. Flagged as risk §9(a).
 
-**Acceptance Criteria:**
-- [x] [`src/experiments/cells.py`](src/experiments/cells.py) `MODELS` tuple ends in `"transnext_tiny"`. `iter_cells()` emits 62 cell tags whose model component is `transnext_tiny`. Total still 186.
-- [x] [`tune_all.py`](tune_all.py) `SUPPORTED_MODELS` ends in `"transnext_tiny"`.
-- [x] `artifacts/priors/transnext_tiny.json` exists, parses, mirrors the now-retired `transnext_small.json` schema, decade-bound is preserved on every distribution. (`tune_all.py --validate-only` → `OK transnext_tiny`.)
-- [x] [`scripts/validate_top3.py`](scripts/validate_top3.py) `DEFAULT_PAIRS` + `--model` choices: `transnext_small` → `transnext_tiny`.
-- [x] [`src/tests/test_matrix.py`](src/tests/test_matrix.py) canonical-tag fixture list reflects `transnext_tiny`.
-- [x] [`src/tests/test_quarantine_transnext.py`](src/tests/test_quarantine_transnext.py) `SUPPORTED_MODELS` assertion updated.
-- [x] [`src/tests/test_ignores.py`](src/tests/test_ignores.py) + [`scripts/check_ignores.sh`](scripts/check_ignores.sh) example paths point at the new on-disk filenames (`transnext_tiny_224_1k.pth`, `transnext_tiny.json`).
-- [x] [`CLAUDE.md`](CLAUDE.md) "Models" row + Optuna priors path reflect TransNeXt-tiny as canonical.
-- [x] [`README.md`](README.md) campaign-status table, frozen-artifacts table, pre-fetch instructions, Troubleshooting, model table — all reflect TransNeXt-tiny.
-- [x] [`PRD.md`](PRD.md) §5.2 / §5.3 / §6.2 / §8.bis / §8.5 / §10 / §11 / §12 reflect the swap; D9 added.
-- [x] `artifacts/weights/transnext_tiny_224_1k.pth` pre-staged via `python scripts/fetch_transnext_weights.py --sizes tiny` (113,221,596 bytes; ~57% of `transnext_small_224_1k.pth`'s 199 MB).
-- [x] `Final_Exp.md` regenerated; all 62 TransNeXt rows show `transnext_tiny` in their tags; total still 186; statuses still `Pending`.
-- [x] `pytest src/tests` green; `mypy src scripts` green (modulo pre-existing vendored `transnext_official` duplicate-module errors per progress.txt line 213).
-- [x] `progress.txt`: `US-016 CLOSED: TransNeXt small→tiny swap landed; cells.py / tune_all.py / priors / PRD all updated; 62 TransNeXt rows pending under new tags; stale transnext_small_cifar10_L3 study left in optuna_thz.db (orphaned, no cleanup).`
+**Acceptance criteria.**
+- [ ] `artifacts/Final_Report.pdf` exists; ≥ 8 pages.
+- [ ] All 3 tables + 6 heatmaps present and legible.
+- [ ] References section renders cleanly with no `??` placeholders.
+- [ ] `tectonic` (or `pdflatex`) exits with code 0.
+- [ ] Auto-generated tables are byte-identical when `scripts/render_final_report_tex.py` is re-run against the same `Final_Exp.json` (idempotency check).
 
-**Gate to US-002:** with US-016 closed, US-002 can launch under the new tiny variant. US-005…US-014 remain gated on US-002 + US-005.
+**Owner:** [REPORTER](agents/REPORTER.md) (authors `docs/Final_Report.tex` + `docs/references.bib` per its `docs/` write scope; produces the publishable PDF, on the same footing as the prior poster/presentation/submission deliverables it owns), with [DESIGNER](agents/DESIGNER.md) for the heatmap PNG tooling under `src/tools/` (DESIGNER's declared scope). **Dependencies:** US-023 (narrative content must be settled before the LaTeX prose is written against it).
+
+---
+
+### US-025 — Final verification + ship-readiness audit
+
+**Goal.** End-of-campaign sweep: every artifact in lockstep, tests green, audit trail intact.
+
+**Checks.**
+- `pytest src/tests/test_degradation_determinism.py -v` → 5/5 green.
+- `python -m src.tests.test_ignores` → 13 ignore categories pass; no `.pt` / `.ckpt` / `.pth` in git index.
+- `mypy src/` → green (baseline was green per v1 US-015).
+- `python scripts/update_final_exp.py --check` → exit 0.
+- `bash scripts/check_ignores.sh` → green.
+- Manual: open `artifacts/Final_Exp.html`, filter to Phase B + Phase C `noise` + Phase C `salt_pepper`, confirm 90 rows reflect v2 numbers and v2 thumb pairs.
+- Manual: open `artifacts/Final_Report.pdf` end-to-end, scan for placeholder text / broken refs / missing figures.
+- Ship-readiness audit via `Agent` tool with subagent_type `general-purpose`: cross-check that [PRD.md](PRD.md) v2 + [README.md](README.md) + [progress.txt](progress.txt) + `artifacts/Final_Report.pdf` all reference `PIPELINE_VERSION = 2` and the same 90-cell scope.
+
+**Acceptance criteria.**
+- [ ] All five test/audit commands exit 0.
+- [ ] Ship-readiness agent report identifies no drift between artifacts.
+- [ ] `git status` clean on `noise_fix` branch; ready for merge into `main`.
+
+**Owner:** [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-024.
 
 ---
 
@@ -545,84 +389,108 @@ The swap is config / repo-only — no cells are run in this US. All 62 TransNeXt
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| **cu128 wheel not yet on PyPI** | Med | High | `setup_gpu_env.py --index-url https://download.pytorch.org/whl/cu128` points at the official cu128 wheelhouse; falls back to the nightly index with operator confirmation. |
-| **bf16 destabilizes TransNeXt attention** | Med | Med | Pathology matrix catches NaN loss at epoch 2; Full FT retry under fp32 attention (`autocast_dtype=torch.float32` override on `attention_native` path) is the documented escape hatch. |
-| **TransNeXt-tiny OOMs at batch 32 / 224×224** | Very Low (post-US-016 swap; peak ~7 GB on 12 GB VRAM) | Med | Bootstrap probe at boot retries at batch 16 with grad-accum 2 once; on second OOM the cell records `QUARANTINED_AFTER_RETRY` and the row stays in the 186 denominator. No silent dropout. (Likelihood was Low under US-004's `transnext_small` peak ~9 GB and Med under the retired `transnext_base` peak ~11 GB.) |
-| **Optuna proxy ranks the wrong winner** | Empirically confirmed (resnet50_cifar10: trial #23 fast-rank 2 → full-rank 1) | Med | Stage 1.5 top-3 validation at full convergence is the gating contract. `validated_at_full_convergence: true` must be present on every winner JSON before any Phase B cell launches. |
-| **RALPH retry loop infinite-loops on a degenerate cell** | Low | High | Retry budget is hard-capped at 1 per cell; second failure → `QUARANTINED_AFTER_RETRY` sentinel and the loop advances. Asserted in `src/tests/test_ralph_loop.py`. |
-| **Severity bump invalidates legacy comparisons** | Cert | Low | `metrics.json.degradation_levels_hash` rotates; tracker rendering surfaces the new hash; no cross-batch comparison is run against the pre-2026-05-12 table. |
-| **SYNCHRONIZER push leaks weight binaries** | Low | Critical | Three explicit pathspec pushes (US-014, was US-047), `FORBIDDEN_FLAGS` enforced, `test_sync_trackers_git` 9/9 covers leak paths. |
-| **Resolution-policy regression re-introduces native-32 branch** | Low | High | `test_degradation_determinism` covers only the {224} group; the determinism gate would fail if a 32-group regression slipped in. `test_quarantine_transnext` asserts no `_native` aliases in `_TRANSNEXT_SPECS`. |
+| **(a) LaTeX toolchain absent on 5070 box** | Medium | High (US-024 blocked) | Install `tectonic` via winget before US-024; fallback to `pdflatex` if necessary. Verify in US-024 pre-flight check. |
+| **(b) Re-run GPU budget overruns ~53 h** | Low | Medium | Cells are independent and `--skip-existing` respected. Operator can pause between passes (US-020/021/022 are not interdependent for hardware reasons). |
+| **(c) Cell-tag stability lost between v1 and v2** | Low | High (tracker patches break) | No tag changes in this PRD. `runs/final/<tag>/` directory names are preserved; only file contents inside change. Verified by [src/tools/final_exp_schema.py](src/tools/final_exp_schema.py) keying by `tag`. |
+| **(d) v2 noise/S&P results break monotonicity** | Medium | Low | Expected and scientifically interesting. The §6.3 pathology guard checks per-cell convergence health, not L-curve monotonicity. Report the v2 monotonicity in the [README.md](README.md) headline section as-found. |
+| **(e) Determinism breaks under v2** | Already mitigated | — | Verified at US-017 close: 5/5 determinism checks green, lag-1 autocorr = 0.993, MSE = 0 on re-run. |
 
 ---
 
 ## 10. Dependency-Ordered Story Map
 
 ```
-Legacy (DONE/CLOSED):
-US-040 (reset) ──► US-041 (5070 bootstrap) ──► US-042 (TransNeXt @ 224 un-quarantine) ──► US-043 (resnet50 × 2 tune, CLOSED)
-
-Open (renumbered 2026-05-13; extended 2026-05-14 by US-004 and US-016):
-US-001 (densenet121 tune, was US-044)  ──┐
-                                         │
-US-004 (TransNeXt base→small swap) ──► US-016 (TransNeXt small→tiny swap) ──► US-002 (transnext_tiny tune, was US-045, retargeted twice)
-                                         │
-US-003 (Phase C single-axis fix) ────────┤
-                                         ▼
-                            US-005 (RALPH Driver Framework, was US-046 infra)
-                                         │
-                                         ▼
-                            US-006 (Phase A · resnet50) ──HALT── US-007 (Phase A · densenet) ──HALT── US-008 (Phase A · transnext_tiny)
-                                         │
-                                        HALT
-                                         ▼
-                            US-009 (Phase B · resnet50) ──HALT── US-010 (Phase B · densenet) ──HALT── US-011 (Phase B · transnext_tiny)
-                                         │
-                                        HALT
-                                         ▼
-                            US-012 (Phase C · resnet50) ──HALT── US-013 (Phase C · densenet) ──HALT── US-014 (Phase C · transnext_tiny)
-                                         │
-                                        HALT
-                                         ▼
-                            US-015 (verify + 3 phase-boundary pushes, was US-047)
+US-017 (pipeline refactor) ──────────────────────┐
+                                                  │
+US-018 (PRD v2) ─────────────────────────────────┤
+                                                  ▼
+                                          US-019 (--axes patch)
+                                                  │
+                                                  ▼
+                                  US-019B (v2 thumb preview + operator sign-off)
+                                                  │  ← HARD GATE: no GPU dispatch
+                                                  ▼     without operator signature
+                            ┌────────────── US-020 (Phase B, 30 cells)
+                            │                     │
+                            │                     ▼
+                            │             US-021 (Phase C noise, 30)
+                            │                     │
+                            │                     ▼
+                            │             US-022 (Phase C S&P, 30)
+                            │                     │
+                            └─────────────────────┤
+                                                  ▼
+                                          US-023 (content sync)
+                                                  │
+                                                  ▼
+                                       US-024 (IEEEtran PDF)
+                                                  │
+                                                  ▼
+                                       US-025 (final audit)
 ```
 
-**Ordering rules:**
-- US-040…US-042 + US-043 strictly precede the renumbered series.
-- US-001 / US-003 / US-004 / US-016 may interleave on a single GPU — they are independent (densenet tune, Phase C data-pipeline edit, two repo-only variant swaps). US-002 strictly follows US-016 (which itself follows US-004): the small→tiny swap must land before the retargeted tiny tune can start.
-- US-005 is gated on all 6 winner JSONs present with `validated_at_full_convergence: true` AND US-003 landed (Phase C identity semantics in `degradation_levels.py`).
-- US-006…US-014 are **strictly sequential** with operator-approval halts between each US. No parallel execution.
-- US-015 is the single end-of-campaign closer.
+**Critical path:** US-017 → US-019 → **US-019B** → US-020 → US-021 → US-022 → US-023 → US-024 → US-025.
+**Wall-clock estimate:** ~55 GPU-h re-runs + ~6 h for US-019/023/024/025 = ~2.5 calendar days on a single RTX 5070 with overnight runs.
 
 ---
 
-## 11. Definition-of-Done (PRD-level)
+## 11. Definition of Done (campaign-level)
 
-- [ ] All 15 renumbered open stories (US-001 … US-015) + the 4 legacy stories (US-040 … US-043) check green.
-- [ ] `Final_Exp.md` status block: `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186`.
-- [ ] `artifacts/Final_Exp.html` renders all 186 rows; first row visible under the sticky header.
-- [ ] `pytest src/tests` green (torch-free baseline + new `test_ralph_loop.py` from US-005; updated `test_matrix.py` from US-003 + US-004).
-- [ ] `mypy src scripts` green.
-- [ ] No `*.ckpt`/`*.pt`/`*.pth` paths leaked into `Final_Exp.json` / `.md` / `.html` / `priors.json` / `best_hparams/*.json` / `history.json` / `progress.txt` / any commit pathspec.
-- [ ] Determinism gate green (MSE = 0) at out_size=224 for both datasets against the **post-US-003** `degradation_levels_hash` (which itself replaces the 2026-05-12 severity-bumped hash).
-- [ ] Three SYNCHRONIZER pushes at US-015 (was US-047), each with the explicit tracker pathspec only.
-- [ ] 9 REPORTER summary docs under `artifacts/reports/phase_{a,b,c}_{resnet50,densenet121,transnext_tiny}_summary.md`.
-- [ ] LIBRARIAN-owned `docs/phase_{a,b,c}.md` capture the final per-phase findings.
-
----
-
-## 12. Decisions Locked (operator 2026-05-13)
-
-- **D1 — Reset scope:** preserve Phase A clean baselines, priors, and lock file; back up Optuna DB and best_hparams under dated suffixes (not deletion) so the pre-5070 study is auditable.
-- **D2 — Architecture: 224×224 only.** The V3 native-resolution refactor (TransNeXt at 32, MNIST pad-to-32) is rolled back. Every model trains at 224×224 with the same data pipeline; TransNeXt loads its upstream 224-pretrained checkpoint. No `_native` aliases, no asymmetric-resolution insurance trial, no `mnist_pad_to_32` field.
-- **D3 — TransNeXt training regime:** full FT with differential LR (head 5e-4 / backbone 5e-5), 10× ratio matching the CNN convention. `pretrain_size=224`, `patch_size=4`.
-- **D4 — Tuning protocol:** continue Option C hybrid (Stage 1 fast rank + Stage 1.5 top-3 validate) for all 6 pairs. Budget ~27 GPU-hours total tuning (90+180 GPU-min × 6).
-- **D5 — Self-correction:** single retry per cell; second failure records `QUARANTINED_AFTER_RETRY` and the row counts toward `Failed` in the 186 denominator.
-- **D6 — Commit cadence:** three per-phase boundary pushes (A-close, B-close, C-close), never per-cell. Matches the US-016 SYNCHRONIZER contract (Q3=C, extended).
-- **D7 — Severity bump:** the 2026-05-12 [`degradation_levels.py`](src/data/degradation_levels.py) bump replaces the 2026-04 table; no cross-batch comparison crosses that hash boundary.
-- **D8 — TransNeXt variant swap (operator 2026-05-14):** Replace `transnext_base` (~89M params, ~11 GB peak VRAM at batch 32 / 224×224) with `transnext_small` (~50M params, ~9 GB peak) across the 186-cell matrix. Rationale: capacity-match to ResNet50 (~25M) / DenseNet121 (~8M) given the small dataset size (10K train × 10 classes); ~40% fewer params frees days of GPU time against the 2026-05-31 poster deadline; OOM-fallback path is now unlikely on the 12 GB RTX 5070. No prior TransNeXt cell results are invalidated (none ran). US-002 retargeted in place; new US-004 owns the swap; all subsequent stories shifted forward by one.
-- **D9 — TransNeXt variant swap, round 2 (operator 2026-05-14, same day as D8):** Replace `transnext_small` (~50M params, ~9 GB peak) with `transnext_tiny` (~28M params, ~7 GB peak) across the 186-cell matrix. Triggered by the in-flight US-002 Stage 1 cifar10 anchor data point of 57.8 min/trial for small, which projected the 186-cell campaign past the 2026-07-26 final deadline at the pessimistic end. Rationale: tighter capacity-match to ResNet50 (~25M) than small offered; ~310 GPU-h savings across the 62 TransNeXt rows; 5 GB VRAM headroom (vs 3 GB) on the 12 GB RTX 5070. Sunk: 10/20 trials of `transnext_small_cifar10_L3` Stage 1 (~10 GPU-h, orphaned study retained in `optuna_thz.db`). No frozen winner JSON was invalidated (no TransNeXt winner JSON existed yet). US-002 retargeted in place (small → tiny); new US-016 owns the swap; US-008/US-011/US-014 model names shift accordingly.
+- [ ] US-019B operator visual sign-off captured in `artifacts/validation/v2_preview_checklist.md` BEFORE any GPU dispatch.
+- [ ] `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` unchanged for the whole campaign (seed-stability invariant, §7); per-`idx` byte-identity of degraded samples reproducible across re-runs.
+- [ ] All 90 v2 cells `healthy` per §6.3 (or operator-accepted sentinel deferrals).
+- [ ] Determinism suite 5/5 green; mypy + ignore tests green.
+- [ ] [Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf), dashboard thumbs all reflect v2 numbers.
+- [ ] [README.md](README.md) headline tables + findings + recent-changes entry updated.
+- [ ] [progress.txt](progress.txt) iteration 27 entry committed (the "everything done so far" summary).
+- [ ] `artifacts/Final_Report.pdf` exists, ≥ 8 pages, IEEEtran-styled, BibTeX references, all 3 tables + 6 heatmaps, no broken refs.
+- [ ] Ship-readiness agent confirms cross-artifact consistency.
+- [ ] `git status` clean on `noise_fix`; PR opened against `main`.
 
 ---
 
-**End of PRD. Awaiting MASTER approval. On approval: execute US-040 (reset) first; do not begin tuning until US-041 + US-042 are green.**
+## 12. Decisions Locked
+
+1. **Pipeline scope:** noise + salt-and-pepper both move pre-upsample. Blur stays post-upsample (kernels calibrated for 224). Saturation stays pre-downsample (RGB-correct luminance). Confirmed by operator 2026-05-20.
+2. **Archival:** overwrite in place; no `runs/final_archive/`. v1 numbers exist only in git history. Confirmed 2026-05-20.
+3. **PRD form:** full rewrite into v2; v1 PRD preserved only in git history (commit `3e1d089`). Confirmed 2026-05-20.
+4. **PDF form:** IEEEtran/article LaTeX template hand-authored from scratch with auto-generated tables + heatmaps + BibTeX references. `markdown-pdf` rendition (`artifacts/Final_Exp.pdf`) stays in lockstep during the campaign but is *superseded* by `artifacts/Final_Report.pdf` as the publishable deliverable. Confirmed 2026-05-20.
+5. **Re-tuning:** no Optuna re-runs against pipeline v2. Frozen v1 `best_hparams` carry forward. Re-tuning deferred to future US.
+6. **RALPH retry policy:** §6.4 retry deltas surfaced to operator; default decision is "decline" unless cell breaks neighbor monotonicity (v1 empirical lesson).
+7. **Sub-agent dispatch:** every US owner in §8 is a sub-agent in [agents/](agents/). MASTER reviews and approves the plan before any sub-agent writes code; sub-agents may not exceed their declared `agents/<NAME>.md` file-system scope without an explicit MASTER scope-extension note (e.g. US-019 grants OPTIMIZER write access to `scripts/run_ralph_loop.py`). Confirmed 2026-05-20.
+8. **Visual pre-flight gate (US-019B):** the 90 v2 dashboard thumbnails are re-rendered and **operator-signed** before any of the ~53 GPU-h of training is dispatched. Cheap CPU-only insurance against burning a 2.5-day campaign on a subtly-wrong pipeline. Confirmed 2026-05-20.
+9. **Noise seed lock:** the v2 noise + S&P passes are seeded by the same `idx + SEED_OFFSET_*` contract used in v1 — same constants, same per-sample local `torch.Generator`, no new global RNG draws. Within v2, same `idx` always produces the same noise pattern. v1↔v2 pixels are NOT comparable (different number of draws), but v2↔v2 byte-identity across re-runs is mandatory and tested. Confirmed 2026-05-20.
+
+---
+
+## 13. v1 History (US-001..US-016 — closed)
+
+Closed in the 2026-05-13 → 2026-05-20 campaign. Full v1 PRD prose preserved at git commit `3e1d089`. Summary:
+
+| Story | Title | Closed |
+|---|---|---|
+| US-001 | densenet121 × {cifar10, mnist} Optuna tune | 2026-05-14 |
+| US-002 | transnext_tiny × {cifar10, mnist} Optuna tune | 2026-05-14 |
+| US-003 | Phase C single-axis correction (inactive axes → identity) | 2026-05-14 |
+| US-004 | TransNeXt base→small variant swap | 2026-05-14 |
+| US-005 | RALPH loop driver framework | 2026-05-14 |
+| US-006 | Phase A `resnet50` ×{cifar10, mnist} | 2026-05-14 |
+| US-007 | Phase A `densenet121` ×{cifar10, mnist} | 2026-05-15 |
+| US-008 | Phase A `transnext_tiny` ×{cifar10, mnist} | 2026-05-15 |
+| US-009 | Phase B `resnet50` × L1..L5 ×{cifar10, mnist} | 2026-05-15 |
+| US-010 | Phase B `densenet121` × L1..L5 ×{cifar10, mnist} | 2026-05-15 |
+| US-011 | Phase B `transnext_tiny` × L1..L5 ×{cifar10, mnist} | 2026-05-16 |
+| US-012 | Phase C `resnet50` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-17 |
+| US-013 | Phase C `densenet121` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-18 |
+| US-014 | Phase C `transnext_tiny` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-20 |
+| US-015 | End-of-campaign verification (partial — leak audit + mypy + pytest done; SYNCHRONIZER pushes deferred to v2 US-023) | 2026-05-20 |
+| US-016 | TransNeXt small→tiny variant swap (capacity-match to ResNet50) | 2026-05-14 |
+
+Headline v1 findings (CAVEAT: noise + salt_pepper claims are invalidated by US-017; verify against v2 in US-023):
+1. Universal 3×3-downsample bottleneck — every architecture lands within ±3 pp on CIFAR-10 at L5 resolution. **Carries forward to v2** (resolution axis was unaffected by US-017).
+2. TransNeXt robustness gap on noise / S&P / saturation — **REQUIRES v2 RE-DERIVATION.**
+3. MNIST robustness floor on perturbation axes — **REQUIRES v2 RE-DERIVATION.**
+
+---
+
+**End of PRD v2.**

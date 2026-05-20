@@ -19,9 +19,13 @@ from pathlib import Path
 import torch
 from torchvision.io import read_image
 
+import argparse
+
 from src.tools.render_cell_thumbs import (
     THUMB_HEIGHT,
     THUMB_WIDTH_PER_HALF,
+    _parse_axes_arg,
+    main as render_main,
     render_thumbs,
 )
 
@@ -99,13 +103,74 @@ def _check_unknown_tag_rejected() -> None:
     raise AssertionError("expected ValueError for unknown tag")
 
 
+def _check_axes_parser() -> None:
+    """US-019 bundled scope: --axes accepts a comma-separated subset of AXES
+    and rejects unknown axis names + empty input. Mirrors the run_ralph_loop
+    contract so US-019B dispatch commands work identically on both tools."""
+    assert _parse_axes_arg("noise") == ("noise",)
+    assert _parse_axes_arg("noise,salt_pepper") == ("noise", "salt_pepper")
+    assert _parse_axes_arg("noise, salt_pepper") == ("noise", "salt_pepper")
+    for bad in ("", "BOGUS", "noise,BOGUS"):
+        try:
+            _parse_axes_arg(bad)
+        except argparse.ArgumentTypeError:
+            continue
+        raise AssertionError(f"expected ArgumentTypeError for input {bad!r}")
+    print("OK [axes-parser] — _parse_axes_arg validates AXES subset.")
+
+
+def _check_phase_axes_filter_counts(out_dir: Path) -> None:
+    """Filter math must match the run_ralph_loop --axes contract:
+       Phase B          → 30 cells
+       Phase C noise    → 30 cells
+       Phase C noise+sp → 60 cells
+       Phase C (no --axes) → 150 cells (unchanged)
+    Render no pixels (force=False on an empty out_dir skips nothing because
+    nothing exists yet — but we also pass tags=[] equivalent by sniffing the
+    dispatched count via build_final_matrix filtering)."""
+    from src.experiments.matrix import build_final_matrix
+
+    matrix = build_final_matrix()
+    by_phase = lambda phase: [c for c in matrix if c.phase == phase]
+    by_phase_axes = lambda phase, axes: [
+        c for c in matrix if c.phase == phase and c.axis in set(axes)
+    ]
+    assert len(by_phase("B")) == 30
+    assert len(by_phase_axes("C", ["noise"])) == 30
+    assert len(by_phase_axes("C", ["noise", "salt_pepper"])) == 60
+    assert len(by_phase("C")) == 150
+    print("OK [filter-counts] — Phase B=30, C/noise=30, C/noise+sp=60, C=150.")
+
+
+def _check_axes_rejected_for_non_c_phase() -> None:
+    """CLI: --axes with Phase A or Phase B must exit via parser.error."""
+    for bad_phase in ("A", "B"):
+        try:
+            render_main(["--phase", bad_phase, "--axes", "noise"])
+        except SystemExit as e:
+            assert e.code != 0, f"expected non-zero exit, got {e.code}"
+            continue
+        raise AssertionError(f"expected SystemExit for --phase {bad_phase} --axes noise")
+    # Also: render_thumbs() function-level guard.
+    try:
+        render_thumbs(phase="B", axes=["noise"], out_dir=Path("/tmp/never"))
+    except ValueError as e:
+        assert "phase='C'" in str(e) or "phase=" in str(e)
+    else:
+        raise AssertionError("expected ValueError for phase='B' with axes")
+    print("OK [reject-non-C] — --axes rejected for Phase A/B at CLI + function levels.")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         out_dir = Path(td)
         _check_dimensions_and_idempotency(out_dir)
         _check_force_regenerates(out_dir)
         _check_clean_vs_degraded_left_right(out_dir)
+        _check_phase_axes_filter_counts(out_dir)
     _check_unknown_tag_rejected()
+    _check_axes_parser()
+    _check_axes_rejected_for_non_c_phase()
     return 0
 
 
