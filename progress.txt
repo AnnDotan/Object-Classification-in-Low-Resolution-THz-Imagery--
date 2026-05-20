@@ -2769,3 +2769,99 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     pass before US-020.
 ---
 
+## Iteration 31 (2026-05-20) — US-019B v2 preview checklist (deliverable for criterion #4)
+- What was done:
+  (a) Authored `artifacts/validation/v2_preview_checklist.md`
+      (56 lines, 5 unchecked bullets, signature placeholder).
+      Contents mirror the smoking-gun expectations enumerated
+      in PRD §US-019B deliverables bullet #4: L5 noise blob
+      structure at low_res=3, L5 salt_pepper ~9-cell paint
+      pattern, L1 v1↔v2 near-identity, saturation/blur/
+      resolution byte-identity (96 unaffected sanity check),
+      determinism across two renderer passes.
+  (b) Includes step-by-step usage instructions pointing at
+      the contact sheet from Iter 30 and the snapshot verify
+      command from Iter 28. Explicitly tells the operator
+      to NOT sign if any bullet fails visually — escalate to
+      a fresh Ralph cycle / DATA_ARCHITECT diagnosis instead.
+  (c) Bottom of file: signature placeholder `approved by ib94
+      YYYY-MM-DD` with documented grep-friendly regex
+      `^approved by ib94 \d{4}-\d{2}-\d{2}$` so US-020
+      pre-flight automation can detect the signature without
+      ambiguity.
+  (d) Did NOT tick PRD §US-019B acceptance criterion #4 —
+      the criterion specifies "**Operator signs**", not
+      "checklist file exists." The agent's job is to create
+      the artifact that needs signing; the signature is by
+      definition operator-gated. The criterion stays [ ] until
+      the operator commits a signed signature line.
+- Files affected:
+  - NEW artifacts/validation/v2_preview_checklist.md (56 LOC,
+    operator-facing markdown, not gitignored).
+  - progress.txt: this Iteration 31 entry.
+  - No code touched, no tests modified, no PRD checkboxes flipped.
+- Validation:
+  - `wc -l artifacts/validation/v2_preview_checklist.md` → 56 ✓.
+  - `grep -c '^- \[ \]'` → 5 (the five smoking-gun bullets) ✓.
+  - `grep -n 'approved by ib94' ...` → 3 hits (two instructional
+    refs + the literal placeholder on the bottom line) ✓.
+  - Placeholder regex `^approved by ib94 \d{4}-\d{2}-\d{2}$`
+    won't match the YYYY-MM-DD placeholder text (good — that's
+    the point: the operator must REPLACE the placeholder for
+    automation to recognise the signature).
+- Learnings for next cycles:
+  - Patterns: Operator-sign-off artifacts should always (i)
+    enumerate the visual checks as explicit `- [ ]` bullets
+    so they're individually checkable, (ii) document the
+    failure-mode escalation path so the operator knows
+    "don't sign" is a valid outcome, and (iii) include a
+    grep-friendly signature regex so downstream automation
+    can detect the signature mechanically. The
+    `^approved by ib94 \d{4}-\d{2}-\d{2}$` format follows
+    this — the leading anchor + literal handle + date pattern
+    eliminates false positives from the instructional refs
+    that mention the same string in prose.
+  - Patterns: When a PRD acceptance criterion requires HUMAN
+    sign-off ("operator signs ..."), the agent's role is to
+    CREATE the artifact that needs signing, NOT to tick the
+    checkbox on behalf of the human. Ticking such a checkbox
+    would falsify the audit trail (the whole reason the
+    criterion exists is to record human review). Leave the
+    checkbox unticked; commit the artifact; document in
+    progress.txt that the criterion is now operator-actionable.
+  - Traps: Resist the temptation to add "[ ] Operator has
+    signed" as an automation check that grep's for the regex
+    and then auto-flips the PRD checkbox — that conflates the
+    artifact-creation step (which CAN auto-tick) with the
+    review step (which CANNOT). If you want a CI gate, build
+    it as a US-020 pre-flight check (read the checklist, regex
+    for the signature, abort dispatch if missing) rather than
+    as an automated PRD-checkbox flip.
+  - Traps: The smoking-gun bullets in the contact sheet HTML
+    (Iter 30) and the checklist markdown (this iter) must
+    stay in sync. The contact-sheet HTML has a Phase-B-
+    coarser-at-L3+ bullet that's NOT in the checklist (this
+    iter's bullet #4 is "saturation/blur/resolution byte-
+    identical" instead, matching PRD §US-019B verbatim).
+    PRD wording wins — the checklist is the authoritative
+    rubric. If a future cycle re-syncs the contact-sheet
+    HTML, replace that bullet to match.
+  - Helpful context: With the checklist in place, 4 of the 5
+    US-019B criteria have agent-doable progress recorded
+    (criterion #1: [x] Iter 29; #3: [x] Iter 30; #5: [x] Iter
+    29; #4: artifact ready, awaiting operator signature).
+    The remaining unticked criterion is #2 (96 unaffected
+    thumbs byte-identical to v1). That requires snapshotting
+    the 96 unaffected v1 thumb hashes BEFORE any future
+    render touches them, then re-rendering them under v2 and
+    comparing. The cleanest implementation extends
+    `scripts/snapshot_v1_thumbs.py` (or adds a sibling
+    `scripts/snapshot_unaffected_thumbs.py`) to enumerate
+    the 96 cells via `iter_cells()` minus AFFECTED_AXES,
+    hash + manifest them, then dispatch
+    `render_cell_thumbs --force --phase A` and
+    `render_cell_thumbs --force --phase C --axes
+    resolution,blur,saturation`, re-hash, and assert zero
+    deltas. That's the natural next Ralph cycle's single task.
+---
+
