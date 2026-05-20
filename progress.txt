@@ -2657,3 +2657,115 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     checklist (criterion #4) in one sitting.
 ---
 
+## Iteration 30 (2026-05-20) — US-019B v1↔v2 dashboard thumbnail contact sheet
+- What was done:
+  (a) Authored `scripts/build_v1_v2_thumb_contact_sheet.py`
+      (~200 LOC). Enumerates the 90 v2-affected cells via
+      `iter_cells()` (asserted to be exactly 90 = 30 Phase B
+      + 30 Phase C noise + 30 Phase C salt_pepper), groups
+      them into 3 sections (Phase B / Phase C noise / Phase
+      C salt_pepper, then sorted by level, then model order
+      resnet50→densenet121→transnext_tiny, then dataset
+      cifar10→mnist), and emits side-by-side `<figure>` pairs.
+  (b) HTML uses relative paths so it opens via file:// with no
+      server: v1 PNGs reference `v1_thumbs/<tag>.png`,
+      v2 PNGs reference `../dashboard_thumbs/<tag>.png`.
+      Both are sibling-or-parent-sibling of the output HTML
+      under `artifacts/validation/`. `image-rendering: pixelated`
+      preserves the noise-blob structure at zoom; `loading="lazy"`
+      keeps the initial render quick for 180 images.
+  (c) Fast-fails BEFORE writing output if any of the 180
+      expected PNGs is missing (90 tags × 2 sides) — catches
+      "operator forgot to snapshot/render" without producing a
+      half-empty contact sheet. Also fast-fails if the v1
+      manifest is missing.
+  (d) Wired in the v1 manifest metadata (snapshot UTC,
+      cell_count, PIPELINE_VERSION) into a header meta strip
+      so the operator can see at a glance what baseline they
+      are comparing against.
+  (e) Embedded the 5 smoking-gun expectations from PRD
+      §US-019B deliverables (74-px blob structure at L5 noise,
+      ~9-cell paint pattern at L5 salt_pepper, L1 nearly
+      indistinguishable, Phase B coarser at L3+, determinism)
+      inline as a checklist block above the pair grid so
+      the operator reviews against the right rubric.
+  (f) Flipped PRD acceptance criterion #3 from [ ] to [x]
+      with the 2026-05-20 verification line (3 sections, 90
+      pair divs, 90 v1 refs, 90 v2 refs, byte-identical across
+      two runs).
+- Files affected:
+  - NEW scripts/build_v1_v2_thumb_contact_sheet.py
+  - NEW artifacts/validation/v1_vs_v2_thumbs.html (49 KiB,
+    not gitignored — it's a small static HTML, lives next to
+    the manifest as the operator-facing artifact).
+  - PRD.md: US-019B acceptance criterion #3 ticked.
+  - progress.txt: this Iteration 30 entry.
+- Validation:
+  - First run: "[contact-sheet] wrote 90 v1-vs-v2 pairs to
+    artifacts/validation/v1_vs_v2_thumbs.html" ✓.
+  - Structural check via inline python: 49314 bytes, 3
+    `<h2>` sections, 90 `class="pair"` divs, 90 `v1_thumbs/`
+    refs, 90 `../dashboard_thumbs/` refs ✓.
+  - Idempotency: SHA-256 of the HTML byte-identical across
+    two consecutive runs of the script (
+    e664d19e4c2c33ebf3a15d95792e3a7b6dc08dc0908c4721ddba9bccad5acc1a)
+    — no embedded timestamps, no ordering nondeterminism.
+  - Pre-flight gates: v1 manifest still verifies (Iter 28),
+    90 v2 PNGs on disk (Iter 29), no PNGs flagged missing
+    by the fast-fail check.
+- Learnings for next cycles:
+  - Patterns: For operator-facing review artifacts that pair
+    file://-loaded images, use RELATIVE URLs that work both
+    when the HTML is double-clicked from the file manager AND
+    when it's served by a tiny static server. The pattern
+    `v1_thumbs/<tag>.png` (sibling) + `../dashboard_thumbs/
+    <tag>.png` (parent-sibling) is the right shape when the
+    inputs live in two related-but-distinct artifact dirs.
+    Don't bake absolute paths — they break the moment the
+    repo is cloned to a different machine for review.
+  - Patterns: When emitting HTML that references images on
+    disk, include a fast-fail PRE-CHECK that hits every expected
+    image path BEFORE writing the HTML. A 90-pair contact sheet
+    that silently degrades to "5 broken-image icons" is worse
+    than no contact sheet at all — the operator could approve
+    on the un-broken pairs and miss the broken ones. The
+    fast-fail produces "FAIL: 4 PNGs missing, first 3 = ..."
+    which is actionable.
+  - Patterns: `image-rendering: pixelated` is mandatory for
+    contact sheets of low-resolution / noise / pixelated
+    content. Without it the browser bilinears each thumb
+    during page zoom and the operator sees blurry pixels that
+    obscure the structure they're trying to verify (the whole
+    point of the operator gate). Pair with explicit
+    `loading="lazy"` so the initial paint isn't 180×PNG-decode.
+  - Traps: Windows default console codec is `cp1255` (or
+    similar non-UTF-8 on this machine), so `print("v1↔v2")`
+    crashes with UnicodeEncodeError even though the HTML it
+    just wrote is UTF-8 with the `<meta charset="utf-8">` tag.
+    Stick to ASCII in stdout messages; non-ASCII characters
+    belong in the HTML body where the encoding is explicit.
+    First attempt crashed on the `↔` arrow; replaced with
+    `-vs-` for the stdout line and kept the arrow in the
+    HTML headline (which works because Python's
+    `Path.write_text(..., encoding='utf-8')` is explicit).
+  - Traps: The contact sheet doesn't trigger re-rendering of
+    either side — it's purely a viewer. If a future Ralph
+    iteration changes either the v1 manifest, the v2 PNGs,
+    or the affected-cell scope, the HTML MUST be rebuilt or
+    the operator could approve a stale view. Add a freshness
+    check (HTML mtime vs newest source PNG mtime) if this
+    becomes a recurring footgun.
+  - Helpful context: With 3/5 US-019B criteria satisfied, the
+    next Ralph cycle's single task is criterion #4 (operator
+    signature on `artifacts/validation/v2_preview_checklist.md`).
+    That checklist file doesn't exist yet — the next iteration
+    needs to CREATE it (5 smoking-gun bullets matching the
+    block we just embedded in the contact sheet, plus a
+    signature line). Criterion #2 (96 unaffected thumbs
+    byte-identical to v1) is also outstanding but requires
+    snapshotting the 96 unaffected v1 thumbs first — those
+    were NOT covered by Iter 28's manifest, which only saved
+    the 90 affected. Probably worth a follow-up snapshot
+    pass before US-020.
+---
+
