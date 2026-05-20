@@ -2433,3 +2433,125 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     to sign before US-020 dispatch.
 ---
 
+## Iteration 28 (2026-05-20) — US-019B foundation: v1 thumbnail baseline snapshot + manifest (FOR all 90 v2-affected cells)
+- What was done:
+  (a) Discovered a load-bearing planning bug in PRD §US-019B:
+      the deliverables list told the operator to retrieve v1
+      thumbs via `git show 3e1d089:artifacts/dashboard_thumbs/
+      <tag>.png` for the contact sheet, but `artifacts/
+      dashboard_thumbs/` has been gitignored since US-013 — so
+      that command returns "fatal: path ... exists on disk, but
+      not in 'HEAD'". The v1 PNGs are exclusively on this
+      machine's local disk RIGHT NOW; once the operator runs
+      `render_cell_thumbs --force`, they're gone forever and
+      the v1↔v2 visual diff is impossible.
+  (b) Wrote `scripts/snapshot_v1_thumbs.py` — a CPU-only,
+      idempotent baseline-preservation script. Enumerates the
+      90 v2-affected tags from `iter_cells()` (30 Phase B + 30
+      Phase C noise + 30 Phase C salt_pepper, asserted), copies
+      each thumb from `artifacts/dashboard_thumbs/<tag>.png`
+      → `artifacts/validation/v1_thumbs/<tag>.png` via
+      `shutil.copy2`, and writes a SHA-256 manifest to
+      `artifacts/validation/v1_thumbs_manifest.json` capturing
+      {tag → hash} plus `pipeline_version_at_snapshot` and a
+      UTC timestamp. The `--verify` mode re-hashes the
+      snapshot files and exits 1 on any drift.
+  (c) Ran the snapshot. Result: 90 thumbs copied, manifest
+      written with cell_count=90. Re-ran `--verify` → "OK —
+      90 v1 thumbs match manifest sha256s." Spot-check:
+      `final_B_L1_densenet121_cifar10` =
+      db7f776f7ea6d8d4f16d8b12250cd6e94d379032d842423244227dffdc7fa654
+  (d) Updated `.gitignore` to add
+      `artifacts/validation/v1_thumbs/` (PNG blobs stay local,
+      gitignored). The manifest JSON sits one directory up at
+      `artifacts/validation/v1_thumbs_manifest.json` and is
+      NOT covered by the rule — it's tracked + committed as the
+      durable cross-machine audit trail.
+  (e) Patched PRD §US-019B deliverables to (i) document the
+      gitignored-from-the-start v1 thumbs flaw with the
+      `git show 3e1d089:...` path, (ii) point at
+      `scripts/snapshot_v1_thumbs.py` as the load-bearing
+      baseline-preservation step that MUST run before any
+      `--force` re-render, and (iii) repoint the contact
+      sheet description from "v1 counterpart from git history"
+      to "snapshotted v1 counterpart under artifacts/validation/
+      v1_thumbs/".
+- Files affected:
+  - NEW scripts/snapshot_v1_thumbs.py (~145 LOC; snapshot +
+    verify modes, hash manifest, missing-thumb fast-fail).
+  - NEW artifacts/validation/v1_thumbs_manifest.json (90
+    SHA-256 entries + meta).
+  - artifacts/validation/v1_thumbs/ (90 PNGs, gitignored).
+  - .gitignore: +3 lines under the existing
+    `artifacts/dashboard_thumbs/` rule documenting the
+    blob-vs-manifest split.
+  - PRD.md: US-019B body section gained a "v1 thumbnail
+    baseline snapshot" bullet at the top of the deliverables
+    list and the contact sheet description repointed.
+  - progress.txt: this Iteration 28 entry.
+- Validation:
+  - `python scripts/snapshot_v1_thumbs.py` → "[snapshot] wrote
+    90 v1 thumbs ... pipeline_version_at_snapshot=2" ✓.
+  - `python scripts/snapshot_v1_thumbs.py --verify` → "[verify]
+    OK — 90 v1 thumbs match manifest sha256s." ✓.
+  - `ls artifacts/validation/v1_thumbs/ | wc -l` → 90 ✓.
+  - `git check-ignore -v artifacts/validation/v1_thumbs/
+    final_B_L1_resnet50_cifar10.png` → matches `.gitignore:72`
+    rule (PNGs ignored) ✓. Manifest JSON not ignored ✓.
+  - cell-count assertion in script fires SystemExit if
+    iter_cells() yields ≠ 90 affected tags — defensively
+    catches matrix drift.
+  - Existing pytest sweep unaffected by this iter (no test
+    files touched, no module imports changed).
+- Learnings for next cycles:
+  - Patterns: When a PRD step depends on `git show <SHA>:<path>`
+    recovering a file, BEFORE writing any code, run
+    `git log -- <path>` to confirm the file ever lived in
+    git history. Gitignored-from-day-1 files (like
+    artifacts/dashboard_thumbs/ under US-013) silently break
+    this recovery path; the only fix is to snapshot them
+    BEFORE the destructive change. The v1 thumb snapshot must
+    happen BEFORE any --force re-render, otherwise the visual
+    diff baseline is lost forever.
+  - Patterns: For binary blobs that need durable evidence but
+    are too large to commit (PNGs, CSVs, parquet files),
+    split blob+manifest: commit a SHA-256 manifest, gitignore
+    the blob directory. The manifest gives any auditor on any
+    machine the byte-identity reference; the blobs stay
+    local-only to keep the repo lean. Future Ralph cycles
+    doing "verify the baseline still holds" can shell out to
+    `--verify` and trust the exit code.
+  - Patterns: Use `shutil.copy2` (not `shutil.copy`) when
+    preserving baseline files — `copy2` copies metadata
+    (mtime, atime) too, so the snapshot directory mirrors the
+    src directory exactly for any audit tool that cares about
+    file timestamps. Hash-based identity is still the load-
+    bearing check, but timestamp preservation is free.
+  - Traps: The script asserts `len(affected_tags()) == 90`
+    BEFORE doing any I/O. If a future US adds a 6th axis or
+    extends Phase B beyond L5, the assert fires and the
+    operator gets a clear "matrix drift" message rather than
+    silently snapshotting more/fewer cells. Don't soften
+    this assert without also updating the v2-affected scope
+    in PRD §1.
+  - Traps: `git check-ignore -v` exit code is 0 when a path
+    IS ignored and 1 when it's NOT. Inverse of the leak-audit
+    grep convention from Iter 26. Reading the textual rule
+    output (`<gitignore-file>:<lineno>:<rule>\t<path>`) is the
+    reliable check; the exit code alone is confusing in
+    isolation.
+  - Helpful context: Next Ralph cycle's first task is US-019B
+    item 2 (re-render the 90 v2 thumbs in place via the
+    `render_cell_thumbs --force --phase ... --axes ...`
+    dispatch chain enabled in Iter 27). After that:
+    (a) build `scripts/build_v1_v2_thumb_contact_sheet.py`
+    pairing artifacts/validation/v1_thumbs/<tag>.png against
+    artifacts/dashboard_thumbs/<tag>.png; (b) write
+    artifacts/validation/v2_preview_checklist.md with the
+    5 smoking-gun visual expectations from PRD §US-019B
+    deliverables (74-px blob structure at L5 noise, 9-cell
+    paint pattern at L5 salt_pepper, etc.); (c) surface to
+    operator for sign-off. Only after operator signs is
+    US-020 GPU dispatch unblocked.
+---
+

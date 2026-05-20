@@ -54,6 +54,7 @@ logs/
 results/
 outputs/
 *.log
+!scripts/notebooklm_sync.log
 wandb/
 lightning_logs/
 
@@ -65,6 +66,10 @@ lightning_logs/
 artifacts/weights/
 artifacts/optuna_thz.db
 artifacts/dashboard_thumbs/
+# US-019B v1 thumbnail blob snapshot — manifest under
+# artifacts/validation/v1_thumbs_manifest.json is the durable evidence;
+# the PNG blobs are local-only (operator visual gate runs on this disk).
+artifacts/validation/v1_thumbs/
 artifacts/best_hparams/
 # artifacts/Final_Exp.html is committed by SYNCHRONIZER at phase boundaries (US-016).
 # It IS the canonical Gold Standard dashboard snapshot — must be tracked so the
