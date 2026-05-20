@@ -88,8 +88,12 @@ def test_image_quality_renders_psnr_ssim():
         runs_root = Path(td) / "runs" / "final"
         cell_dir = runs_root / "final_B_L3_resnet50_cifar10"
         cell_dir.mkdir(parents=True)
+        # `pipeline_version: 2` defeats the US-019B v2-pending demoter so the
+        # row renders as Complete and exercises the PSNR/SSIM column path
+        # under test (the demoter would otherwise blank these for Phase B).
         (cell_dir / "metrics.json").write_text(
-            json.dumps({"best_val_acc": 0.42}), encoding="utf-8",
+            json.dumps({"best_val_acc": 0.42, "pipeline_version": 2}),
+            encoding="utf-8",
         )
         (cell_dir / "image_quality.json").write_text(
             json.dumps({

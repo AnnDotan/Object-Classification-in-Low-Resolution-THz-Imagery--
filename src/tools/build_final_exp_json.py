@@ -33,8 +33,10 @@ from src.data.degradation_levels import level_params
 from src.experiments.cells import EXPECTED_TOTAL, CellMeta, iter_cells
 from src.experiments.run_status import (
     QUARANTINE_REASON,
+    demote_v2_pending,
     detect_status,
     is_quarantined,
+    is_v2_affected,
     read_image_quality,
     read_metrics,
     read_quarantine_sentinel,
@@ -139,13 +141,19 @@ def _visual_core_for(tag: str, visual_dir: Optional[Path] = None) -> Optional[st
 def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
     metrics = read_metrics(meta.tag, runs_root)
     status = detect_status(meta.tag, runs_root, metrics)
+    # US-019B: v2-affected cells with v1-vintage metrics demote to Pending in
+    # the dashboard so the operator can see at a glance which 90 cells still
+    # need the US-020/021/022 re-run. v1 metrics stay on disk for audit until
+    # the per-US pre-flight deletes them.
+    status = demote_v2_pending(status, metrics, meta.phase, meta.axis)
+    pending_v2 = status == "Pending" and is_v2_affected(meta.phase, meta.axis)
     val_acc: Optional[float] = None
     val_loss: Optional[float] = None
     epochs_run: Optional[int] = None
     runtime_s: Optional[float] = None
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
-    if metrics is not None:
+    if metrics is not None and not pending_v2:
         for key in ("best_val_acc", "final_val_acc", "last_val_acc"):
             v = metrics.get(key)
             if isinstance(v, (int, float)) and v >= 0.0:
@@ -184,7 +192,7 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
     # the dashboard can render them under the Visual Core thumbnail. Null on
     # Phase A clean cells (the measurement step is skipped — clean-vs-clean
     # is identity) and on any cell whose run dir hasn't been measured yet.
-    iq = read_image_quality(meta.tag, runs_root)
+    iq = read_image_quality(meta.tag, runs_root) if not pending_v2 else None
     psnr_mean: Optional[float] = None
     psnr_std: Optional[float] = None
     ssim_mean: Optional[float] = None
@@ -221,10 +229,12 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         "psnr_std": psnr_std,
         "ssim_mean": ssim_mean,
         "ssim_std": ssim_std,
-        "has_history": _has_history(meta.tag, runs_root),
+        "has_history": False if pending_v2 else _has_history(meta.tag, runs_root),
         # Inline learning-curve series — embedded so the drawer renders
-        # under file:// without a fetch(). None on cells with no history.json.
-        "history": _read_history(meta.tag, runs_root),
+        # under file:// without a fetch(). None on cells with no history.json
+        # AND on v2-affected cells whose v1 history is no longer the canonical
+        # answer (it'll be overwritten by the US-020/021/022 re-run).
+        "history": None if pending_v2 else _read_history(meta.tag, runs_root),
     }
 
 

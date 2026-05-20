@@ -33,8 +33,10 @@ from src.experiments.cells import (  # noqa: E402
 )
 from src.experiments.run_status import (  # noqa: E402
     QUARANTINE_REASON,
+    demote_v2_pending,
     detect_status,
     is_quarantined,
+    is_v2_affected,
     read_image_quality,
     read_metrics,
 )
@@ -125,10 +127,13 @@ def _empty_counts() -> dict:
 
 
 def _resolve_status(spec, runs_root: Path, metrics: Optional[dict]) -> str:
-    """Detect status, then apply US-014 quarantine override for TransNeXt."""
+    """Detect status, then apply US-014 quarantine override for TransNeXt
+    AND the US-019B v2-pending demoter for the 90 v2-affected cells whose
+    on-disk metrics.json predates PIPELINE_VERSION=2."""
     if is_quarantined(spec.model):
         return "Deferred"
-    return detect_status(spec.tag, runs_root, metrics)
+    status = detect_status(spec.tag, runs_root, metrics)
+    return demote_v2_pending(status, metrics, spec.phase, spec.axis)
 
 
 def _fmt_status_md(status: str) -> str:
@@ -136,6 +141,16 @@ def _fmt_status_md(status: str) -> str:
     if status == "Deferred":
         return f"Deferred — {QUARANTINE_REASON}"
     return status
+
+
+def _display_payload(spec, status: str, m: Optional[dict], q: Optional[dict]):
+    """Hide v1-vintage metrics + image_quality when the row was demoted to
+    Pending by `demote_v2_pending`. Keeps Best Val Acc / PSNR / SSIM /
+    Started / Duration columns as `EM_DASH` for the 90 v2-affected cells
+    awaiting US-020/021/022 re-run."""
+    if status == "Pending" and is_v2_affected(spec.phase, spec.axis):
+        return None, None
+    return m, q
 
 
 def _phase_a_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, dict]:
@@ -150,10 +165,11 @@ def _phase_a_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, d
         status = _resolve_status(spec, runs_root, m)
         counts[status] += 1
         rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
         rows.append(_row(i, [
             spec.model, spec.dataset, f"`{spec.tag}`", _fmt_status_md(status),
-            _fmt_acc(m), _fmt_psnr(q), _fmt_ssim(q),
-            _fmt_started(rd, m), _fmt_duration(rd, m),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
         ]))
     return "\n".join(rows), counts
 
@@ -170,11 +186,12 @@ def _phase_b_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, d
         status = _resolve_status(spec, runs_root, m)
         counts[status] += 1
         rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
         rows.append(_row(i, [
             spec.model, spec.dataset, LEVEL_NAMES[spec.level],
             f"`{spec.tag}`", _fmt_status_md(status),
-            _fmt_acc(m), _fmt_psnr(q), _fmt_ssim(q),
-            _fmt_started(rd, m), _fmt_duration(rd, m),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
         ]))
     return "\n".join(rows), counts
 
@@ -191,11 +208,12 @@ def _phase_c_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, d
         status = _resolve_status(spec, runs_root, m)
         counts[status] += 1
         rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
         rows.append(_row(i, [
             spec.model, spec.dataset, LEVEL_NAMES[spec.level], spec.axis,
             f"`{spec.tag}`", _fmt_status_md(status),
-            _fmt_acc(m), _fmt_psnr(q), _fmt_ssim(q),
-            _fmt_started(rd, m), _fmt_duration(rd, m),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
         ]))
     return "\n".join(rows), counts
 

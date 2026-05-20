@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from src.data.degradation_levels import PIPELINE_VERSION
+
 RUNS_ROOT_DEFAULT = Path("runs/final")
 
 # Keys in metrics.json that, when present and non-negative, mean the run
@@ -100,6 +102,46 @@ def read_image_quality(tag: str, runs_root: Path = RUNS_ROOT_DEFAULT) -> Optiona
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def is_v2_affected(phase: str, axis: Optional[str]) -> bool:
+    """True iff a cell's v1 metrics were invalidated by the
+    `PIPELINE_VERSION=2` noise/S&P pre-upsample move (US-017). Covers the
+    90 v2-affected cells:
+      - Phase B (all 30; noise_std>0 and salt_pepper>0 at every level)
+      - Phase C `noise` axis (30)
+      - Phase C `salt_pepper` axis (30)
+    The remaining 96 cells (Phase A clean + Phase C resolution/blur/
+    saturation) are unaffected because US-017 moved steps that are
+    no-ops at their identity values.
+    """
+    if phase == "B":
+        return True
+    if phase == "C" and axis in ("noise", "salt_pepper"):
+        return True
+    return False
+
+
+def demote_v2_pending(
+    status: str,
+    metrics: Optional[dict],
+    phase: str,
+    axis: Optional[str],
+) -> str:
+    """Dashboard-only status override: demote `Complete` to `Pending` when
+    the cell is in the v2-affected set AND its `metrics.json` predates
+    `PIPELINE_VERSION=2`. The on-disk v1 metrics are NOT deleted (that's
+    US-020/021/022 pre-flight); this only changes what the operator sees
+    in the dashboards until the v2 re-run lands.
+    """
+    if status != "Complete":
+        return status
+    if not is_v2_affected(phase, axis):
+        return status
+    pv = (metrics or {}).get("pipeline_version")
+    if isinstance(pv, (int, float)) and int(pv) >= PIPELINE_VERSION:
+        return status
+    return "Pending"
 
 
 def detect_status(
