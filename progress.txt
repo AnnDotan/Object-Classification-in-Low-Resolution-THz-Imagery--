@@ -2984,3 +2984,143 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     back to the operator for the signature.
 ---
 
+## Iteration 33 (2026-05-20) — PRD §5 reproducibility audit-trail: pipeline_version in metrics.json write path (US-020 prerequisite)
+- What was done:
+  (a) Picked-task rationale: US-019B criterion #4 (operator
+      signature) is the only US-019B unticked criterion left
+      and is by definition operator-gated. All downstream USs
+      (US-020/021/022/023/024/025) gate on the signature for
+      GPU dispatch, but ONE concrete PRD-specified code change
+      is independently agent-doable and de-risks US-020:
+      PRD §5's "Reproducibility audit trail" specifies adding
+      `pipeline_version` to the Lightning metrics.json write
+      path. US-020 acceptance criterion #2 directly says "All
+      30 metrics.json files written with `pipeline_version: 2`
+      field." If the callback doesn't emit this, the 17.5 GPU-h
+      Phase B re-run would fail acceptance on a one-line bug.
+  (b) Confirmed the gap: grepped for `pipeline_version` /
+      `degradation_levels_hash` in src/lightning/. Found that
+      `src/experiments/run_status.py:141` READS
+      `metrics["pipeline_version"]` (the v2-pending demoter,
+      per the inline comment in test_update_final_exp.py:91)
+      but `src/lightning/callbacks.py:LegacyJSONMetricsCallback.
+      on_train_end` does NOT emit it. The read-side already
+      assumes the contract; only the write-side is missing.
+      Also confirmed `degradation_levels_hash` is referenced
+      only in docstrings — it was a planned but unwritten
+      field, so PRD §5's "alongside the existing
+      degradation_levels_hash documentary field" wording is
+      stale (documentary cruft, not a blocker).
+  (c) Edited `src/lightning/callbacks.py` (2 surgical changes):
+      1. Module-level `from src.data.degradation_levels import
+         PIPELINE_VERSION`.
+      2. Appended `"pipeline_version": int(PIPELINE_VERSION)`
+         to the `on_train_end` payload dict, with a `PRD §5`
+         comment referencing the build_final_exp_json /
+         update_final_exp consumers.
+  (d) Extended `src/tests/test_wandb_capture.py` to lock the
+      contract:
+      1. Added `pipeline_version` to `_REQUIRED_KEYS` (the
+         missing-keys check now fires if the field is omitted).
+      2. New `_check_pipeline_version_field` test that asserts
+         (i) field present, (ii) is `int`, (iii) equals
+         `int(PIPELINE_VERSION)` at write time. Wired into
+         `main()` so the 5-check sweep now has a 5th case.
+      3. Added `from src.data.degradation_levels import
+         PIPELINE_VERSION` to the test imports.
+  (e) Validation passes:
+      - `python -m src.tests.test_wandb_capture` → 5/5 OK,
+        including "OK [pipeline-version] payload[
+        'pipeline_version'] == 2 (int)."
+      - `pytest src/tests/test_update_final_exp.py` → 6/6 pass
+        (consumer side unaffected, demoter still works).
+      - `python -m src.tests.test_degradation_determinism`
+        → 5/5 green (intra=0, inter=0, lag-1 autocorr=0.993).
+  (f) Did NOT tick any PRD checkbox: US-020 acceptance #2 is a
+      RUNTIME acceptance ("All 30 metrics.json files written..."),
+      requires the GPU runs to have actually executed, and is
+      gated on US-019B criterion #4 signature. This iter is the
+      write-side wiring that makes US-020 #2 satisfiable - not
+      US-020 #2 itself. No checkbox in §5 either (it's prose
+      spec, not a tracked [ ] task). Pure prerequisite work.
+- Files affected:
+  - src/lightning/callbacks.py: +1 import line, +3 lines in
+    payload dict (1 comment + 1 key).
+  - src/tests/test_wandb_capture.py: +1 import, +3 lines in
+    `_REQUIRED_KEYS`, +15 LOC for `_check_pipeline_version_field`,
+    +2 lines wiring it into `main()`.
+  - progress.txt: this Iteration 33 entry.
+  - No PRD checkbox ticks (intentional - prerequisite, not
+    acceptance).
+- Validation:
+  - `python -m src.tests.test_wandb_capture` exits 0 with all
+    5 OK lines.
+  - `pytest src/tests/test_update_final_exp.py` exits 0 with
+    6/6 pass (the read-side v2-pending demoter still works).
+  - `python -m src.tests.test_degradation_determinism` exits 0
+    with 5/5 green; lag-1 autocorr still 0.993 (US-017 invariant
+    intact).
+  - No callback-level integration test needed: the existing
+    test_wandb_capture suite exercises the on_train_end write
+    path with a real LegacyJSONMetricsCallback and reads back
+    the JSON; the new assertion lives at that integration seam.
+- Learnings for next cycles:
+  - Patterns: When a downstream consumer reads a metrics.json
+    field, the schema test must lock it at BOTH ends - write
+    side (callback test) AND read side (consumer test). This
+    iter added the write-side lock; the read-side was already
+    locked by test_update_final_exp.py's v2-pending demoter
+    cases. If a future cycle ever sees "field present in
+    consumer test but missing from callback test," that's a
+    schema-asymmetry smell - one side will silently drift.
+  - Patterns: For "documentary fields" (fields written for
+    audit only, not used by training logic), put them at the
+    END of the payload dict with a one-line `# PRD §X` comment
+    referencing the spec. Keeps the load-bearing fields up top
+    and the audit-trail fields below the fold. Future readers
+    can scan past the audit fields when debugging metric values.
+  - Patterns: When picking a Ralph task while the next-in-line
+    checkbox is operator-gated, prefer PRD-specified prep work
+    over invented improvements. PRD §5 was explicit: "Concretely:
+    import `from src.data.degradation_levels import
+    PIPELINE_VERSION` and emit `metrics['pipeline_version'] =
+    int(PIPELINE_VERSION)`." That's the spec; the agent's job
+    is to execute it, not to redesign. If the spec is wrong
+    (like §5's stale `degradation_levels_hash` ref), document
+    the staleness in progress.txt rather than papering over it.
+  - Traps: `python -m src.tests.test_update_final_exp` failed
+    with `NameError: test_empty_runs_root_renders_with_
+    quarantine_split is not defined` - the file's __main__
+    block references a test function that no longer exists.
+    This is pre-existing test-runner cruft, NOT a regression
+    from this iter. Use `pytest src/tests/test_update_final_exp.py`
+    for that file (its tests are pytest-style, not main()-style);
+    the file's bottom __main__ block is dead code that should
+    eventually be cleaned up - flagged but NOT touched here
+    (one-task-per-cycle).
+  - Traps: `test_wandb_capture.py` and `test_build_final_exp_json.py`
+    are NOT pytest-discoverable (they use a `main()` function +
+    `__name__ == "__main__"` style). `pytest` reports "no tests
+    ran" - which can mislead you into thinking the tests don't
+    exist. Run them with `python -m src.tests.<file>` instead.
+    The convention split (pytest-style vs main-style) is fixed
+    per-file by historical accident; don't try to "normalize"
+    without a separate US.
+  - Traps: PRD §5's mention of "alongside the existing
+    degradation_levels_hash documentary field" is rot - that
+    field was planned in prior PRDs but never actually wired
+    in. Don't add it speculatively just because the PRD says
+    "existing." Greps prove what exists; PRD prose does not.
+  - Helpful context: With this iter, US-020 acceptance #2 is
+    now SATISFIABLE end-to-end: when the operator signs the
+    US-019B checklist and the 30 Phase B cells dispatch,
+    every metrics.json they write will carry `pipeline_version:
+    2`. The next agent-doable prep task (if the operator
+    signature still hasn't landed) would be similar
+    de-risking for US-024: pre-author docs/references.bib
+    (pure bibliographic file, no runtime-results dependency)
+    and confirm the LaTeX toolchain (`tectonic` on PATH) per
+    PRD §9 Risk (a). Both are useful even before US-023
+    closes the content side.
+---
+

@@ -20,6 +20,8 @@ from typing import Optional
 import pytorch_lightning as pl
 import torch
 
+from src.data.degradation_levels import PIPELINE_VERSION
+
 
 class LegacyMetricsCSVCallback(pl.Callback):
     """Append [epoch, train_loss, train_acc, val_loss, val_acc] to <run_dir>/metrics.csv
@@ -149,6 +151,9 @@ class LegacyJSONMetricsCallback(pl.Callback):
             "runtime_s": self._runtime_s,
             "started_at": self._started_at,
             "finished_at": self._finished_at,
+            # PRD §5: documentary field so v1 vs v2 cells can be filtered
+            # programmatically by build_final_exp_json / update_final_exp.
+            "pipeline_version": int(PIPELINE_VERSION),
         }
         with open(self.json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)

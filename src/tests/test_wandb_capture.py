@@ -17,6 +17,7 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
+from src.data.degradation_levels import PIPELINE_VERSION
 from src.lightning.callbacks import LegacyJSONMetricsCallback
 
 
@@ -67,6 +68,9 @@ _REQUIRED_KEYS = (
     # three keys — null is acceptable, omission is not (the dashboard's
     # tag-keyed lookup is stable on schema).
     "runtime_s", "started_at", "finished_at",
+    # PRD §5 (US-017 follow-up): documentary field so v1 vs v2 cells can be
+    # filtered programmatically. US-020 acceptance #2 makes this load-bearing.
+    "pipeline_version",
 )
 
 
@@ -124,6 +128,22 @@ def _check_no_loggers_attr(td: Path) -> None:
     print("OK [loggers-none] — trainer.loggers=None tolerated, fields null.")
 
 
+def _check_pipeline_version_field(td: Path) -> None:
+    """PRD §5: pipeline_version is an int matching PIPELINE_VERSION at write time."""
+    cb = LegacyJSONMetricsCallback(td)
+    trainer = _make_trainer()
+    payload = _flush(cb, trainer)
+    _check_keys_present(payload, "pipeline-version")
+    pv = payload["pipeline_version"]
+    assert isinstance(pv, int), (
+        f"pipeline_version must be int (round-trip schema); got {type(pv).__name__}"
+    )
+    assert pv == int(PIPELINE_VERSION), (
+        f"pipeline_version mismatch: payload={pv} module={int(PIPELINE_VERSION)}"
+    )
+    print(f"OK [pipeline-version] — payload['pipeline_version'] == {pv} (int).")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         _check_with_wandb_logger(Path(td))
@@ -133,6 +153,8 @@ def main() -> int:
         _check_wandb_logger_raises(Path(td))
     with tempfile.TemporaryDirectory() as td:
         _check_no_loggers_attr(Path(td))
+    with tempfile.TemporaryDirectory() as td:
+        _check_pipeline_version_field(Path(td))
     return 0
 
 
