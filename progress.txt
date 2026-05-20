@@ -2555,3 +2555,105 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     US-020 GPU dispatch unblocked.
 ---
 
+## Iteration 29 (2026-05-20) — US-019B v2 thumbnail re-render (90 cells, CPU-only)
+- What was done:
+  (a) Verified the v1 baseline still intact via
+      `scripts/snapshot_v1_thumbs.py --verify` → "OK — 90 v1
+      thumbs match manifest sha256s." Confirmed
+      `degradation_levels.PIPELINE_VERSION == 2` before touching
+      anything — both pre-flight gates green.
+  (b) Dispatched the three US-019B render commands verbatim
+      (CPU-only, no GPU touched):
+        - `python -m src.tools.render_cell_thumbs --force --phase B`
+          → 30 written / 0 failed.
+        - `python -m src.tools.render_cell_thumbs --force --phase C
+          --axes noise` → 30 written / 0 failed.
+        - `python -m src.tools.render_cell_thumbs --force --phase C
+          --axes salt_pepper` → 30 written / 0 failed.
+      Total: 90 v2 thumbs written to
+      `artifacts/dashboard_thumbs/<tag>.png` (gitignored).
+  (c) Acceptance check #1 (v1↔v2 differ): hashed each of the 90
+      new PNGs and compared against `sha256` entries in
+      `artifacts/validation/v1_thumbs_manifest.json`. Result:
+      90/90 differ, 0 byte-identical, 0 missing. The v2 pipeline
+      move (noise + S&P pre-upsample) is visibly stamped into
+      every affected cell.
+  (d) Acceptance check #5 (determinism gate): captured
+      SHA-256 of every PNG in `artifacts/dashboard_thumbs/`
+      (310 total — includes the 96 unaffected from prior
+      renders + the 90 just-written), then re-ran the three
+      `--force` dispatches a second time and re-hashed. Result:
+      0 deltas across 310 files. The 90 forced re-renders all
+      reproduced byte-identical output; the seed contract from
+      PRD §4 holds end-to-end (per-`idx` `torch.Generator`
+      determinism stable across CPU passes).
+  (e) Marked PRD acceptance criteria #1 + #5 as [x] in
+      §US-019B (lines 212, 216 in the v2 layout) with parens
+      noting the 2026-05-20 verification evidence. The
+      remaining three criteria (96-unaffected check, contact
+      sheet, operator signature) stay [ ] for subsequent Ralph
+      cycles.
+- Files affected:
+  - 90 PNGs overwritten in `artifacts/dashboard_thumbs/` (all
+    gitignored — `final_B_L{1..5}_{model}_{dataset}.png` +
+    `final_C_L{1..5}_{noise,salt_pepper}_{model}_{dataset}.png`).
+  - PRD.md: two acceptance-criterion checkboxes flipped from
+    [ ] to [x] in §US-019B with verification-date annotations.
+  - progress.txt: this Iteration 29 entry.
+  - No source code touched; no tests modified.
+- Validation:
+  - 90 v2 thumbs written with `--force`; 0 failures across all
+    three dispatches.
+  - v1↔v2 hash diff: 90/90 differ (Python one-liner using
+    `hashlib.sha256` against `manifest['sha256']`).
+  - Determinism gate: second `--force` pass yields 0 hash
+    deltas across 310 dashboard PNGs (covers both the
+    re-rendered 90 and the untouched 220 still on disk).
+  - Pre-flight: `snapshot_v1_thumbs.py --verify` green;
+    `PIPELINE_VERSION == 2` confirmed via direct import.
+- Learnings for next cycles:
+  - Patterns: When validating "this re-run is deterministic,"
+    hash EVERY file in the output directory (not just the
+    subset you re-rendered) and re-run with `--force`. Catches
+    two failure modes in one pass: (a) the targeted files
+    really are byte-identical, AND (b) the renderer didn't
+    silently mutate sibling files. The "310 files compared, 0
+    differ" line is a stronger guarantee than spot-checking 5
+    thumbs.
+  - Patterns: For PRD acceptance criteria that come in
+    bundles (US-019B's 5 checkboxes), tick the individual
+    criteria as evidence lands rather than batching the close.
+    Future Ralph cycles can read the PRD diff and immediately
+    see "2 of 5 already verified" without re-running the same
+    checks. Cite the verification command + date in parens
+    next to each tick so the audit trail is self-contained.
+  - Traps: The v1 thumb manifest from Iter 28 uses key
+    `sha256` (a flat `{tag: hash}` dict), NOT `thumbs`. First
+    pass at the hash-diff one-liner KeyError'd on `thumbs` —
+    always `json.dumps` the manifest top-level keys before
+    writing the comparison code. The schema lives in the
+    `schema_version`/`purpose`/`sha256` shape Iter 28
+    committed; don't guess.
+  - Traps: `render_cell_thumbs` always writes to
+    `artifacts/dashboard_thumbs/` even when --phase filters
+    the cell set — the output directory is shared across
+    phases. Don't assume `--phase B` only touches Phase-B
+    PNGs by directory; it touches files by tag name. The
+    `git diff --stat` recipe in PRD acceptance #2 won't work
+    because the directory is gitignored — that's why Iter 28
+    built the manifest-based comparison instead.
+  - Helpful context: With 2/5 US-019B criteria satisfied, the
+    next Ralph cycle's single task is criterion #3: build
+    `scripts/build_v1_v2_thumb_contact_sheet.py` that
+    enumerates the 90 v2-affected tags, emits an HTML page
+    pairing
+    `artifacts/validation/v1_thumbs/<tag>.png` (snapshotted
+    baseline) against `artifacts/dashboard_thumbs/<tag>.png`
+    (v2 just-rendered), and writes
+    `artifacts/validation/v1_vs_v2_thumbs.html`. That's
+    arguably the load-bearing deliverable for the operator
+    visual review — once it's clickable, the operator can
+    spot-check the 5 smoking-gun expectations and sign the
+    checklist (criterion #4) in one sitting.
+---
+

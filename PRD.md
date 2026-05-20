@@ -209,11 +209,11 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 (The `--axes` flag on `render_cell_thumbs` may need a small patch mirroring US-019; if so, bundle that into US-019's deliverable.)
 
 **Acceptance criteria.**
-- [ ] 90 v2 thumbs present on disk and visibly differ from their v1 git-history counterparts on the noise/S&P axes.
+- [x] 90 v2 thumbs present on disk and visibly differ from their v1 git-history counterparts on the noise/S&P axes. *(verified 2026-05-20: all 90 SHA-256 hashes differ from `artifacts/validation/v1_thumbs_manifest.json` baseline.)*
 - [ ] 96 unaffected thumbs (Phase A clean + Phase C resolution/blur/saturation) byte-identical to v1 — verified by `git diff --stat artifacts/dashboard_thumbs/` showing changes only on the 90 expected tags.
 - [ ] Contact sheet `artifacts/validation/v1_vs_v2_thumbs.html` opens cleanly and shows all 90 pairs.
 - [ ] **Operator signs `artifacts/validation/v2_preview_checklist.md`** (writes "approved by ib94 YYYY-MM-DD" on the last line and commits). Without this signature, US-020 dispatch is forbidden.
-- [ ] Re-running the renderer with no other changes produces byte-identical PNGs (seed determinism gate).
+- [x] Re-running the renderer with no other changes produces byte-identical PNGs (seed determinism gate). *(verified 2026-05-20: second `--force` pass produced 0 hash deltas across 310 thumbs in `artifacts/dashboard_thumbs/`.)*
 
 **Owner:** [DESIGNER](agents/DESIGNER.md) (owns `src/tools/` per agent spec, renders the contact sheet) with **[DATA_ARCHITECT](agents/DATA_ARCHITECT.md)** verifying the seed contract held end-to-end (lag-1 autocorrelation re-spot-checked on the rendered PNGs). **Dependencies:** US-017, US-019 (the `--axes` filter on the renderer).
 
