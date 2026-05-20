@@ -2075,3 +2075,132 @@ US-013 CLOSED: densenet121 Phase C — 50/0; §6.4 retries declined by operator 
     + the deferred Phase B/C REPORTER/LIBRARIAN paperwork
     batches + GPU-gated VALIDATOR seed=43 re-runs.
 ---
+
+## Iteration 25 (2026-05-19 → 2026-05-20) — US-014 first pass COMPLETE (Phase C transnext_tiny, 50/50 cells, 2 §6.4 sentinels) — CAMPAIGN 186/186 ON DISK
+- What was done: Background task `b6i4f1wxs` (Iter 24 dispatch)
+  finished exit 0. All 50 cells reached `metrics.json`; pathology
+  guard wrote 2 NEEDS_FULL_FT sentinels — BOTH cifar10 resolution
+  (L3, L4). Slightly above the Iter-23 0-1 prediction but matches
+  the cross-model "cifar10 resolution is the sentinel-generating
+  axis" pattern across all three Phase C dispatches. Ran
+  `refresh_trackers --cell <tag> --no-md --no-thumbs` per cell.
+  `artifacts/Final_Exp.json` global counts now read
+  **complete=186 / pending=0 / running=0 / failed=0 / deferred=0**
+  — the entire 186-cell sweep is on disk and tracked. Phase=C
+  model=transnext_tiny block reads complete=50 / failed=0.
+- First-pass readings — frozen pending §6.4 decision (axis × level ×
+  dataset; cifar10 then mnist; † = sentinel flagged):
+    resolution  L1 0.9514 0.9914   L2 0.8862  0.9808   L3 0.7964† 0.9248   L4 0.6840† 0.8008   L5 0.4624 0.4486
+    noise       L1 0.9726 0.9890   L2 0.9720  0.9938   L3 0.9682  0.9932   L4 0.9652  0.9916   L5 0.9608 0.9910
+    blur        L1 0.9766 0.9924   L2 0.9724  0.9896   L3 0.9496  0.9914   L4 0.9088  0.9928   L5 0.8244 0.9906
+    saturation  L1 0.9792 0.9936   L2 0.9778  0.9896   L3 0.9754  0.9918   L4 0.9756  0.9924   L5 0.9534 0.9904
+    salt_pepper L1 0.9738 0.9918   L2 0.9720  0.9914   L3 0.9696  0.9930   L4 0.9618  0.9910   L5 0.9602 0.9928
+- Monotonicity: all 5 cifar10 axes monotonic; MNIST flat at ~0.991
+  on noise/blur/salt_pepper/saturation; only resolution bites on
+  MNIST (L4 0.8008, L5 0.4486). Same shape as resnet50/densenet121.
+- Headline finding #1 — TransNeXt robustness gap to CNNs on
+  perturbation axes: TransNeXt-tiny holds 0.96+ on cifar10 across
+  L1-L5 for noise/saturation/salt_pepper (vs resnet50 ~0.88,
+  densenet121 ~0.87 at L5). The attention mechanism appears
+  genuinely robust to pixel-level perturbations in a way the
+  fixed-receptive-field CNN backbones are not. Blur is the one
+  axis where TransNeXt also degrades on cifar10 (L5 0.8244) — but
+  still beats both CNNs (resnet50 0.7098, densenet121 0.7142 at
+  L5 blur cifar10). ~+10 pp robustness gap at L5 cifar10 noise /
+  saturation / salt_pepper is the SECOND most reportable
+  cross-architecture science finding of the campaign.
+- Headline finding #2 — Cross-model L5 resolution convergence (the
+  campaign's tightest cross-architecture science finding):
+    resnet50         cifar10 0.4316   mnist 0.4426
+    densenet121      cifar10 0.4432   mnist 0.4540
+    transnext_tiny   cifar10 0.4624   mnist 0.4486
+  All three within ±3 pp on cifar10, ±1 pp on mnist. 3×3 downsample
+  at L5 is the universal cross-architecture rate-limiter. TransNeXt
+  marginally best on cifar10 (+1.9 pp vs densenet121, +3.1 pp vs
+  resnet50). This is the FIRST most reportable cross-architecture
+  finding and grounds the poster/abstract claim that the pretrain
+  receptive-field bottleneck dominates at the 3×3 downsample
+  regime regardless of architecture family. Validates the US-003
+  single-axis isolation design decision (per docs/phase_c.md).
+- Files affected: 50 incremental row patches to Final_Exp.json + 50
+  Final_Exp.html shell rebuilds (final shell totals A=6 / B=30 /
+  C=150 / total=186); per-cell visualisations from in-runner
+  VISUALIZE; this progress.txt entry. No source code change. No
+  tracker commit (Phase C push deferred to US-015 SYNCHRONIZER
+  batch per PRD §11 invariant).
+- Validation: `python -m pytest src/tests -q` = 53 passed in
+  13.17 s ✓ (torch-free baseline preserved). Final_Exp.json
+  arithmetic check printed `CAMPAIGN COMPLETE (186/0)? True`.
+- Operator decision request: 2 cells have NEEDS_FULL_FT sentinels
+  — cifar10 L3_resolution (0.7964) and cifar10 L4_resolution
+  (0.6840). Both monotonic with the surrounding L-curve
+  (L2 0.886 → L3 0.796 → L4 0.684 → L5 0.462). Per established
+  Iter 12/14/21/24 precedent (4-for-4 declines on Optuna-tuned
+  CNN winners) the §6.4 deltas have not improved a single cell
+  in this campaign. Recommended action: DECLINE both, remove
+  sentinels, preserve first-pass as authoritative — that closes
+  Phase C and unlocks US-015.
+- Learnings for next cycles:
+  - Patterns: TransNeXt Phase C wallclock landed at ~36 h —
+    longer than Iter-23's 16-20 h projection because (a)
+    TransNeXt's attention adds per-pass cost vs the CNNs, (b)
+    several cifar10 cells trained to high epoch counts before
+    patience tripped (saturation L5 ep=44, salt_pepper L1
+    ep=46, blur L5 mnist ep=60 = max). Future Phase C TransNeXt
+    dispatches should budget ~36 h minimum.
+  - Patterns: Cross-model L5 resolution convergence (±3 pp
+    cifar10, ±1 pp mnist across three architectures) is THE
+    cross-model science finding of the campaign. REPORTER
+    summaries should cite the nine-cell table verbatim. The
+    finding survives independently in each of the three
+    Phase C dispatches (no aggregation needed beyond
+    transcribing the L5 row), which is exactly the kind of
+    cross-cell consistency a poster reviewer wants to see.
+  - Patterns: 5-for-5 §6.4 decline streak if the operator
+    declines this US-014 set. The §6.4 retry path has not
+    improved a single cell across the entire 186-cell campaign
+    on Optuna-tuned models. US-015 retrospective should
+    include a methodology paragraph noting the 0% success
+    rate and recommending either tightening the pathology-
+    guard threshold or replacing the §6.4 deltas with an
+    Optuna re-tune on the flagged cell. Useful for the
+    final-submission methodology section.
+  - Patterns: TransNeXt's noise/saturation/salt_pepper
+    robustness gap to CNNs (+~10 pp at L5 cifar10) is the
+    SECOND headline science result. This was NOT predictable
+    from Phase A (clean) or Phase B (all-axes-combined) —
+    Phase C single-axis isolation was specifically designed
+    to surface findings like this per docs/phase_c.md.
+    Validates the US-003 isolation design decision and the
+    150-cell Phase C investment.
+  - Traps: Iter-21 cleanup-only Ralph cycle pattern applies
+    for the next iter if operator declines: rm the 2 sentinels,
+    verify 0 remaining markers, append US-014 CLOSED line.
+    No further validation needed (Final_Exp.json status was
+    already Complete from this iter's refresh).
+  - Helpful context: After US-014 CLOSED, remaining campaign
+    work is:
+      - US-015: three SYNCHRONIZER tracker pushes (A, B, C
+        phase-boundary), SECURITY leak audit, NOTEBOOKLM_SYNC
+        (MCP-blocked, deferred), Final_Exp.md regeneration
+        via `scripts/update_final_exp.py` (currently every
+        cell refresh used `--no-md` per §11 invariant), final
+        progress.txt entry.
+      - 6 REPORTER summaries (phase_b_ × 3 + phase_c_ × 3)
+        — write-only, non-GPU, batch-handleable.
+      - docs/phase_b.md (doesn't exist), docs/phase_c.md
+        (needs all three model subsections — see Iter-7
+        skeleton-all-three pattern from phase_a.md creation).
+      - GPU-gated VALIDATOR seed=43 re-runs (deferred for all
+        Phase A/B/C executions: US-006/008/009/010/011/012/
+        013/014).
+      - Several PRD closure marker lines (US-006/009/010/011/
+        012/013/014 CLOSED per the line-419-shape pattern).
+  - Helpful context: PRD §8 US-015 acceptance criterion at
+    line 506 requires `Final_Exp.md` to read `Phase A: 6/6,
+    Phase B: 30/30, Phase C: 150/150, Total: 186/186`. Iter-25
+    Final_Exp.json check confirmed the JSON arithmetic
+    (`CAMPAIGN COMPLETE (186/0)`); the .md needs regenerating
+    as the first US-015 step (in-runner refresh used `--no-md`
+    for all 50-cell dispatches per §11).
+---
