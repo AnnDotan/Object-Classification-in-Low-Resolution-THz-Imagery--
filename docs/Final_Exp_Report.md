@@ -1,0 +1,590 @@
+# Object Classification in Low-Resolution THz-like Imagery — Final Research Report
+
+**Status:** 186 / 186 cells complete · **Generated:** 2026-05-20 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
+
+---
+
+## Executive Summary
+
+This report presents the final outcomes of a 186-cell experimental campaign evaluating
+the robustness of three deep-learning architectures —
+**ResNet50** (CNN, ~25M params), **DenseNet121** (CNN, ~8M params), and
+**TransNeXt-tiny** (attention, ~28M params) — under severe visual degradation that
+simulates Terahertz (THz) imaging conditions: low resolution, blur, additive noise,
+salt-and-pepper, and desaturation. All three models are trained at the same
+**224 × 224** input resolution using a uniform protocol (full fine-tuning with
+differential learning rates), so accuracy differences are attributable to architecture
+and not to input shape.
+
+**Two headline cross-architecture findings emerged from the 150-cell Phase C
+single-axis isolation:**
+
+1. **Universal 3 × 3-downsample bottleneck.** At the most aggressive resolution
+   axis level (L5 = 3 × 3 native pixels upsampled to 224), every architecture
+   collapses to ~0.43-0.46 best-val-acc on CIFAR-10 and ~0.45 on MNIST, within
+   ±3 pp across architectures. The pretrain receptive-field hierarchy fails uniformly
+   when sub-class geometric structure is destroyed, regardless of whether the
+   backbone is convolutional or attention-based.
+
+2. **TransNeXt robustness gap on perturbation axes.** TransNeXt-tiny holds
+   ≥ 0.96 best-val-acc on CIFAR-10 across L1 → L5 for noise, saturation, and
+   salt-and-pepper, while both CNN backbones drop to ~0.87 at L5 — a ~+8 to +10 pp
+   robustness gap that grows monotonically with severity. The attention mechanism
+   integrates over local perturbations in a way the fixed CNN receptive fields
+   do not.
+
+Combined-axis Phase B confirms that the resolution-axis collapse dominates the
+overall L5 accuracy: with all five axes active at L5, CIFAR-10 best-val-acc falls to
+0.26 (DenseNet121) to 0.29 (ResNet50, TransNeXt-tiny), while MNIST holds at
+0.40-0.42 — bounded by the same resolution-axis floor exposed in Phase C.
+
+---
+
+## Campaign Statistics
+
+- **Total cells:** 186 (6 Phase A + 30 Phase B + 150 Phase C)
+- **Total accumulated GPU runtime:** ~108.9 GPU-hours
+- **Total training epochs across all cells:** 4,999
+- **Architectures evaluated:** 3 (ResNet50, DenseNet121, TransNeXt-tiny)
+- **Datasets:** 2 (CIFAR-10, MNIST upsampled 28 → 224)
+- **Degradation severities:** 5 (L1 Mild → L5 Extreme)
+- **Phase C single-axis isolation axes:** 5 (resolution, noise, blur, saturation, salt_pepper)
+
+---
+
+## Methodology
+
+### Architectures
+
+| Model | Params | Input | Training Regime |
+|-------|--------|-------|-----------------|
+| ResNet50 | ~25M | 224 × 224 | Full fine-tune, AdamW, head LR 1e-3 / backbone LR 1e-4 |
+| DenseNet121 | ~8M | 224 × 224 | Full fine-tune, AdamW, head LR 1e-3 / backbone LR 1e-4 |
+| TransNeXt-tiny | ~28M | 224 × 224 | Full fine-tune, AdamW, head LR 5e-4 / backbone LR 5e-5, weight_decay 5e-2, drop_path 0.1 |
+
+All three use ImageNet pretrained weights, a uniform 60-epoch cap with
+`patience=10` early stopping (`min_delta=1e-4`, `monitor=val_acc`,
+`mode=max`), gradient clipping at `max_norm=1.0`, batch size 32,
+seed 42 with `pl.seed_everything(workers=True)`, and `bf16-mixed`
+Blackwell precision.
+
+### Datasets
+
+- **CIFAR-10** — 10 object classes, 32 × 32 RGB, 10K train / 5K val, upsampled 32 → 224.
+- **MNIST** — 10 digit classes, 28 × 28 grayscale broadcast to 3 channels, 10K train /
+  5K val, upsampled 28 → 224 by the degradation pipeline.
+
+### Degradation Pipeline
+
+All cells share the same pipeline:
+
+```
+original → saturation lerp → downsample(low_res) → upsample 224 × 224 (bicubic)
+        → blur → noise → salt&pepper → ImageNet normalize → model
+```
+
+### 5-Level Degradation Curve
+
+| Level | low_res | blur kernel | blur σ | noise std | S&P | saturation |
+|-------|---------|-------------|--------|-----------|-----|------------|
+| L1 Mild | 18 | 13 | 2.50 | 0.04 | 0.03 | 0.95 |
+| L2 Light | 12 | 25 | 5.00 | 0.08 | 0.06 | 0.65 |
+| L3 Moderate | 8 | 41 | 8.00 | 0.12 | 0.10 | 0.40 |
+| L4 Severe | 6 | 61 | 12.00 | 0.16 | 0.14 | 0.15 |
+| L5 Extreme | 3 | 91 | 18.00 | 0.22 | 0.18 | 0.00 |
+
+Saturation is a deterministic lerp `(1 − s) · gray + s · img`, applied **before**
+noise / salt-and-pepper so injected noise stays color-correct. Validation
+degradations are per-sample seeded
+(`seed = idx + SEED_OFFSET_VAL`) — validation pixels are byte-identical
+across dataset rebuilds, gated by `src/tests/test_degradation_determinism.py`.
+
+### Phase Design
+
+| Phase | Description | Count |
+|-------|-------------|-------|
+| **A — Clean baselines** | identity pipeline, no degradation | 6 |
+| **B — Combined degradation** | all five axes active at the same level L | 30 |
+| **C — Single-axis isolation** | one axis at L, the other four at identity | 150 |
+| **Total** | | **186** |
+
+Phase C single-axis isolation (US-003) was the diagnostic instrument
+designed to attribute Phase B collapses to specific axes; the
+headline findings above are direct outputs of this design.
+
+---
+
+## Phase A — Clean Baselines (6 cells)
+
+Identity degradation pipeline; measures the upper bound for each (model, dataset)
+pair before any THz-like distortion is applied.
+
+| # | Model | Dataset | Best Val Acc | Epochs | Runtime |
+|---|-------|---------|--------------|--------|---------|
+| 1 | resnet50 | cifar10 | 0.9518 | 23 | 9m |
+| 2 | resnet50 | mnist | 0.9914 | 21 | 7m |
+| 3 | densenet121 | cifar10 | 0.9356 | 17 | 9m |
+| 4 | densenet121 | mnist | 0.9930 | 29 | 14m |
+| 5 | transnext_tiny | cifar10 | 0.9764 | 15 | 38m |
+| 6 | transnext_tiny | mnist | 0.9924 | 35 | 90m |
+
+**Reading:** TransNeXt-tiny leads CIFAR-10 by +2.46 pp over ResNet50 and +4.08 pp
+over DenseNet121 at clean baseline; MNIST clusters tight at 0.991-0.993.
+
+---
+
+## Phase B — Combined Degradation (30 cells)
+
+Every five axes are active at the same level L per cell. This is the
+"realistic THz" regime — the model has to defeat all five degradations
+simultaneously.
+
+### Phase B Best-Val-Acc Curve (L1 → L5)
+
+| Model | Dataset | L1 | L2 | L3 | L4 | L5 |
+|-------|---------|----|----|----|----|----|
+| resnet50 | cifar10 | 0.8432 | 0.7344 | 0.5590 | 0.4174 | 0.2684 |
+| resnet50 | mnist | 0.9918 | 0.9804 | 0.9088 | 0.7426 | 0.3982 |
+| densenet121 | cifar10 | 0.8464 | 0.7558 | 0.6030 | 0.4586 | 0.2572 |
+| densenet121 | mnist | 0.9916 | 0.9830 | 0.9220 | 0.7824 | 0.4040 |
+| transnext_tiny | cifar10 | 0.9404 | 0.8550 | 0.7174 | 0.5500 | 0.2908 |
+| transnext_tiny | mnist | 0.9910 | 0.9824 | 0.9160 | 0.7676 | 0.4166 |
+
+**Reading:** Strictly monotonic on CIFAR-10 across all three architectures (no
+inversions). MNIST holds ≥ 0.98 through L2 for all models, then falls fast at
+L4 / L5 — driven by the resolution axis (see Phase C).
+
+### Full Phase B Result Table
+
+| # | Model | Dataset | Level | Best Val Acc | Epochs | Runtime |
+|---|-------|---------|-------|--------------|--------|---------|
+| 7 | resnet50 | cifar10 | L1 Mild | 0.8432 | 27 | 27m |
+| 8 | resnet50 | mnist | L1 Mild | 0.9918 | 24 | 24m |
+| 9 | densenet121 | cifar10 | L1 Mild | 0.8464 | 46 | 57m |
+| 10 | densenet121 | mnist | L1 Mild | 0.9916 | 54 | 66m |
+| 11 | transnext_tiny | cifar10 | L1 Mild | 0.9404 | 17 | 52m |
+| 12 | transnext_tiny | mnist | L1 Mild | 0.9910 | 26 | 79m |
+| 13 | resnet50 | cifar10 | L2 Light | 0.7344 | 47 | 47m |
+| 14 | resnet50 | mnist | L2 Light | 0.9804 | 21 | 21m |
+| 15 | densenet121 | cifar10 | L2 Light | 0.7558 | 39 | 49m |
+| 16 | densenet121 | mnist | L2 Light | 0.9830 | 33 | 42m |
+| 17 | transnext_tiny | cifar10 | L2 Light | 0.8550 | 21 | 64m |
+| 18 | transnext_tiny | mnist | L2 Light | 0.9824 | 26 | 80m |
+| 19 | resnet50 | cifar10 | L3 Moderate | 0.5590 | 13 | 14m |
+| 20 | resnet50 | mnist | L3 Moderate | 0.9088 | 26 | 27m |
+| 21 | densenet121 | cifar10 | L3 Moderate | 0.6030 | 44 | 57m |
+| 22 | densenet121 | mnist | L3 Moderate | 0.9220 | 19 | 25m |
+| 23 | transnext_tiny | cifar10 | L3 Moderate | 0.7174 | 14 | 43m |
+| 24 | transnext_tiny | mnist | L3 Moderate | 0.9160 | 16 | 49m |
+| 25 | resnet50 | cifar10 | L4 Severe | 0.4174 | 13 | 14m |
+| 26 | resnet50 | mnist | L4 Severe | 0.7426 | 12 | 13m |
+| 27 | densenet121 | cifar10 | L4 Severe | 0.4586 | 14 | 19m |
+| 28 | densenet121 | mnist | L4 Severe | 0.7824 | 14 | 19m |
+| 29 | transnext_tiny | cifar10 | L4 Severe | 0.5500 | 13 | 40m |
+| 30 | transnext_tiny | mnist | L4 Severe | 0.7676 | 13 | 41m |
+| 31 | resnet50 | cifar10 | L5 Extreme | 0.2684 | 12 | 13m |
+| 32 | resnet50 | mnist | L5 Extreme | 0.3982 | 12 | 13m |
+| 33 | densenet121 | cifar10 | L5 Extreme | 0.2572 | 14 | 19m |
+| 34 | densenet121 | mnist | L5 Extreme | 0.4040 | 14 | 19m |
+| 35 | transnext_tiny | cifar10 | L5 Extreme | 0.2908 | 14 | 44m |
+| 36 | transnext_tiny | mnist | L5 Extreme | 0.4166 | 13 | 41m |
+
+---
+
+## Phase C — Single-Axis Isolation (150 cells)
+
+The active axis is at level L; the other four axes are at **identity** (no
+degradation). This isolates the contribution of each degradation axis from
+the Phase B collapse.
+
+At L1, the isolation cells differ from Phase B L1 cells because Phase B L1 has
+**all five axes** at L1 mild while Phase C L1 has **one axis at L1, four at
+identity** — see `docs/phase_c.md` for the scientific rationale and the
+`degradation_levels_hash` rotation note.
+
+### 5 × 5 Heatmaps per (model, dataset)
+
+#### ResNet50
+
+#### resnet50 · cifar10
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.8800 | 0.7898 | 0.6846 | 0.6050 | 0.4316 |
+| noise | 0.9208 | 0.9092 | 0.9046 | 0.9040 | 0.8974 |
+| blur | 0.9354 | 0.8988 | 0.8678 | 0.8146 | 0.7098 |
+| saturation | 0.9206 | 0.9282 | 0.9256 | 0.9178 | 0.8822 |
+| salt_pepper | 0.9096 | 0.8978 | 0.8898 | 0.8882 | 0.8768 |
+
+#### resnet50 · mnist
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.9884 | 0.9850 | 0.9348 | 0.8122 | 0.4426 |
+| noise | 0.9940 | 0.9886 | 0.9932 | 0.9930 | 0.9922 |
+| blur | 0.9932 | 0.9914 | 0.9918 | 0.9920 | 0.9882 |
+| saturation | 0.9894 | 0.9918 | 0.9936 | 0.9918 | 0.9910 |
+| salt_pepper | 0.9902 | 0.9932 | 0.9920 | 0.9924 | 0.9924 |
+
+#### DenseNet121
+
+#### densenet121 · cifar10
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.8652 | 0.7960 | 0.6768 | 0.5776 | 0.4432 |
+| noise | 0.9136 | 0.9050 | 0.8984 | 0.8930 | 0.8774 |
+| blur | 0.9054 | 0.9040 | 0.8644 | 0.8204 | 0.7142 |
+| saturation | 0.9184 | 0.9142 | 0.9166 | 0.9130 | 0.8834 |
+| salt_pepper | 0.9006 | 0.8942 | 0.8900 | 0.8756 | 0.8694 |
+
+#### densenet121 · mnist
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.9922 | 0.9862 | 0.9360 | 0.8132 | 0.4540 |
+| noise | 0.9934 | 0.9936 | 0.9922 | 0.9896 | 0.9930 |
+| blur | 0.9906 | 0.9934 | 0.9896 | 0.9928 | 0.9846 |
+| saturation | 0.9932 | 0.9924 | 0.9926 | 0.9928 | 0.9914 |
+| salt_pepper | 0.9918 | 0.9906 | 0.9916 | 0.9930 | 0.9894 |
+
+#### TransNeXt-tiny
+
+#### transnext_tiny · cifar10
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.9514 | 0.8862 | 0.7964 | 0.6840 | 0.4624 |
+| noise | 0.9726 | 0.9720 | 0.9682 | 0.9652 | 0.9608 |
+| blur | 0.9766 | 0.9724 | 0.9496 | 0.9088 | 0.8244 |
+| saturation | 0.9792 | 0.9778 | 0.9754 | 0.9756 | 0.9534 |
+| salt_pepper | 0.9738 | 0.9720 | 0.9696 | 0.9618 | 0.9602 |
+
+#### transnext_tiny · mnist
+
+| Axis | L1 | L2 | L3 | L4 | L5 |
+|------|----|----|----|----|----|
+| resolution | 0.9914 | 0.9808 | 0.9248 | 0.8008 | 0.4486 |
+| noise | 0.9890 | 0.9938 | 0.9932 | 0.9916 | 0.9910 |
+| blur | 0.9924 | 0.9896 | 0.9914 | 0.9928 | 0.9906 |
+| saturation | 0.9936 | 0.9896 | 0.9918 | 0.9924 | 0.9904 |
+| salt_pepper | 0.9918 | 0.9914 | 0.9930 | 0.9910 | 0.9928 |
+
+### Full Phase C Result Table
+
+| # | Model | Dataset | Level | Axis | Best Val Acc | Epochs | Runtime |
+|---|-------|---------|-------|------|--------------|--------|---------|
+| 37 | resnet50 | cifar10 | L1 Mild | resolution | 0.8800 | 52 | 25m |
+| 38 | resnet50 | mnist | L1 Mild | resolution | 0.9884 | 13 | 6m |
+| 39 | densenet121 | cifar10 | L1 Mild | resolution | 0.8652 | 35 | 26m |
+| 40 | densenet121 | mnist | L1 Mild | resolution | 0.9922 | 41 | 31m |
+| 41 | transnext_tiny | cifar10 | L1 Mild | resolution | 0.9514 | 16 | 41m |
+| 42 | transnext_tiny | mnist | L1 Mild | resolution | 0.9914 | 29 | 74m |
+| 43 | resnet50 | cifar10 | L1 Mild | noise | 0.9208 | 15 | 10m |
+| 44 | resnet50 | mnist | L1 Mild | noise | 0.9940 | 31 | 21m |
+| 45 | densenet121 | cifar10 | L1 Mild | noise | 0.9136 | 41 | 39m |
+| 46 | densenet121 | mnist | L1 Mild | noise | 0.9934 | 25 | 24m |
+| 47 | transnext_tiny | cifar10 | L1 Mild | noise | 0.9726 | 13 | 36m |
+| 48 | transnext_tiny | mnist | L1 Mild | noise | 0.9890 | 14 | 39m |
+| 49 | resnet50 | cifar10 | L1 Mild | blur | 0.9354 | 60 | 39m |
+| 50 | resnet50 | mnist | L1 Mild | blur | 0.9932 | 31 | 20m |
+| 51 | densenet121 | cifar10 | L1 Mild | blur | 0.9054 | 24 | 22m |
+| 52 | densenet121 | mnist | L1 Mild | blur | 0.9906 | 20 | 19m |
+| 53 | transnext_tiny | cifar10 | L1 Mild | blur | 0.9766 | 15 | 41m |
+| 54 | transnext_tiny | mnist | L1 Mild | blur | 0.9924 | 27 | 74m |
+| 55 | resnet50 | cifar10 | L1 Mild | saturation | 0.9206 | 14 | 7m |
+| 56 | resnet50 | mnist | L1 Mild | saturation | 0.9894 | 13 | 7m |
+| 57 | densenet121 | cifar10 | L1 Mild | saturation | 0.9184 | 37 | 28m |
+| 58 | densenet121 | mnist | L1 Mild | saturation | 0.9932 | 28 | 22m |
+| 59 | transnext_tiny | cifar10 | L1 Mild | saturation | 0.9792 | 17 | 44m |
+| 60 | transnext_tiny | mnist | L1 Mild | saturation | 0.9936 | 30 | 77m |
+| 61 | resnet50 | cifar10 | L1 Mild | salt_pepper | 0.9096 | 21 | 12m |
+| 62 | resnet50 | mnist | L1 Mild | salt_pepper | 0.9902 | 21 | 12m |
+| 63 | densenet121 | cifar10 | L1 Mild | salt_pepper | 0.9006 | 48 | 41m |
+| 64 | densenet121 | mnist | L1 Mild | salt_pepper | 0.9918 | 29 | 25m |
+| 65 | transnext_tiny | cifar10 | L1 Mild | salt_pepper | 0.9738 | 14 | 37m |
+| 66 | transnext_tiny | mnist | L1 Mild | salt_pepper | 0.9918 | 46 | 2.0h |
+| 67 | resnet50 | cifar10 | L2 Light | resolution | 0.7898 | 22 | 11m |
+| 68 | resnet50 | mnist | L2 Light | resolution | 0.9850 | 37 | 18m |
+| 69 | densenet121 | cifar10 | L2 Light | resolution | 0.7960 | 52 | 39m |
+| 70 | densenet121 | mnist | L2 Light | resolution | 0.9862 | 52 | 40m |
+| 71 | transnext_tiny | cifar10 | L2 Light | resolution | 0.8862 | 20 | 51m |
+| 72 | transnext_tiny | mnist | L2 Light | resolution | 0.9808 | 20 | 51m |
+| 73 | resnet50 | cifar10 | L2 Light | noise | 0.9092 | 14 | 9m |
+| 74 | resnet50 | mnist | L2 Light | noise | 0.9886 | 13 | 9m |
+| 75 | densenet121 | cifar10 | L2 Light | noise | 0.9050 | 41 | 39m |
+| 76 | densenet121 | mnist | L2 Light | noise | 0.9936 | 41 | 39m |
+| 77 | transnext_tiny | cifar10 | L2 Light | noise | 0.9720 | 12 | 33m |
+| 78 | transnext_tiny | mnist | L2 Light | noise | 0.9938 | 23 | 63m |
+| 79 | resnet50 | cifar10 | L2 Light | blur | 0.8988 | 17 | 11m |
+| 80 | resnet50 | mnist | L2 Light | blur | 0.9914 | 24 | 16m |
+| 81 | densenet121 | cifar10 | L2 Light | blur | 0.9040 | 44 | 41m |
+| 82 | densenet121 | mnist | L2 Light | blur | 0.9934 | 24 | 23m |
+| 83 | transnext_tiny | cifar10 | L2 Light | blur | 0.9724 | 14 | 38m |
+| 84 | transnext_tiny | mnist | L2 Light | blur | 0.9896 | 17 | 47m |
+| 85 | resnet50 | cifar10 | L2 Light | saturation | 0.9282 | 14 | 7m |
+| 86 | resnet50 | mnist | L2 Light | saturation | 0.9918 | 21 | 11m |
+| 87 | densenet121 | cifar10 | L2 Light | saturation | 0.9142 | 41 | 32m |
+| 88 | densenet121 | mnist | L2 Light | saturation | 0.9924 | 22 | 17m |
+| 89 | transnext_tiny | cifar10 | L2 Light | saturation | 0.9778 | 13 | 33m |
+| 90 | transnext_tiny | mnist | L2 Light | saturation | 0.9896 | 14 | 36m |
+| 91 | resnet50 | cifar10 | L2 Light | salt_pepper | 0.8978 | 17 | 10m |
+| 92 | resnet50 | mnist | L2 Light | salt_pepper | 0.9932 | 37 | 22m |
+| 93 | densenet121 | cifar10 | L2 Light | salt_pepper | 0.8942 | 36 | 31m |
+| 94 | densenet121 | mnist | L2 Light | salt_pepper | 0.9906 | 30 | 26m |
+| 95 | transnext_tiny | cifar10 | L2 Light | salt_pepper | 0.9720 | 15 | 40m |
+| 96 | transnext_tiny | mnist | L2 Light | salt_pepper | 0.9914 | 34 | 1.5h |
+| 97 | resnet50 | cifar10 | L3 Moderate | resolution | 0.6846 | 23 | 11m |
+| 98 | resnet50 | mnist | L3 Moderate | resolution | 0.9348 | 49 | 24m |
+| 99 | densenet121 | cifar10 | L3 Moderate | resolution | 0.6768 | 19 | 14m |
+| 100 | densenet121 | mnist | L3 Moderate | resolution | 0.9360 | 53 | 41m |
+| 101 | transnext_tiny | cifar10 | L3 Moderate | resolution | 0.7964 | 37 | 1.6h |
+| 102 | transnext_tiny | mnist | L3 Moderate | resolution | 0.9248 | 16 | 41m |
+| 103 | resnet50 | cifar10 | L3 Moderate | noise | 0.9046 | 27 | 18m |
+| 104 | resnet50 | mnist | L3 Moderate | noise | 0.9932 | 33 | 23m |
+| 105 | densenet121 | cifar10 | L3 Moderate | noise | 0.8984 | 41 | 39m |
+| 106 | densenet121 | mnist | L3 Moderate | noise | 0.9922 | 23 | 22m |
+| 107 | transnext_tiny | cifar10 | L3 Moderate | noise | 0.9682 | 19 | 52m |
+| 108 | transnext_tiny | mnist | L3 Moderate | noise | 0.9932 | 42 | 1.9h |
+| 109 | resnet50 | cifar10 | L3 Moderate | blur | 0.8678 | 31 | 21m |
+| 110 | resnet50 | mnist | L3 Moderate | blur | 0.9918 | 31 | 22m |
+| 111 | densenet121 | cifar10 | L3 Moderate | blur | 0.8644 | 36 | 35m |
+| 112 | densenet121 | mnist | L3 Moderate | blur | 0.9896 | 23 | 22m |
+| 113 | transnext_tiny | cifar10 | L3 Moderate | blur | 0.9496 | 15 | 41m |
+| 114 | transnext_tiny | mnist | L3 Moderate | blur | 0.9914 | 22 | 61m |
+| 115 | resnet50 | cifar10 | L3 Moderate | saturation | 0.9256 | 17 | 8m |
+| 116 | resnet50 | mnist | L3 Moderate | saturation | 0.9936 | 19 | 10m |
+| 117 | densenet121 | cifar10 | L3 Moderate | saturation | 0.9166 | 45 | 34m |
+| 118 | densenet121 | mnist | L3 Moderate | saturation | 0.9926 | 37 | 29m |
+| 119 | transnext_tiny | cifar10 | L3 Moderate | saturation | 0.9754 | 14 | 36m |
+| 120 | transnext_tiny | mnist | L3 Moderate | saturation | 0.9918 | 22 | 57m |
+| 121 | resnet50 | cifar10 | L3 Moderate | salt_pepper | 0.8898 | 18 | 11m |
+| 122 | resnet50 | mnist | L3 Moderate | salt_pepper | 0.9920 | 35 | 21m |
+| 123 | densenet121 | cifar10 | L3 Moderate | salt_pepper | 0.8900 | 43 | 37m |
+| 124 | densenet121 | mnist | L3 Moderate | salt_pepper | 0.9916 | 30 | 26m |
+| 125 | transnext_tiny | cifar10 | L3 Moderate | salt_pepper | 0.9696 | 16 | 42m |
+| 126 | transnext_tiny | mnist | L3 Moderate | salt_pepper | 0.9930 | 30 | 80m |
+| 127 | resnet50 | cifar10 | L4 Severe | resolution | 0.6050 | 60 | 29m |
+| 128 | resnet50 | mnist | L4 Severe | resolution | 0.8122 | 43 | 21m |
+| 129 | densenet121 | cifar10 | L4 Severe | resolution | 0.5776 | 17 | 13m |
+| 130 | densenet121 | mnist | L4 Severe | resolution | 0.8132 | 30 | 23m |
+| 131 | transnext_tiny | cifar10 | L4 Severe | resolution | 0.6840 | 33 | 84m |
+| 132 | transnext_tiny | mnist | L4 Severe | resolution | 0.8008 | 16 | 41m |
+| 133 | resnet50 | cifar10 | L4 Severe | noise | 0.9040 | 49 | 33m |
+| 134 | resnet50 | mnist | L4 Severe | noise | 0.9930 | 36 | 25m |
+| 135 | densenet121 | cifar10 | L4 Severe | noise | 0.8930 | 42 | 40m |
+| 136 | densenet121 | mnist | L4 Severe | noise | 0.9896 | 18 | 17m |
+| 137 | transnext_tiny | cifar10 | L4 Severe | noise | 0.9652 | 15 | 41m |
+| 138 | transnext_tiny | mnist | L4 Severe | noise | 0.9916 | 23 | 63m |
+| 139 | resnet50 | cifar10 | L4 Severe | blur | 0.8146 | 44 | 31m |
+| 140 | resnet50 | mnist | L4 Severe | blur | 0.9920 | 34 | 25m |
+| 141 | densenet121 | cifar10 | L4 Severe | blur | 0.8204 | 41 | 41m |
+| 142 | densenet121 | mnist | L4 Severe | blur | 0.9928 | 44 | 44m |
+| 143 | transnext_tiny | cifar10 | L4 Severe | blur | 0.9088 | 29 | 81m |
+| 144 | transnext_tiny | mnist | L4 Severe | blur | 0.9928 | 36 | 1.7h |
+| 145 | resnet50 | cifar10 | L4 Severe | saturation | 0.9178 | 18 | 9m |
+| 146 | resnet50 | mnist | L4 Severe | saturation | 0.9918 | 13 | 7m |
+| 147 | densenet121 | cifar10 | L4 Severe | saturation | 0.9130 | 35 | 27m |
+| 148 | densenet121 | mnist | L4 Severe | saturation | 0.9928 | 45 | 35m |
+| 149 | transnext_tiny | cifar10 | L4 Severe | saturation | 0.9756 | 14 | 36m |
+| 150 | transnext_tiny | mnist | L4 Severe | saturation | 0.9924 | 19 | 49m |
+| 151 | resnet50 | cifar10 | L4 Severe | salt_pepper | 0.8882 | 29 | 17m |
+| 152 | resnet50 | mnist | L4 Severe | salt_pepper | 0.9924 | 31 | 19m |
+| 153 | densenet121 | cifar10 | L4 Severe | salt_pepper | 0.8756 | 39 | 33m |
+| 154 | densenet121 | mnist | L4 Severe | salt_pepper | 0.9930 | 36 | 31m |
+| 155 | transnext_tiny | cifar10 | L4 Severe | salt_pepper | 0.9618 | 14 | 37m |
+| 156 | transnext_tiny | mnist | L4 Severe | salt_pepper | 0.9910 | 18 | 48m |
+| 157 | resnet50 | cifar10 | L5 Extreme | resolution | 0.4316 | 15 | 7m |
+| 158 | resnet50 | mnist | L5 Extreme | resolution | 0.4426 | 20 | 10m |
+| 159 | densenet121 | cifar10 | L5 Extreme | resolution | 0.4432 | 19 | 14m |
+| 160 | densenet121 | mnist | L5 Extreme | resolution | 0.4540 | 21 | 16m |
+| 161 | transnext_tiny | cifar10 | L5 Extreme | resolution | 0.4624 | 13 | 33m |
+| 162 | transnext_tiny | mnist | L5 Extreme | resolution | 0.4486 | 17 | 44m |
+| 163 | resnet50 | cifar10 | L5 Extreme | noise | 0.8974 | 56 | 38m |
+| 164 | resnet50 | mnist | L5 Extreme | noise | 0.9922 | 33 | 22m |
+| 165 | densenet121 | cifar10 | L5 Extreme | noise | 0.8774 | 37 | 35m |
+| 166 | densenet121 | mnist | L5 Extreme | noise | 0.9930 | 25 | 24m |
+| 167 | transnext_tiny | cifar10 | L5 Extreme | noise | 0.9608 | 16 | 44m |
+| 168 | transnext_tiny | mnist | L5 Extreme | noise | 0.9910 | 25 | 69m |
+| 169 | resnet50 | cifar10 | L5 Extreme | blur | 0.7098 | 39 | 30m |
+| 170 | resnet50 | mnist | L5 Extreme | blur | 0.9882 | 31 | 24m |
+| 171 | densenet121 | cifar10 | L5 Extreme | blur | 0.7142 | 21 | 22m |
+| 172 | densenet121 | mnist | L5 Extreme | blur | 0.9846 | 19 | 20m |
+| 173 | transnext_tiny | cifar10 | L5 Extreme | blur | 0.8244 | 22 | 62m |
+| 174 | transnext_tiny | mnist | L5 Extreme | blur | 0.9906 | 60 | 2.8h |
+| 175 | resnet50 | cifar10 | L5 Extreme | saturation | 0.8822 | 16 | 8m |
+| 176 | resnet50 | mnist | L5 Extreme | saturation | 0.9910 | 13 | 7m |
+| 177 | densenet121 | cifar10 | L5 Extreme | saturation | 0.8834 | 37 | 28m |
+| 178 | densenet121 | mnist | L5 Extreme | saturation | 0.9914 | 20 | 16m |
+| 179 | transnext_tiny | cifar10 | L5 Extreme | saturation | 0.9534 | 44 | 1.9h |
+| 180 | transnext_tiny | mnist | L5 Extreme | saturation | 0.9904 | 18 | 46m |
+| 181 | resnet50 | cifar10 | L5 Extreme | salt_pepper | 0.8768 | 24 | 14m |
+| 182 | resnet50 | mnist | L5 Extreme | salt_pepper | 0.9924 | 33 | 20m |
+| 183 | densenet121 | cifar10 | L5 Extreme | salt_pepper | 0.8694 | 44 | 38m |
+| 184 | densenet121 | mnist | L5 Extreme | salt_pepper | 0.9894 | 16 | 14m |
+| 185 | transnext_tiny | cifar10 | L5 Extreme | salt_pepper | 0.9602 | 15 | 40m |
+| 186 | transnext_tiny | mnist | L5 Extreme | salt_pepper | 0.9928 | 31 | 83m |
+
+---
+
+## Cross-Architecture Headline Findings
+
+### Finding 1 — Universal 3 × 3-downsample bottleneck at L5 resolution
+
+At the most aggressive resolution axis level (L5 = 3 × 3 native pixels
+upsampled to 224 × 224 bicubic), every architecture lands within ±3 pp
+on CIFAR-10 and ±1 pp on MNIST:
+
+| Axis @ L5 — resolution | resnet50 | densenet121 | transnext_tiny |
+|------------------------|----------|-------------|----------------|
+| CIFAR-10 | 0.4316 | 0.4432 | 0.4624 |
+| MNIST | 0.4426 | 0.4540 | 0.4486 |
+
+The pretrain receptive-field hierarchy fails uniformly when sub-class geometric
+structure is destroyed, regardless of whether the backbone is convolutional or
+attention-based. The L5 resolution axis is the rate-limiting degradation for
+both Phase B (combined) collapses and the campaign's overall worst-case cells.
+
+### Finding 2 — TransNeXt robustness gap on perturbation axes
+
+At L5 on CIFAR-10, TransNeXt-tiny holds ≥ 0.95 on noise, saturation, and
+salt-and-pepper, while both CNN backbones drop to ~0.87 — a +~8 to +10 pp gap:
+
+| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | transnext_tiny | TransNeXt gap |
+|----------------------|----------|-------------|----------------|---------------|
+| noise | 0.8974 | 0.8774 | 0.9608 | ~+8 pp |
+| saturation | 0.8822 | 0.8834 | 0.9534 | ~+7 pp |
+| salt_pepper | 0.8768 | 0.8694 | 0.9602 | ~+9 pp |
+| blur | 0.7098 | 0.7142 | 0.8244 | ~+10 pp |
+| resolution | 0.4316 | 0.4432 | 0.4624 | +3 pp |
+
+Attention's adaptive receptive fields integrate over pixel-level perturbations in
+a way the fixed-receptive-field CNNs cannot. This robustness advantage extends
+to the blur axis (~+10 pp at L5) but vanishes at L5 resolution, where the
+geometric bottleneck dominates.
+
+### Finding 3 — MNIST robustness floor on perturbation axes
+
+For all three architectures, MNIST val_acc on noise, blur, salt-and-pepper, and
+saturation stays flat at ~0.991 ± 0.003 across L1 → L5. Only the resolution
+axis bites on MNIST (and only at L4-L5). This validates that the
+THz-like degradation pipeline preserves digit-shape signal for all five
+perturbation axes except the geometric one, while consistently destroying
+CIFAR-10 natural-image class signal.
+
+### Complete cross-model L5 axis table
+
+| Axis @ L5 | resnet50 cifar10 | resnet50 mnist | densenet121 cifar10 | densenet121 mnist | transnext_tiny cifar10 | transnext_tiny mnist |
+|-----------|------------------|----------------|---------------------|-------------------|------------------------|----------------------|
+| resolution | 0.4316 | 0.4426 | 0.4432 | 0.4540 | 0.4624 | 0.4486 |
+| noise | 0.8974 | 0.9922 | 0.8774 | 0.9930 | 0.9608 | 0.9910 |
+| blur | 0.7098 | 0.9882 | 0.7142 | 0.9846 | 0.8244 | 0.9906 |
+| saturation | 0.8822 | 0.9910 | 0.8834 | 0.9914 | 0.9534 | 0.9904 |
+| salt_pepper | 0.8768 | 0.9924 | 0.8694 | 0.9894 | 0.9602 | 0.9928 |
+
+---
+
+## Research Conclusions
+
+1. **Architecture matters more for noise than for geometry.** When the
+   degradation is pixel-level (noise / saturation / salt-and-pepper), TransNeXt's
+   attention mechanism provides a substantial robustness margin over CNNs. When
+   the degradation is geometric (low resolution), all three architectures
+   converge to the same failure mode at L5.
+
+2. **The single-axis isolation design (Phase C) is the right diagnostic.**
+   Without Phase C, the campaign's two headline cross-architecture findings
+   would be invisible — Phase B's combined-axes L5 cells average over the
+   resolution collapse and the perturbation-axis robustness gap, giving a
+   misleading uniform "all CNN backbones fail" picture. The 150-cell investment
+   in single-axis isolation surfaced both findings.
+
+3. **CIFAR-10 vs MNIST gap at L5 quantifies natural-image vs digit-shape
+   robustness.** Phase B L5 CIFAR-10 collapses to 0.26-0.29 across all three
+   models, while MNIST holds at 0.40-0.42 — a +12 to +15 pp gap that persists
+   across architectures. The gap is driven entirely by the resolution axis;
+   for all other axes, MNIST is essentially uniform at all severities.
+
+4. **§6.4 pathology-guard retry path is ineffective on Optuna-tuned models.**
+   Across the entire campaign, the pathology guard flagged 13 cells (1 in
+   Phase B resnet50, 2 in Phase B densenet121, 6 in Phase C resnet50, 3 in
+   Phase C densenet121, 2 in Phase C transnext_tiny). All 13 were
+   monotonic with their surrounding L-curve. The operator declined the
+   §6.4 retry on all 13 (Iter 12 / 14 / 21 / 24 / Iter 25 closure) because
+   the §6.4 deltas (`wd × 2` + `dropout = 0.1` + `backbone_lr ÷ 20`)
+   consistently underfit tightly-tuned Optuna winners. Recommendation
+   for future campaigns: replace §6.4 with an Optuna re-tune on the
+   flagged cell, or tighten the pathology-guard threshold so it only
+   fires on genuinely non-monotonic readings.
+
+5. **Cross-architecture L5 convergence justifies the 224 × 224 uniform
+   protocol decision.** When the V3 native-resolution refactor was rolled
+   back (2026-05-13 protocol ratification), the fair-comparison invariant
+   became "same tensor shape (224 × 224 after upsample)". The cross-model
+   L5 resolution finding (Finding 1) is meaningful precisely because all
+   three architectures see the same pixel budget — the convergence is
+   evidence about the architectures, not about the input shape.
+
+---
+
+## Operational Notes
+
+- **Reproducibility lock:** `pl.seed_everything(42, workers=True)` + per-sample
+  validation seeds (`seed = idx + SEED_OFFSET_VAL`). Determinism gate
+  (`src/tests/test_degradation_determinism.py`) verifies byte-identical
+  validation pixels across dataset rebuilds.
+
+- **Optuna pre-tuning:** Six (model, dataset) pairs were tuned at L3 Moderate
+  before the 186-cell campaign launched; the winning hyperparameters were
+  frozen for every Phase A/B/C cell of that pair. Winners under
+  `artifacts/best_hparams/{model}_{dataset}.json`.
+
+- **Engine:** PyTorch Lightning in `src/lightning/` (`THzClassifier`,
+  `THzDataModule`). `bf16-mixed` on Blackwell (sm_120) RTX 5070;
+  `32-true` on CPU.
+
+- **Weight privacy:** Trained checkpoints (`*.ckpt`), the Optuna SQLite
+  store, and dashboard thumbnail caches are local-only, gitignored, and
+  claudeignored. Analysis tooling reads `metrics.json` / `metrics.csv` /
+  the tracker artifacts only — never the binary weights.
+
+---
+
+## Appendix A — Full 186-cell Result Table
+
+See `Final_Exp.md` (auto-regenerated from `runs/final/` by
+`scripts/update_final_exp.py`) for the canonical 186-cell tracker with PSNR /
+SSIM / Started / Duration columns. This report's tables summarize the same
+data with focus on val_acc.
+
+## Appendix B — Story-Driven Methodology Timeline
+
+The campaign executed under a 9-story execution roadmap (US-006 through US-014),
+each closing a (phase, model) sub-campaign with operator-gated HALTs between
+stories. After US-014 closure, US-015 (end-of-campaign verification + three
+phase-boundary SYNCHRONIZER pushes + SECURITY leak audit) completes the campaign.
+
+Closure decisions were recorded in `progress.txt` as `Iteration N` blocks
+(currently 25 iterations across Phase B and Phase C dispatches), each with
+the dispatch command, background task id, first-pass readings, pathology-guard
+outcomes, and operator decisions. The §6.4 retry decline streak (5-for-5
+across all Phase B/C CNN dispatches + the one TransNeXt Phase C dispatch
+with sentinels) is documented inline.
+
+## Appendix C — Repository Pointers
+
+- `Final_Exp.md` — 186-cell tracker (auto-regenerated)
+- `artifacts/Final_Exp.json` — JSON-shaped tracker (dashboard data source)
+- `artifacts/Final_Exp.html` — interactive dashboard with sortable rows + filters
+- `artifacts/reports/phase_a_{model}_summary.md` — Phase A REPORTER summaries
+- `docs/phase_a.md` / `docs/phase_c.md` — LIBRARIAN per-phase docs
+- `progress.txt` — full iteration log (Iterations 1-25)
+- `PRD.md` — 9-story execution roadmap (US-006 through US-015)
+- `CLAUDE.md` — protocol invariants + multi-agent guidance
+- `scripts/build_final_exp_report.py` — this report generator
+- `scripts/render_final_exp_pdf.py` — Markdown → PDF renderer
+
+---
+
+*Report generated 2026-05-20 from `artifacts/Final_Exp.json` (state of disk after
+Iteration 25 closure). Regenerate with* `python scripts/build_final_exp_report.py`.

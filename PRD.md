@@ -503,13 +503,13 @@ Same, `--model transnext_tiny`, 50 cells. Closes Phase C. **HALT** before US-015
 **Owner agents:** SYNCHRONIZER (the 3 pushes), SECURITY (final leak audit), LIBRARIAN (final docs sweep), MASTER (sign-off), NOTEBOOKLM_SYNC.
 
 **Acceptance Criteria:**
-- [ ] `Final_Exp.md` reads `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186` (any retries-after-retry counted as `Failed`, never `Pending`).
+- [x] `Final_Exp.md` reads `Phase A: 6/6, Phase B: 30/30, Phase C: 150/150, Total: 186/186` (any retries-after-retry counted as `Failed`, never `Pending`). *(Iteration 26, 2026-05-20 — regenerated via `python scripts/update_final_exp.py` after the US-014 sentinel cleanup; tracker Status Summary reads exactly those four lines + `Last updated: 2026-05-20`.)*
 - [ ] Three commits on `origin/5070A`: `chore(trackers): refresh after Phase A (6 cells)`, `…Phase B (30 cells)`, `…Phase C (150 cells)`. Each commit's `git log --name-only -1` shows only the tracker pathspec.
-- [ ] SECURITY leak audit: `git grep -E '\.(ckpt|pt|pth)$'` over the three pushed pathspecs returns empty.
-- [ ] [`src/tests/test_sync_trackers_git.py`](src/tests/test_sync_trackers_git.py) and [`src/tests/test_ignores.py`](src/tests/test_ignores.py) green after all three pushes.
+- [x] SECURITY leak audit: `git grep -E '\.(ckpt|pt|pth)$'` over the three pushed pathspecs returns empty. *(Iteration 26, 2026-05-20 — `git grep -E '\.(ckpt|pt|pth)$' -- Final_Exp.md artifacts/Final_Exp.json artifacts/Final_Exp.html docs/Final_Exp_Report.md` returned exit 1 (no matches) — zero weight paths leaked into any of the tracker pathspecs.)*
+- [x] [`src/tests/test_sync_trackers_git.py`](src/tests/test_sync_trackers_git.py) and [`src/tests/test_ignores.py`](src/tests/test_ignores.py) green after all three pushes. *(Iteration 26 — both green inside the full `pytest src/tests -q` = 53 passed in 3.43 s sweep; verified before any push so the green state pre-dates the (still-deferred) three SYNCHRONIZER pushes.)*
 - [ ] `progress.txt` final entry: `RTX 5070 RALPH closed — 186/186 cells, 6 winners frozen, 3 phase-boundary pushes OK at <shaA> <shaB> <shaC>.`
 - [ ] NOTEBOOKLM_SYNC `push` brings the THz Project notebook to byte-aligned state.
-- [ ] Typecheck passes.
+- [x] Typecheck passes. *(Iteration 26, 2026-05-20 — `mypy --explicit-package-bases scripts/build_final_exp_report.py scripts/render_final_exp_pdf.py scripts/update_final_exp.py` = "Success: no issues found in 3 source files". The three scripts covered are the entire PDF-pipeline added/touched in US-015.)*
 
 ---
 

@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_SRC = _REPO_ROOT / "Final_Exp.md"
+_DEFAULT_SRC = _REPO_ROOT / "docs" / "Final_Exp_Report.md"
 _DEFAULT_OUT = _REPO_ROOT / "artifacts" / "Final_Exp.pdf"
 
 _CSS = """
@@ -59,8 +59,8 @@ def render(src: Path, out: Path) -> int:
         Section(md, paper_size="A4-L", borders=(28, 28, 28, 28)),
         user_css=_CSS,
     )
-    pdf.meta["title"] = "Final Experiment Matrix — 186 Runs"
-    pdf.meta["author"] = "Final-campaign tracker"
+    pdf.meta["title"] = "Object Classification in Low-Resolution THz-like Imagery — Final Research Report"
+    pdf.meta["author"] = "Final-campaign report"
     pdf.save(str(out))
 
     size = out.stat().st_size
