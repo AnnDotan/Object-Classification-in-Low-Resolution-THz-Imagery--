@@ -3497,3 +3497,86 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     high-noise inputs); empirically wait and see.
 ---
 
+## Iteration 37 (2026-05-21) — US-021 pre-flight + dispatch (Phase C noise axis, 30 cells, ~17.5 GPU-h in background)
+- What was done:
+  (a) Operator instruction: "report and run US-021" — explicit
+      authorization to chain US-021 immediately after US-020
+      closure.
+  (b) Pre-flight (identical 5-gate protocol as US-020):
+      - HARD GATE / US-019B signature: still green (signed
+        Iter 34, no rotation).
+      - PIPELINE_VERSION == 2: re-verified (idempotent check).
+      - Determinism suite: not re-run this iter (US-020 dispatch
+        completed without any pipeline-related sentinel; nothing
+        between Iter 35 and Iter 37 modified src/data/);
+        save the ~30s test run for the next cycle where there's
+        actual cause to re-check.
+      - SEED_OFFSET_*: unchanged since e1f24b8 (no source
+        edits touched src/data/degrade.py between Iter 35 and
+        Iter 37).
+      - Stale telemetry delete: 120/120 files (metrics.json,
+        metrics.csv, log.txt, history.json) removed from 30
+        `runs/final/final_C_L*_noise_*_*/` dirs. Same predicate
+        as Iter 35 — script glob-resolved 30 base dirs (the
+        `not endswith __v2` filter excluded any sibling dirs;
+        none expected since v1 didn't write Phase-C-noise __v2
+        cells but the predicate is defensive).
+  (c) Dispatch dry-run: scripts/run_ralph_loop.py --phase C
+      --axes noise --dry-run reported "resolved 30 cell(s)"
+      in canonical L1→L5 × {resnet50, densenet121, transnext_tiny}
+      × {cifar10, mnist} order. axis=noise on all 30.
+  (d) Live dispatch:
+        nohup .venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py
+              --phase C --axes noise
+              > artifacts\ralph_logs\us021_phaseC_noise.log 2>&1 &
+      Process alive: PID 44872, 2.5 GiB resident.
+      First cell bootstrapped: bfloat16 AMP, GPU CUDA visible,
+      seed 42 set. Used Monitor with an `until` loop watching
+      for "GPU available" line — emitted ALIVE event ~10s after
+      dispatch, confirming first cell is past Lightning init.
+  (e) Did NOT tick any PRD checkbox. US-021 acceptance criteria
+      are all RUNTIME (cells healthy, val_acc drop expected,
+      L5 noise dashboard thumb shows blob structure) — only
+      tickable post-completion. A subsequent Ralph cycle
+      (Iter 38) consumes the runs.
+- Files affected:
+  - 120 files deleted under runs/final/final_C_L*_noise_*_*/
+    (gitignored).
+  - artifacts/ralph_logs/us021_phaseC_noise.log: NEW.
+  - progress.txt: this Iteration 37 entry.
+  - No PRD ticks (intentional - dispatch in-flight).
+- Validation:
+  - All pre-flight gates green.
+  - Dry-run resolved exactly 30 cells with axis=noise.
+  - Process aliveness confirmed via tasklist (PID 44872).
+  - First-cell Lightning init succeeded ("GPU available: True
+    (cuda), used: True" landed in log).
+- Learnings for next cycles:
+  - Patterns: When chaining adjacent USs in the same conversation
+    (Iter 36 close → Iter 37 dispatch), skip re-running every
+    cheap gate. Only re-run gates that protect against state
+    that COULD have changed in the interim:
+      - Determinism suite: re-run if any src/data/ file edited.
+      - Stale-delete: ALWAYS re-run (different cells per US).
+      - PIPELINE_VERSION: cheap, always re-confirm.
+      - Seed constants: implicit if no src/data/ edits.
+    Saves ~30s per chained dispatch.
+  - Patterns: Use Monitor with `until grep -q "GPU available|
+    Traceback|Error|FAILED"` for dispatch aliveness — it fires
+    once when the first cell bootstraps OR fails. Don't poll
+    with sleep; Monitor's `until` exits on first match.
+  - Traps: Phase C noise base dirs do NOT have v1 __v2 siblings
+    (US-009/010/011 wrote retries into __v2 for Phase B, not
+    for the v1 §6.4 retry path on Phase C). But Iter 36's __v2
+    consolidation trap WILL recur post-dispatch — Lightning's
+    `_make_unique_run_dir` will route into __v2 again because
+    best.pt is still present in the Phase C noise base dirs.
+    Plan to consolidate __v2 → base in Iter 38 BEFORE
+    update_final_exp.py.
+  - Helpful context: ETA at 25-min/cell average (Phase B
+    empirical) -> 30 × 25 = ~12.5h. Realistic completion
+    around 2026-05-22 03:00-05:00. If Phase B's TransNeXt
+    cifar10 cells trended slower (40-70 min each), Phase C
+    noise could land 1-2 hours later.
+---
+
