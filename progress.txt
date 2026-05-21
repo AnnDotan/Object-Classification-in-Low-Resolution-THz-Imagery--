@@ -3365,3 +3365,135 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     criteria and commit.
 ---
 
+## Iteration 36 (2026-05-21) — US-020 CLOSED: Phase B v2 30/30 healthy + __v2 consolidation + artifact refresh chain
+- What was done:
+  (a) Overnight Phase B dispatch (Iter 35) completed:
+      30/30 cells finished in 15.79h wall-clock (under the 17.5h
+      PRD budget). Zero §6.3 pathology sentinels written across
+      all 30 cells (`find runs/final/final_B_L*_*_*__v2 -name
+      "NEEDS_FULL_FT*" -o -name "QUARANTINED*"` → 0 matches).
+      US-020 acceptance criterion #1 (cells healthy) trivially met.
+  (b) v1↔v2 comparison computed via `git show 043a12b~1:artifacts/
+      Final_Exp.json` (pre-Pending snapshot) joined against the 30
+      v2 metrics.json files:
+      - Mean delta: -12.49pp across 30 cells (v2 materially
+        harder than v1 — validates noise-fix rationale).
+      - CIFAR-10 drops sharper than MNIST (geometry vs. texture).
+      - L1 drops modest (-0 to -8pp); L2-L4 catastrophic
+        (-10 to -33pp); L5 drops smaller again (both v1+v2 near
+        chance level).
+      - Worst hit: final_B_L3_transnext_tiny_cifar10 at -32.74pp.
+  (c) __v2 consolidation (Iter 35's flagged trap, resolved):
+      Lightning's `_make_unique_run_dir` routed all 30 v2 runs
+      into `final_B_L*_*_*__v2/` siblings (NOT base dirs) because
+      best.pt + stale NEEDS_FULL_FT sentinels from v1 retry paths
+      were still present in the base dirs. After post-pass
+      refresh #1 attempt, build_final_exp_json reported
+      pending=60, running=30 (NOT complete=30) — confirming the
+      reader looks at base dirs only.
+      Fix: wrote a single 12-line Python loop that for each of
+      30 v2 cells:
+        1. asserted base dir exists,
+        2. recursively wiped base dir contents,
+        3. moved __v2/* into base/,
+        4. removed empty __v2/.
+      Post-fix: build_final_exp_json reported complete=126
+      (= 96 v1 unaffected + 30 Phase B v2). PRD §3 "no archive"
+      decision is the explicit authorization for this overwrite
+      (v1 best.pt and v1 metrics survive only in git history).
+  (d) Ran full PRD §US-020 Post-pass refresh chain (all 6 commands
+      green):
+        update_final_exp.py        -> 186 cells written
+        render_cell_thumbs --phase B -> 30 thumbs re-rendered
+        build_final_exp_json       -> 186 rows complete=126
+        build_final_dashboard      -> A=6 B=30 C=150 -> .html
+        build_final_exp_report.py  -> 30,554-char Final_Exp_Report.md
+        render_final_exp_pdf.py    -> 437,722-byte Final_Exp.pdf
+        update_final_exp.py --check -> OK matches disk state
+  (e) Ticked all 5 US-020 acceptance criteria in PRD.md with
+      provenance notes and an inline "v2 outcome" paragraph
+      summarizing the -12.49pp mean delta + worst hit.
+  (f) Did NOT yet dispatch US-021 in this Ralph cycle — operator
+      said "report and run US-021"; this iter handles the close
+      of US-020 (the report half) + commit. US-021 pre-flight +
+      dispatch is the natural next half (will run in this same
+      conversation but logged as Iter 37 to keep the Ralph cycle
+      boundaries clean: one commit per PRD checkbox-batch).
+- Files affected:
+  - PRD.md: US-020 acceptance criteria #1-5 ticked + v2 outcome
+    paragraph.
+  - Final_Exp.md: regenerated (186 rows; Phase B now shows v2
+    val_acc values).
+  - artifacts/Final_Exp.json: regenerated (complete=126).
+  - artifacts/Final_Exp.html: regenerated.
+  - artifacts/Final_Exp.pdf: regenerated (437,722 bytes).
+  - docs/Final_Exp_Report.md: regenerated (30,554 chars).
+  - artifacts/dashboard_thumbs/final_B_L*_*_*.png: 30 thumbs
+    re-rendered (gitignored; on-disk only).
+  - runs/final/final_B_L*_*_*/: 30 base dirs now hold the v2
+    contents (gitignored).
+  - runs/final/final_B_L*_*_*__v2/: 30 dirs deleted.
+  - progress.txt: this Iteration 36 entry.
+- Validation:
+  - 30/30 cells `healthy` (no sentinels written).
+  - All 30 metrics.json carry `pipeline_version: 2` (verified by
+    a json.load loop; spot-checked by inspecting
+    `final_B_L1_densenet121_cifar10/metrics.json`).
+  - `python scripts/update_final_exp.py --check` -> exit 0
+    ("Final_Exp.md matches disk state").
+  - build_final_exp_json complete count: 126 (= 96 + 30; no
+    cells stuck in Running).
+  - PDF regenerated; non-zero byte count; visual sanity from the
+    chain's report-script.
+- Learnings for next cycles:
+  - Patterns: After any RALPH dispatch where the base dirs hold
+    pre-existing best.pt/sentinels, Lightning's
+    `_make_unique_run_dir` will route into `__v2` siblings.
+    The post-pass acceptance MUST consolidate __v2 → base before
+    update_final_exp.py / build_final_exp_json will recognize
+    the cells as complete. Add this as a default Phase X post-pass
+    step:
+        python -c "consolidation loop" before running
+        update_final_exp.py.
+    This trap was flagged in Iter 35's notes; Iter 36 confirmed
+    and resolved it. Phase C noise (US-021) and Phase C
+    salt_pepper (US-022) will hit the SAME trap — best.pt is
+    present in those base dirs too. Plan to consolidate again
+    in those post-pass cycles.
+  - Patterns: When the post-pass chain has 6 commands and one
+    of them depends on another's output (build_final_dashboard
+    re-runs build_final_exp_json internally), order matters but
+    re-running build_final_exp_json after the consolidation is
+    cheap (<1s) and idempotent. Don't try to be clever about
+    skipping it.
+  - Traps: `find` with `-not -path "*__v2*"` is needed when
+    walking final_B_L*_*_*/ globs after a partial v2 dispatch,
+    or you'll mix v1-era sentinels with v2-era sibling dir
+    structure. Iter 36 used the predicate to count stale v1
+    NEEDS_FULL_FT sentinels (30/30 base dirs had them) BEFORE
+    deciding to wipe the base dirs.
+  - Traps: `best_val_acc` in metrics.json is the keyed field
+    (NOT `val_acc`). Iter 36's first analysis script crashed
+    with `unsupported format string passed to NoneType.__format__`
+    because the JSON has a `val_acc` field with value None (the
+    "Pending" demoter) on rows whose base dir still hadn't been
+    consolidated. Use `best_val_acc` from metrics.json directly
+    when reading raw run dirs, and `val_acc` from Final_Exp.json
+    when reading the rolled-up tracker — and check for None
+    explicitly. Don't trust the printf format string to handle
+    nulls.
+  - Helpful context: Phase B v2 results show a STRONG empirical
+    finding worth lifting into README headlines after US-023:
+    the noise-fix is not a cosmetic refactor — it materially
+    changes the robustness story. Pre-noise-fix v1 results
+    claimed "TransNeXt holds ≥0.95 on noise/salt_pepper" — that
+    claim is now contradicted by L3 cifar10 dropping from 0.7174
+    to 0.3900. The poster/presentation/scientific report will
+    need to lead with this narrative reversal.
+  - Helpful context: Total US-020 wall-clock 15.79h vs. budget
+    17.5h = 10% under. US-021 budget is also 17.5h; expect
+    similar headroom. Single-axis Phase C noise might actually
+    be slower per-cell (more epochs to convergence with
+    high-noise inputs); empirically wait and see.
+---
+
