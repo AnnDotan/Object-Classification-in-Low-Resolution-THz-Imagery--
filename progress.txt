@@ -3673,3 +3673,82 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     deliverable (US-024). Total ~20h GPU + ~6h authoring left.
 ---
 
+## Iteration 39 (2026-05-22) — US-022 pre-flight + dispatch (Phase C salt_pepper axis, 30 cells, ~17.5-20 GPU-h in background)
+- What was done:
+  (a) Ralph cycle directive: identify first unchecked PRD task,
+      execute one task only. First unchecked acceptance criteria
+      block is US-022 (Phase C salt_pepper re-run). Matches the
+      Iter 35 / Iter 37 dispatch pattern.
+  (b) Pre-flight (5-gate protocol, chained from US-021 close):
+      - HARD GATE / US-019B signature: still green (signed
+        Iter 34, no rotation).
+      - PIPELINE_VERSION == 2: re-verified at
+        src/data/degradation_levels.py:48 (idempotent check).
+      - Determinism suite: skipped per Iter 37 learning — no
+        src/data/ edits between Iter 38 close and now
+        (`git status src/data/` shows only the pre-existing
+        US-017 working-tree state that has carried the v2
+        campaign through US-020 + US-021 without incident).
+      - SEED_OFFSET_*: unchanged since e1f24b8 (degrade.py
+        diff stat constant across Iter 35/37/39).
+      - Stale telemetry delete: 120/120 files (metrics.json,
+        metrics.csv, log.txt, history.json) removed from 30
+        `runs/final/final_C_L*_salt_pepper_*_*/` dirs. No __v2
+        siblings found (defensive glob returned empty —
+        consistent with Phase C noise Iter 37 finding).
+  (c) Dispatch dry-run: scripts/run_ralph_loop.py --phase C
+      --axes salt_pepper --dry-run reported "resolved 30 cell(s)"
+      in canonical L1→L5 × {resnet50, densenet121, transnext_tiny}
+      × {cifar10, mnist} order. axis=salt_pepper on all 30.
+  (d) Live dispatch:
+        .venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py
+          --phase C --axes salt_pepper
+          > artifacts\ralph_logs\us022_phaseC_salt_pepper.log 2>&1
+      First cell bootstrapped: bfloat16 AMP, GPU CUDA visible,
+      seed 42 set, LOCAL_RANK 0, CUDA_VISIBLE_DEVICES [0].
+      Lightning init completed without traceback.
+  (e) Did NOT tick any PRD checkbox. US-022 acceptance criteria
+      are all RUNTIME (30/30 healthy, L5 salt_pepper val_acc
+      materially lower than v1, L5 dashboard thumb shows blobs).
+      Subsequent Ralph cycle (Iter 40) consumes the runs and
+      ticks acceptance.
+- Files affected:
+  - 120 files deleted under runs/final/final_C_L*_salt_pepper_*_*/
+    (gitignored).
+  - artifacts/ralph_logs/us022_phaseC_salt_pepper.log: NEW.
+  - progress.txt: this Iteration 39 entry.
+  - No PRD ticks (intentional — dispatch in-flight).
+- Validation:
+  - All pre-flight gates green (5/5).
+  - Dry-run resolved exactly 30 cells with axis=salt_pepper.
+  - First-cell Lightning init succeeded ("GPU available: True
+    (cuda), used: True" landed in log within ~30s of dispatch).
+  - No Traceback/Error/FAILED tokens in log at bootstrap.
+- Learnings for next cycles:
+  - Patterns: Third successful application of the Iter 35
+    pre-flight+dispatch idiom (US-020, US-021, US-022). The
+    chained-cycle optimization (skip determinism re-run when
+    src/data/ untouched) saves ~30s per dispatch and is now
+    proven across two consecutive cycles. Ready to codify as
+    a Ralph SOP if US-024 or future re-runs need it.
+  - Traps: Phase C salt_pepper L5 paints low_res²=9 pixels at
+    low_res=3 then bicubically spreads each into a ~74×74 blob.
+    The §6.3 pathology guard should treat this as a legitimate
+    severe degradation, NOT as a divergent run. If sentinels
+    fire on L5 cifar10 cells, the operator decision is likely
+    "decline retry" (v1 lesson, 13/13 declined; Phase B v2
+    0/30 sentinels; Phase C noise v2 0/30 sentinels).
+  - Helpful context: ETA: Phase C noise ran 19.40h (11% over
+    17.5h budget) because TransNeXt MNIST tail. salt_pepper
+    should be similar — budget for ~19-20h, expect completion
+    around 2026-05-23 06:00-08:00. The Iter 36/38 __v2
+    consolidation trap WILL recur (best.pt still in base dirs)
+    — Iter 40 should run the same 12-line consolidation Python
+    loop BEFORE update_final_exp.py.
+  - Helpful context: With US-022 dispatched, all 186/186 v2
+    cells are either done (156) or in-flight (30). Once Iter 40
+    closes US-022, the entire 186-cell v2 campaign is on disk
+    and US-023 (content sync) / US-024 (IEEEtran report) /
+    US-025 (final audit) become unblocked.
+---
+
