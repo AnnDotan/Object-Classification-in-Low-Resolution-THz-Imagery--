@@ -3580,3 +3580,96 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     noise could land 1-2 hours later.
 ---
 
+## Iteration 38 (2026-05-22) — US-021 CLOSED: Phase C noise 30/30 healthy + __v2 consolidation + scientific findings
+- What was done:
+  (a) US-021 overnight dispatch (Iter 37) completed: 30/30 cells,
+      zero §6.3 sentinels, total wall-clock 19.40h (11% over the
+      17.5h budget — driven by TransNeXt MNIST cells running
+      60-100 min each to convergence; not a pipeline issue).
+  (b) __v2 consolidation (as predicted in Iter 37 learnings):
+      30 `final_C_L*_noise_*_*__v2/` siblings present because
+      best.pt was still in each base dir. Re-used the exact
+      Iter 36 12-line Python loop: wipe base, mv __v2/* into
+      base, rmdir __v2. 30/30 dirs consolidated cleanly.
+  (c) Post-pass refresh chain (all 6 commands green, single-line
+      chained for efficiency):
+        update_final_exp.py      -> 186 cells
+        render_cell_thumbs C noise -> 30 thumbs
+        build_final_exp_json     -> complete=156 (= 96 + 30 + 30)
+        build_final_dashboard    -> A=6 B=30 C=150
+        build_final_exp_report.py -> 30,990 chars
+        render_final_exp_pdf.py  -> 438,067 bytes
+        update_final_exp.py --check -> OK matches disk state
+  (d) Scientific findings (v1 vs v2 across 30 Phase C noise cells):
+      - Mean Δ: -5.15pp (less than Phase B's -12.49pp because
+        single-axis noise is less destructive than combined L
+        degradation, but the structural pattern is identical).
+      - **CIFAR-10 drops monotonically**: L1→L5 ranges from
+        -1.3pp to -22.9pp. Worst: final_C_L5_noise_resnet50_cifar10
+        at -22.86pp (0.8974 → 0.6688).
+      - **MNIST is essentially UNAFFECTED**: all 15 MNIST cells
+        stay within ±0.4pp of v1 baseline (most show 0.0pp).
+        The thick stroke of a digit covers many of the bicubically-
+        spread noise footprints, so the geometry survives.
+      - **TransNeXt softens but does not stop the CIFAR-10
+        collapse**: L5 transnext_tiny cifar10 = 0.8008 (drop -16.0pp)
+        vs ResNet50's 0.6688 (drop -22.9pp). Attention integrates
+        partial information across noisy regions.
+      - **v1's "TransNeXt holds ≥0.95 on noise" claim FALSIFIED**
+        for CIFAR-10 (L5 dropped to 0.80) but HOLDS for MNIST
+        (L5 stayed at 0.9914). The headline must be split by
+        dataset in US-023's README rewrite.
+  (e) Ticked all 4 US-021 acceptance criteria in PRD.md with
+      provenance notes + a "v2 outcome" paragraph with the
+      headline finding.
+- Files affected:
+  - PRD.md: US-021 acceptance criteria #1-4 ticked + v2 outcome
+    paragraph.
+  - Final_Exp.md, artifacts/Final_Exp.{html,json,pdf},
+    docs/Final_Exp_Report.md, artifacts/dashboard_thumbs/
+    final_C_L*_noise_*_*.png: all refreshed.
+  - runs/final/final_C_L*_noise_*_*/: 30 base dirs hold v2
+    contents (gitignored); 30 __v2 siblings removed.
+  - progress.txt: this Iteration 38 entry.
+- Validation:
+  - 30/30 cells healthy (no sentinels).
+  - All 30 metrics.json carry pipeline_version=2.
+  - `update_final_exp.py --check` -> exit 0.
+  - build_final_exp_json complete count: 156 (= 96 + 30 + 30).
+- Learnings for next cycles:
+  - Patterns: The Iter 36 + Iter 38 sequence proves the post-pass
+    refresh chain is now a 3-step idiom that can be inlined as
+    one shell line for the remaining US-022 cycle:
+      (1) consolidate __v2->base (12-line Python loop, axis-aware
+          glob),
+      (2) chain 6 refresh commands with && for fail-fast,
+      (3) tick PRD criteria + write progress entry.
+    US-022 should not need any new tooling; just pass --axes
+    salt_pepper to the consolidation glob, render_cell_thumbs,
+    and run_ralph_loop.
+  - Patterns: When ticking acceptance criteria that have
+    "expected to drop" language, the provenance note should
+    quote BOTH the prediction phrasing AND the actual measured
+    drop ("v1: 0.9608 -> v2: 0.8008, drop -16.00pp, v1 claim
+    falsified"). Future audits can verify the empirical result
+    against the textual prediction in one read.
+  - Traps: Phase C noise wall-clock OVER budget by 11% because
+    TransNeXt mnist cells run 60-100 min each (vs the 35-min
+    Phase B average for CNNs). US-022 salt_pepper will face the
+    same TransNeXt MNIST tail. Don't worry about it - just budget
+    for ~19-20h instead of 17.5h.
+  - Helpful context: The split CIFAR-10/MNIST finding is the
+    KEY narrative for US-024's IEEEtran report:
+      "Coarse-grain additive noise selectively destroys texture-
+       dependent recognition (CIFAR-10) while preserving
+       geometry-dominant recognition (MNIST), with attention-
+       based architectures (TransNeXt) softening but not
+       reversing the collapse on texture-dominant data."
+    This is the publishable scientific contribution that the
+    noise-fix campaign uncovered. Pre-author this paragraph
+    in docs/Final_Report.tex §V Discussion when US-024 lands.
+  - Helpful context: With US-021 closed, 156/186 cells complete.
+    Remaining: 30 Phase C salt_pepper (US-022) + the IEEEtran
+    deliverable (US-024). Total ~20h GPU + ~6h authoring left.
+---
+

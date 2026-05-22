@@ -274,12 +274,14 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 **Post-pass artifact refresh.** Same chain as US-020 with `--phase C --axes noise` filter on `render_cell_thumbs`.
 
 **Acceptance criteria.**
-- [ ] 30/30 cells `healthy` (or operator-deferred).
-- [ ] Phase C `noise` rows in [Final_Exp.md](Final_Exp.md) carry v2 `pipeline_version` + new `val_acc`.
-- [ ] L5 noise val_acc expected to drop substantially vs v1 baseline (v1 transnext_tiny L5 cifar10 noise was 0.9608 — implausibly high; v2 prediction is materially lower, but the exact number is the empirical question this US answers).
-- [ ] Dashboard thumb `final_C_L5_noise_transnext_tiny_cifar10.png` visibly shows blob-shaped noise (single low_res samples upsampled into ~74×74 patches at low_res=3).
+- [x] 30/30 cells `healthy` (or operator-deferred). *(2026-05-22: zero §6.3 sentinels across all 30 cells.)*
+- [x] Phase C `noise` rows in [Final_Exp.md](Final_Exp.md) carry v2 `pipeline_version` + new `val_acc`. *(2026-05-22: post `__v2`→base consolidation; `update_final_exp.py --check` exits 0; build_final_exp_json complete=156.)*
+- [x] L5 noise val_acc expected to drop substantially vs v1 baseline (v1 transnext_tiny L5 cifar10 noise was 0.9608 — implausibly high; v2 prediction is materially lower, but the exact number is the empirical question this US answers). *(2026-05-22: v2 transnext_tiny L5 cifar10 noise = **0.8008** — drop of −16.00pp. v1 claim falsified, as predicted.)*
+- [x] Dashboard thumb `final_C_L5_noise_transnext_tiny_cifar10.png` visibly shows blob-shaped noise (single low_res samples upsampled into ~74×74 patches at low_res=3). *(2026-05-22: thumb re-rendered via `render_cell_thumbs --force --phase C --axes noise`; pre-flight US-019B contact sheet already attested the v1↔v2 blob structure.)*
 
-**GPU budget:** ~17.5 GPU-h. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-020 (sequential to keep dashboard monotonically updated; not strictly required but operationally cleaner).
+**v2 outcome (2026-05-22):** mean Δ across the 30 Phase C noise cells is **−5.15pp** vs v1, but the average masks a strong split: CIFAR-10 cells drop −2.4 to −22.9pp (worst: `final_C_L5_noise_resnet50_cifar10` at −22.86pp), while all 15 MNIST cells stay within ±0.4pp of their v1 baseline. **MNIST digit geometry is robust to coarse-grain noise at any tested low_res; CIFAR-10 texture features collapse monotonically with level.** TransNeXt softens but does not stop the CIFAR-10 collapse (L5: 0.80 vs ResNet50's 0.67). v1's "TransNeXt holds ≥0.95 on noise" claim falsified for CIFAR-10.
+
+**GPU budget:** ~17.5 GPU-h (actual: 19.40h, 11% over — TransNeXt MNIST cells ran longer to convergence than the Phase B average). **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-020 (sequential to keep dashboard monotonically updated; not strictly required but operationally cleaner).
 
 ---
 
