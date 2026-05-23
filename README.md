@@ -72,7 +72,9 @@ Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 | `transnext_tiny × cifar10` | `artifacts/best_hparams/transnext_tiny_cifar10.json` | **0.7336** | trial #16 (fast-rank-2 → full-rank-1 swap at Stage 1.5) — **highest cifar10 winner across the 3 models** |
 | `transnext_tiny × mnist` | `artifacts/best_hparams/transnext_tiny_mnist.json` | 0.9176 | trial #12 (no re-ranking — fast and full both rank #12 first) |
 
-### Final Results — 186 / 186 cells (campaign closed 2026-05-20)
+### Final Results — 186 / 186 cells (v2 campaign closed 2026-05-23, `PIPELINE_VERSION = 2`)
+
+All cells reported below run under **pipeline v2** ([`src.data.degradation_levels.PIPELINE_VERSION`](src/data/degradation_levels.py) `= 2`) — additive Gaussian noise and salt-and-pepper are drawn pre-upsample at `low_res` and then bicubically spread to 224 (sensor-realistic coarse-grain structure). v1 numbers (pre-noise_fix, post-upsample noise) survive only in git history and are not directly comparable on the 90 noise / salt_pepper / Phase B cells re-run during the 2026-05-21 → 2026-05-23 v2 campaign. The remaining 96 cells (Phase A clean + Phase C resolution / blur / saturation) are byte-identical to v1.
 
 Comprehensive long-form report (executive summary + methodology + per-phase tables + 5×5 heatmaps + 3 cross-architecture findings + 5 research conclusions): [`docs/Final_Exp_Report.md`](docs/Final_Exp_Report.md) → [`artifacts/Final_Exp.pdf`](artifacts/Final_Exp.pdf).
 
@@ -86,32 +88,32 @@ Per-model upper bound at 224×224 under the convergence-first protocol (60 ep / 
 | `densenet121` | 0.9356 | **0.9930** | US-007 |
 | `transnext_tiny` | **0.9764** | 0.9924 | US-008 |
 
-#### Phase B — Combined Degradation (30 / 30 cells, best_val_acc L1 → L5)
+#### Phase B — Combined Degradation (30 / 30 cells, best_val_acc L1 → L5, pipeline v2)
 
-All five axes active at the same severity per cell. Strictly monotonic across all three architectures on both datasets — no inversions.
+All five axes active at the same severity per cell. v2 numbers (re-run 2026-05-21 under `PIPELINE_VERSION = 2`); mean Δ across the 30 cells is **−12.49 pp** vs v1, with mid-range levels (L2-L4) dropping hardest. Strictly monotonic across all three architectures on both datasets — no inversions. Bold = best of three architectures per `(dataset, level)` column.
 
 | Model | Dataset | L1 | L2 | L3 | L4 | L5 |
 |---|---|---:|---:|---:|---:|---:|
-| `resnet50` | cifar10 | 0.8432 | 0.7344 | 0.5590 | 0.4174 | 0.2684 |
-| `resnet50` | mnist | 0.9918 | 0.9804 | 0.9088 | 0.7426 | 0.3982 |
-| `densenet121` | cifar10 | 0.8464 | 0.7558 | 0.6030 | 0.4586 | 0.2572 |
-| `densenet121` | mnist | 0.9916 | 0.9830 | 0.9220 | 0.7824 | 0.4040 |
-| `transnext_tiny` | cifar10 | **0.9404** | **0.8550** | **0.7174** | **0.5500** | **0.2908** |
-| `transnext_tiny` | mnist | 0.9910 | 0.9824 | 0.9160 | 0.7676 | **0.4166** |
+| `resnet50` | cifar10 | 0.7646 | 0.5394 | 0.3586 | 0.2684 | 0.1906 |
+| `resnet50` | mnist | **0.9918** | 0.9636 | 0.7886 | 0.5644 | **0.2800** |
+| `densenet121` | cifar10 | 0.7848 | 0.5368 | **0.3960** | **0.2852** | 0.1958 |
+| `densenet121` | mnist | 0.9874 | **0.9654** | **0.8196** | **0.5808** | 0.2776 |
+| `transnext_tiny` | cifar10 | **0.8758** | **0.6422** | 0.3900 | 0.2850 | **0.2010** |
+| `transnext_tiny` | mnist | 0.9896 | 0.9600 | 0.7994 | 0.5724 | 0.2748 |
 
-#### Phase C — Single-Axis Isolation Headline (150 / 150 cells)
+#### Phase C — Single-Axis Isolation Headline (150 / 150 cells, pipeline v2 on noise + salt_pepper)
 
-Only the named axis at level L; the other four axes at identity. Cross-architecture best_val_acc **at L5** (the campaign's worst-case isolation cells):
+Only the named axis at level L; the other four axes at identity. Cross-architecture best_val_acc **at L5** (the campaign's worst-case isolation cells). v2 numbers on the `noise` and `salt_pepper` rows (re-run 2026-05-22 / 2026-05-23 under `PIPELINE_VERSION = 2`); `resolution`, `blur`, and `saturation` rows are byte-identical to v1 because those axes were unaffected by US-017. Bold = best of three architectures per `(dataset, axis)` cell.
 
 | Axis @ L5 | resnet50 cifar10 | densenet121 cifar10 | transnext_tiny cifar10 | resnet50 mnist | densenet121 mnist | transnext_tiny mnist |
 |---|---:|---:|---:|---:|---:|---:|
 | `resolution` | 0.4316 | 0.4432 | **0.4624** | 0.4426 | **0.4540** | 0.4486 |
-| `noise` | 0.8974 | 0.8774 | **0.9608** | 0.9922 | **0.9930** | 0.9910 |
+| `noise` (v2) | 0.6688 | 0.6846 | **0.8008** | 0.9896 | **0.9928** | 0.9914 |
 | `blur` | 0.7098 | 0.7142 | **0.8244** | 0.9882 | 0.9846 | **0.9906** |
 | `saturation` | 0.8822 | 0.8834 | **0.9534** | 0.9910 | **0.9914** | 0.9904 |
-| `salt_pepper` | 0.8768 | 0.8694 | **0.9602** | 0.9924 | 0.9894 | **0.9928** |
+| `salt_pepper` (v2) | 0.8330 | 0.8508 | **0.9422** | 0.9862 | 0.9872 | **0.9894** |
 
-Full per-axis × per-level 5×5 heatmaps per (model, dataset) and the complete 150-row Phase C table live in [`docs/Final_Exp_Report.md`](docs/Final_Exp_Report.md).
+Pipeline-v2 severity ordering on CIFAR-10 at L5: `resolution` (~0.43–0.46) > `noise` (0.67–0.80) > `blur` (0.71–0.82) > `salt_pepper` (0.83–0.94) > `saturation` (0.88–0.95). Noise overtakes blur as the second-worst CIFAR-10 axis under v2; the v1 `noise` row hid this because post-upsample noise was effectively averaged out by the bicubic kernel. MNIST cells on all four perturbation axes stay within the geometric-axis floor (≥ 0.98 at L5) — only `resolution` bites on MNIST. Full per-axis × per-level 5×5 heatmaps per (model, dataset) and the complete 150-row Phase C table live in [`docs/Final_Exp_Report.md`](docs/Final_Exp_Report.md).
 
 ### Headline Research Findings
 

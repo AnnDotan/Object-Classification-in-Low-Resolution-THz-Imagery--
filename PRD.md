@@ -324,7 +324,7 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 - [progress.txt](progress.txt) — append "Iteration 27 — v2 noise-fix follow-up" summarizing: (a) full v1 186-cell campaign closure highlights (8-12 bullets covering Phase A/B/C completion dates, winner JSONs, headline findings, §6.4 13-retries-all-declined tally); (b) the v2 90-cell re-run scope and outcomes; (c) US-017..US-025 progress. This is the user-requested "everything done so far" summary.
 
 **Acceptance criteria.**
-- [ ] [README.md](README.md) Phase B + Phase C L5 tables show v2 numbers and reference `PIPELINE_VERSION = 2`.
+- [x] [README.md](README.md) Phase B + Phase C L5 tables show v2 numbers and reference `PIPELINE_VERSION = 2`. *(2026-05-23: §"Final Results" header rewritten to flag pipeline v2 + v1↔v2 incomparability rule; Phase B 30-cell table + Phase C L5 5-axis table refreshed from `artifacts/Final_Exp.json`; bold patterns re-keyed to per-`(dataset, level)` column-max under v2; new severity-ordering paragraph appended below Phase C L5 table. Validation: 6 Phase B rows + 5 Phase C L5 rows all match disk values in order.)*
 - [ ] Finding #2 + Finding #3 narratives re-derived from v2 data; no orphan v1 claims left in prose.
 - [ ] `progress.txt` iteration 27 entry committed; serves as the canonical session summary.
 - [ ] `Final_Exp_Report.md` regenerated; the existing markdown-pdf `Final_Exp.pdf` rebuilt as a side-effect of the per-pass refresh in US-020/021/022.
