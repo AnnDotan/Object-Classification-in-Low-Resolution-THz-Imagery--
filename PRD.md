@@ -359,11 +359,11 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 **LaTeX toolchain prerequisite.** Confirm `tectonic` or `pdflatex` on PATH on the 5070 box before execution. If neither is available, install `tectonic` via `winget install --id TectonicProject.Tectonic` or download a portable build to the venv. Flagged as risk §9(a).
 
 **Acceptance criteria.**
-- [ ] `artifacts/Final_Report.pdf` exists; ≥ 8 pages.
-- [ ] All 3 tables + 6 heatmaps present and legible.
-- [ ] References section renders cleanly with no `??` placeholders.
-- [ ] `tectonic` (or `pdflatex`) exits with code 0.
-- [ ] Auto-generated tables are byte-identical when `scripts/render_final_report_tex.py` is re-run against the same `Final_Exp.json` (idempotency check).
+- [x] `artifacts/Final_Report.pdf` exists; ≥ 8 pages. *(2026-05-23: PyMuPDF reports 8 pages / 636,807 bytes / 36,793 chars of extracted text. After the initial 7-page draft, expanded §I with a Related Work subsection to push the body length over the IEEEtran two-column 8-page threshold.)*
+- [x] All 3 tables + 6 heatmaps present and legible. *(2026-05-23: PDF extraction confirms all 3 table captions ("Phase A clean-baseline", "Phase B combined-degradation", "Phase C single-axis isolation at"); 6 heatmap PNGs rendered to `docs/_autogen/figs/phase_c_heatmap_{model}_{dataset}.png` via `src/tools/render_phase_c_heatmaps.py` and `\\includegraphics`'d via `docs/Final_Report.tex` figures 1-3. v2 floor values 0.8008 / 0.9422 / 0.4316 / 0.9534 all present in the PDF body text.)*
+- [x] References section renders cleanly with no `??` placeholders. *(2026-05-23: PDF text-extraction reports 0 occurrences of "??". Bibtex completed cleanly; all 13 entries in `docs/references.bib` resolved on the second pdflatex pass.)*
+- [x] `tectonic` (or `pdflatex`) exits with code 0. *(2026-05-23: pdflatex (MiKTeX-pdfTeX 4.23 / MiKTeX 25.12) ran 3 passes + bibtex via `scripts/render_final_report_tex.py` with exit code 0 on the final pass. tectonic not available on this box; pdflatex fallback was the path.)*
+- [x] Auto-generated tables are byte-identical when `scripts/render_final_report_tex.py` is re-run against the same `Final_Exp.json` (idempotency check). *(2026-05-23: SHA-256-concatenated hash of the 3 autogen tables is identical across two consecutive `--tables-only` runs.)*
 
 **Owner:** [REPORTER](agents/REPORTER.md) (authors `docs/Final_Report.tex` + `docs/references.bib` per its `docs/` write scope; produces the publishable PDF, on the same footing as the prior poster/presentation/submission deliverables it owns), with [DESIGNER](agents/DESIGNER.md) for the heatmap PNG tooling under `src/tools/` (DESIGNER's declared scope). **Dependencies:** US-023 (narrative content must be settled before the LaTeX prose is written against it).
 

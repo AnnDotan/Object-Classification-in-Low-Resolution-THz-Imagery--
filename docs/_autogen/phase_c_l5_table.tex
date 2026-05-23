@@ -1,0 +1,19 @@
+% AUTO-GENERATED — do not edit. Regenerate via scripts/render_final_report_tex.py.
+\begin{table*}[t]
+  \centering
+  \caption{Phase C single-axis isolation at $L=5$ (worst case), pipeline v2 on \texttt{noise} and \texttt{salt\_pepper} rows. Only the named axis is active at L5; the other four are at identity. Boldface marks the best-of-three architectures per $(\text{dataset}, \text{axis})$ cell. The \texttt{resolution}, \texttt{blur}, \texttt{saturation} rows are byte-identical to the pre-US-017 v1 pipeline.}
+  \label{tab:phase_c_l5}
+  \begin{tabular}{lcccccc}
+    \toprule
+     & \multicolumn{3}{c}{CIFAR-10} & \multicolumn{3}{c}{MNIST} \\
+    \cmidrule(lr){2-4} \cmidrule(lr){5-7}
+    Axis @ L5 & ResNet50 & DenseNet121 & TransNeXt-tiny & ResNet50 & DenseNet121 & TransNeXt-tiny \\
+    \midrule
+    \texttt{resolution} & 0.4316 & 0.4432 & \textbf{0.4624} & 0.4426 & \textbf{0.4540} & 0.4486 \\
+    \texttt{noise (v2)} & 0.6688 & 0.6846 & \textbf{0.8008} & 0.9896 & \textbf{0.9928} & 0.9914 \\
+    \texttt{blur} & 0.7098 & 0.7142 & \textbf{0.8244} & 0.9882 & 0.9846 & \textbf{0.9906} \\
+    \texttt{saturation} & 0.8822 & 0.8834 & \textbf{0.9534} & 0.9910 & \textbf{0.9914} & 0.9904 \\
+    \texttt{salt-and-pepper (v2)} & 0.8330 & 0.8508 & \textbf{0.9422} & 0.9862 & 0.9872 & \textbf{0.9894} \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

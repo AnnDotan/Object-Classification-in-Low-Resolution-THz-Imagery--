@@ -1,0 +1,20 @@
+% AUTO-GENERATED — do not edit. Regenerate via scripts/render_final_report_tex.py.
+\begin{table*}[t]
+  \centering
+  \caption{Phase B combined-degradation best-val-acc, pipeline v2. All five degradation axes are active at level $L$ simultaneously. Boldface marks the best-of-three architectures per $(\text{dataset}, L)$ column. Mean $\Delta$ across the 30 v2 cells is $-12.49$ pp vs the pre-US-017 v1 pipeline.}
+  \label{tab:phase_b}
+  \begin{tabular}{llccccc}
+    \toprule
+    Model & Dataset & L1 & L2 & L3 & L4 & L5 \\
+    \midrule
+    ResNet50 & CIFAR-10 & 0.7646 & 0.5394 & 0.3586 & 0.2684 & 0.1906 \\
+    ResNet50 & MNIST & \textbf{0.9918} & 0.9636 & 0.7886 & 0.5644 & \textbf{0.2800} \\
+    \midrule
+    DenseNet121 & CIFAR-10 & 0.7848 & 0.5368 & \textbf{0.3960} & \textbf{0.2852} & 0.1958 \\
+    DenseNet121 & MNIST & 0.9874 & \textbf{0.9654} & \textbf{0.8196} & \textbf{0.5808} & 0.2776 \\
+    \midrule
+    TransNeXt-tiny & CIFAR-10 & \textbf{0.8758} & \textbf{0.6422} & 0.3900 & 0.2850 & \textbf{0.2010} \\
+    TransNeXt-tiny & MNIST & 0.9896 & 0.9600 & 0.7994 & 0.5724 & 0.2748 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

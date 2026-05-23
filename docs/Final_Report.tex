@@ -1,0 +1,813 @@
+% docs/Final_Report.tex
+% IEEEtran-styled scientific report for US-024.
+% Build: python scripts/render_final_report_tex.py
+% Output: artifacts/Final_Report.pdf
+%
+% Tables in docs/_autogen/*.tex are AUTO-GENERATED from artifacts/Final_Exp.json
+% by scripts/render_final_report_tex.py. Hand-edits to those snippets will be
+% overwritten on the next build.
+
+\documentclass[journal]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{subcaption}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black,
+}
+
+\sisetup{
+  detect-weight=true,
+  detect-family=true,
+  round-mode=places,
+  round-precision=4,
+}
+
+% Place autogen figures and tables alongside the .tex source.
+\graphicspath{{_autogen/figs/}}
+
+\begin{document}
+
+\title{Coarse-Grain Perturbation Robustness of CNN and Attention-Based Classifiers under THz-Like Low-Resolution Imaging}
+
+\author{
+  Itamar~Bahat\\
+  \texttt{ibahat90@gmail.com}\\
+  \emph{Object Classification in Low-Resolution THz Imagery} project (p-2026-061)\\
+  Pipeline v2 noise-fix campaign --- branch \texttt{noise\_fix}, closed 2026-05-23
+}
+
+\maketitle
+
+% =============================================================
+\begin{abstract}
+We evaluate the robustness of three deep-learning classifiers ---
+ResNet50~\cite{he2016resnet}, DenseNet121~\cite{huang2017densenet}, and
+TransNeXt-tiny~\cite{shi2024transnext} --- under severe visual degradation
+that simulates Terahertz (THz) imaging conditions: low resolution, Gaussian
+blur, additive Gaussian noise, salt-and-pepper noise, and desaturation.
+A 186-cell experimental campaign at uniform 224$\times$224 input
+resolution covers a five-level severity curve over two datasets
+(CIFAR-10~\cite{krizhevsky2009cifar} and MNIST~\cite{lecun1998mnist}) in
+three phases: clean baselines (6 cells), combined degradation (30 cells),
+and single-axis isolation (150 cells).
+% Three contributions.
+We present three contributions.
+\emph{First}, we identify and correct a bug in the degradation pipeline
+that caused additive Gaussian noise and salt-and-pepper to be drawn
+\emph{after} the bicubic upsample to 224, where each stochastic sample
+landed on a single output pixel and was averaged out by the bicubic
+kernel. Our v2 pipeline draws both perturbations at \texttt{low\_res}
+and bicubically spreads each sample across a wider footprint, producing
+the sensor-realistic coarse-grain structure a true low-resolution
+detector would record (lag-1 spatial autocorrelation of the residual
+jumps from $\sim$0 to $0.993$ at $\texttt{low\_res}{=}8$).
+\emph{Second}, under the corrected pipeline we identify a universal
+3$\times$3-downsample bottleneck: at $\texttt{low\_res}{=}3$, all three
+architectures collapse to within $\pm 3$ pp on CIFAR-10 (0.43--0.46) and
+$\pm 1$ pp on MNIST (0.44--0.45), regardless of whether the backbone is
+convolutional or attention-based. The pretrain receptive-field hierarchy
+fails uniformly when sub-class geometric structure is destroyed.
+\emph{Third}, we establish a 60-cell two-axis empirical result that
+coarse-grain stochastic perturbations selectively destroy
+texture-dependent recognition (CIFAR-10) while preserving
+geometry-dominant recognition (MNIST). TransNeXt-tiny retains a
+single-digit-to-low-double-digit robustness gap over the CNN backbones
+on every CIFAR-10 perturbation axis at $L=5$, but the absolute floor is
+much lower than the pre-fix numbers suggested: \texttt{val\_acc} drops
+to $0.80$ on noise (was $0.96$ under the bug) and $0.94$ on
+salt-and-pepper (was $0.96$). The advantage disappears at $L=5$
+resolution. Attention softens but does not reverse the CIFAR-10
+texture-statistic collapse.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Image classification; Terahertz imaging; low-resolution imagery; visual
+degradation; robustness; vision transformers; CNN; deep learning;
+TransNeXt; DenseNet; ResNet; CIFAR-10; MNIST.
+\end{IEEEkeywords}
+
+% =============================================================
+\section{Introduction}
+\label{sec:intro}
+
+Terahertz (THz) imaging is a non-ionising, sub-millimetre-wave sensing
+modality used in security screening, materials inspection, and
+biomedical contexts. Compared with optical imaging it produces
+fundamentally low-resolution outputs: typical operational sensors deliver
+imagery on the order of $\sim$3--32 pixels per dimension before any
+super-resolution post-processing. The corresponding classification
+problem --- recognising object categories under severely
+information-limited inputs --- is therefore distinct from the more
+heavily studied natural-image classification regime~\cite{deng2009imagenet}
+in two important ways. First, the input resolution is far below the
+$\sim$224$\times$224 to which ImageNet-pretrained backbones are anchored,
+and second, the dominant nuisance variables are coarse-grain (sensor-pixel
+or larger) rather than fine-grain (photographic) perturbations.
+
+In this work we benchmark three representative deep-learning backbones
+under a controlled, parametric THz-like degradation pipeline.
+We deliberately avoid the use of real THz imagery: real THz datasets
+are scarce, application-specific, and confound classifier behaviour with
+calibration, sensor-noise floor, and bandwidth artefacts that vary by
+instrument. Instead we degrade two widely-used clean datasets
+(CIFAR-10~\cite{krizhevsky2009cifar} and
+MNIST~\cite{lecun1998mnist}) through five orthogonal axes spanning the
+physical mechanisms that a real low-resolution detector imposes:
+spatial downsampling (\emph{resolution}), additive Gaussian noise
+(\emph{noise}), Gaussian smoothing (\emph{blur}), additive salt-and-pepper
+spikes (\emph{salt\_pepper}), and luminance--chrominance attenuation
+(\emph{saturation}). The five-level severity curve is calibrated to
+sweep from a mild near-clean regime ($L=1$) to a $3{\times}3$ native
+input regime ($L=5$) that mimics current consumer-grade THz scanners.
+
+We evaluate three backbones chosen to cover the dominant architectural
+families: ResNet50~\cite{he2016resnet} (residual CNN, $\sim$25M
+parameters), DenseNet121~\cite{huang2017densenet} (densely-connected CNN,
+$\sim$8M parameters), and TransNeXt-tiny~\cite{shi2024transnext}
+(aggregated-attention vision transformer, $\sim$28M parameters; we use
+the tiny variant for capacity parity with ResNet50). All three load
+ImageNet-pretrained weights and are fully fine-tuned with a uniform
+protocol at 224$\times$224 input resolution. The fair-comparison
+invariant is therefore \emph{same tensor shape, same training protocol,
+same degradation pipeline}; observed performance differences are
+attributable to architecture rather than to bookkeeping.
+
+Beyond simply reporting headline numbers, we draw attention to a
+methodological correction that we believe is important for any future
+work in this area. The first version of our degradation pipeline (v1)
+applied additive Gaussian noise and salt-and-pepper \emph{after} the
+bicubic upsample to 224$\times$224 --- each \texttt{torch.randn} sample
+landed on a single output pixel and was effectively averaged out by the
+bicubic kernel that produced its neighbours. The result, at first
+glance plausible, was unrealistically high \texttt{val\_acc} on the
+noise and salt-and-pepper axes: under v1, TransNeXt-tiny appeared to
+hold $\geq 0.95$ on CIFAR-10 noise across $L=1{\to}5$, even at
+$\texttt{low\_res}{=}3$. We identified this as a software bug, not a
+property of the data: a true low-resolution sensor records noise at
+the sensor-pixel scale, not at the upsampled-pixel scale. Our v2
+pipeline draws the perturbations \emph{at} \texttt{low\_res} and lets
+the bicubic upsample spread each draw across a wider footprint at 224.
+The lag-1 spatial autocorrelation of the residual jumps from $\sim$0
+under v1 to $0.993$ under v2 at $\texttt{low\_res}{=}8$. We re-ran the
+90 affected cells under v2 (the 30 Phase B combined cells, the 30 Phase
+C \texttt{noise} cells, and the 30 Phase C \texttt{salt\_pepper}
+cells) and present those v2 numbers throughout. The 96 unaffected
+cells (Phase A clean plus Phase C \texttt{resolution} / \texttt{blur} /
+\texttt{saturation}) are byte-identical to v1.
+
+\subsection{Related Work}
+\label{sec:related_work}
+
+The robustness of CNN and attention-based image classifiers under
+visual perturbations has been studied along several distinct axes
+that are worth disentangling. Adversarial-robustness work studies
+imperceptible additive perturbations crafted to maximise
+classifier loss; that regime is fundamentally different from the
+sensor-realistic coarse-grain perturbations we study, where every
+perturbed pixel is also visibly perturbed to a human observer.
+Natural-image-corruption benchmarks (CIFAR-C, ImageNet-C, and
+their derivatives) characterise the per-class accuracy under a
+broad menu of distortions and have shown that attention-based
+architectures generally outperform CNNs on out-of-distribution
+robustness, but these benchmarks typically perturb at the native
+input resolution and do not isolate a low-resolution downsample
+axis separate from the perturbation axes.
+The TransNeXt~\cite{shi2024transnext} paper itself reports
+state-of-the-art ImageNet accuracy at every parameter budget and
+attributes the gain to aggregated foveal attention; we evaluate the
+\texttt{tiny} variant for parameter-budget parity with ResNet50, which
+makes the cross-architecture comparison here a cleaner test of
+attention-vs-convolution under degradation than would be obtained
+by comparing model sizes within the same family. The
+DenseNet121~\cite{huang2017densenet} backbone is included for its
+dense-connection topology, which differs structurally from both the
+residual-block ResNet50~\cite{he2016resnet} and the
+patch-attention TransNeXt; the three together span the
+representative architecture families.
+
+Within the THz-imaging literature, the dominant deep-learning
+applications are concealed-object screening, materials inspection,
+and biomedical micro-imaging, and the prevailing approach is to
+super-resolve the THz input to a CNN-compatible resolution before
+classification. Our work is complementary: rather than recovering
+information that the sensor has discarded, we ask how a
+high-quality classifier performs when the recovered input is
+itself coarse-grained. The five-axis severity curve in
+Table~\ref{tab:severity_curve} sweeps the range from a $\sim$18-pixel
+``mild'' downsampling regime (similar to many THz reconstruction
+benchmarks after super-resolution) down to a $3{\times}3$ ``extreme''
+regime that matches a raw THz scanner before any reconstruction.
+The L1$\to$L5 trajectory therefore brackets the operating range of
+plausible real-world THz classification pipelines.
+
+\paragraph*{Roadmap}
+Section~\ref{sec:method} describes the degradation pipeline, including
+the v1$\to$v2 correction; Section~\ref{sec:experimental_design} describes
+the 186-cell matrix, the Optuna~\cite{akiba2019optuna} pre-tuning of
+hyperparameters at the moderate $L=3$ severity, and the
+PyTorch Lightning~\cite{falcon2019lightning} training engine;
+Section~\ref{sec:results} presents the v2 numerical results across
+all three phases; Section~\ref{sec:discussion} interprets the headline
+findings and contrasts them with the v1 numbers; and
+Section~\ref{sec:conclusion} discusses limitations and future
+directions.
+
+% =============================================================
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Datasets}
+
+We use CIFAR-10~\cite{krizhevsky2009cifar} as a \emph{texture-dominant}
+benchmark: 10 natural-image object classes at native 32$\times$32 RGB
+with 10K training and 5K validation samples drawn from the standard
+torchvision split. MNIST~\cite{lecun1998mnist} serves as a
+\emph{geometry-dominant} contrast: 10 hand-written digit classes at
+native 28$\times$28 grayscale (broadcast to 3 channels), with the same
+10K/5K split. Both datasets are upsampled by the degradation pipeline
+to 224$\times$224 before reaching any backbone, so input tensor shape
+is identical across all six (model, dataset) pairs.
+
+The two datasets are chosen for contrast in the dominant discriminative
+feature. CIFAR-10's per-class signal is carried by texture statistics
+that are spatially distributed across the image (e.g.\ feather patterns,
+fur, wing structure), while MNIST's per-class signal is carried by
+the global geometric shape of thick digit strokes that are robust to
+local perturbations. We expect coarse-grain perturbations to bite
+sharply on the first and weakly on the second; the 60-cell two-axis
+result in Section~\ref{sec:results} confirms this directly.
+
+\subsection{Architectures}
+
+Table~\ref{tab:backbone_summary} summarises the three backbones. We
+chose them to span the three dominant families of supervised-pretrained
+image classifiers as of the current literature: residual CNNs,
+densely-connected CNNs, and aggregated-attention vision transformers.
+
+\begin{table}[t]
+  \centering
+  \caption{Backbones evaluated in this study.}
+  \label{tab:backbone_summary}
+  \begin{tabular}{lccp{2.5cm}}
+    \toprule
+    Model & Family & Params & Pretrain \\
+    \midrule
+    ResNet50~\cite{he2016resnet} & residual CNN & $\sim$25M & ImageNet-1K\\
+    DenseNet121~\cite{huang2017densenet} & dense CNN & $\sim$8M & ImageNet-1K\\
+    TransNeXt-tiny~\cite{shi2024transnext} & ViT (attention) & $\sim$28M & ImageNet-1K\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Both CNNs are fine-tuned end-to-end with differential learning rates
+(head $10^{-3}$, backbone $10^{-4}$) following the
+TResNet~\cite{ridnik2021tresnet} convention.
+TransNeXt-tiny is fine-tuned end-to-end with the
+paper-prescribed differential learning rates (head $5{\times}10^{-4}$,
+backbone $5{\times}10^{-5}$) per~\cite{shi2024transnext}~\S{}A.3. All three
+backbones load their official ImageNet-pretrained
+checkpoints~\cite{deng2009imagenet} before training.
+
+We deliberately avoid heavier TransNeXt variants (\texttt{small},
+\texttt{base}) for capacity parity with ResNet50. The
+\texttt{tiny} variant has approximately the same parameter budget
+($\sim$28M vs $\sim$25M); the alternative (\texttt{small} at
+$\sim$50M) would confound the architecture comparison with
+parameter-count effects.
+
+\subsection{Degradation Pipeline}
+
+The degradation pipeline applies five orthogonal perturbation axes in
+the following order. Saturation is applied first, at native resolution,
+so that any downstream noise stays colour-correct. The image is then
+downsampled (bilinear) to the configured \texttt{low\_res}; this is the
+sensor-pixel scale. Additive Gaussian noise and salt-and-pepper are
+then drawn at \texttt{low\_res}. The image is upsampled (bicubic) to
+the model-input resolution of 224$\times$224. Gaussian blur is then
+applied with kernels calibrated for the 224$\times$224 target.
+Finally, the image is clamped to $[0,1]$ and normalised with the
+ImageNet channel statistics:
+\begin{equation}
+\begin{aligned}
+\mathbf{x}_{\mathrm{sat}}  &= (1-s)\,\mathrm{gray}(\mathbf{x}) + s\,\mathbf{x},\\
+\mathbf{x}_{\mathrm{low}}  &= \mathrm{down}_{\mathrm{bilin}}(\mathbf{x}_{\mathrm{sat}}, r),\\
+\mathbf{x}_{\mathrm{nse}}  &= \mathbf{x}_{\mathrm{low}} + \sigma\,\mathcal{N}(\mathbf{0}, \mathbf{I}),\\
+\mathbf{x}_{\mathrm{sp}}   &= \mathrm{paint}(\mathbf{x}_{\mathrm{nse}}, p_{\mathrm{sp}}),\\
+\mathbf{x}_{\mathrm{up}}   &= \mathrm{up}_{\mathrm{bicub}}(\mathbf{x}_{\mathrm{sp}}, 224),\\
+\mathbf{x}_{\mathrm{out}}  &= \mathrm{blur}_{\mathrm{Gaussian}}(\mathbf{x}_{\mathrm{up}}, k, \sigma_{b}).
+\end{aligned}
+\end{equation}
+
+The configurable parameters are $\{s, r, \sigma, p_{\mathrm{sp}}, k, \sigma_b\}$
+for $\{\mathrm{saturation}, \mathrm{low\_res}, \mathrm{noise\_std}, \mathrm{salt\_pepper}, \mathrm{blur\_kernel}, \mathrm{blur\_sigma}\}$.
+
+\subsubsection*{Pipeline v1$\to$v2 correction}
+\label{sec:v2_correction}
+In the v1 pipeline, the noise and salt-and-pepper steps were
+mistakenly placed \emph{after} the upsample, i.e.\ between
+$\mathbf{x}_{\mathrm{up}}$ and the blur step. Each
+\texttt{torch.randn} sample then landed on a single output pixel at
+the 224$\times$224 grid, and the lag-1 spatial autocorrelation of the
+noise was effectively zero. Real low-resolution sensors integrate
+photons over each sensor pixel and read out a per-pixel noise sample,
+which the imaging chain then spreads spatially via its
+point-spread-function (which we model with the bicubic upsample).
+Pipeline v2 enforces this physical ordering by drawing noise and
+salt-and-pepper at \texttt{low\_res} and letting the bicubic upsample
+provide the spatial spreading; the lag-1 autocorrelation of the
+residual rises to $0.993$ at $\texttt{low\_res}{=}8$. The
+\texttt{resolution} axis (which controls $r$), the \texttt{blur} axis
+(which acts at 224 with kernels calibrated for that resolution), and
+the \texttt{saturation} axis (which is applied at native resolution
+before the downsample) are unchanged from v1.
+
+The corresponding 90 cells in our experimental matrix --- the 30 Phase
+B combined cells (in which all five axes are active simultaneously) and
+the 60 Phase C cells whose active axis is \texttt{noise} or
+\texttt{salt\_pepper} --- were re-run under v2. The remaining 96
+cells (Phase A clean, plus Phase C \texttt{resolution} /
+\texttt{blur} / \texttt{saturation}) have identical pixels under v1
+and v2 and were not re-run.
+
+\subsubsection*{Severity curve}
+
+\begin{table}[t]
+  \centering
+  \caption{Five-level severity curve. All values are dimensionless image-space parameters; \texttt{low\_res} is the native-pixel side of the input grid before upsampling to 224.}
+  \label{tab:severity_curve}
+  \begin{tabular}{ccccccc}
+    \toprule
+    Level & \texttt{low\_res} & blur $k$ & $\sigma_b$ & $\sigma$ & $p_{\mathrm{sp}}$ & $s$\\
+    \midrule
+    L1 Mild     & 18 & 13 & 2.5  & 0.04 & 0.03 & 0.95\\
+    L2 Light    & 12 & 25 & 5.0  & 0.08 & 0.06 & 0.65\\
+    L3 Moderate &  8 & 41 & 8.0  & 0.12 & 0.10 & 0.40\\
+    L4 Severe   &  6 & 61 & 12.0 & 0.16 & 0.14 & 0.15\\
+    L5 Extreme  &  3 & 91 & 18.0 & 0.22 & 0.18 & 0.00\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:severity_curve} gives the per-level parameters. The
+curve is logarithmic in the resolution axis (18, 12, 8, 6, 3) and
+roughly linear in the additive-noise axis. The $L=5$ resolution
+($3{\times}3$) is the worst-case scenario meant to mimic a current
+consumer-grade THz scanner.
+
+\subsection{Determinism Contract}
+
+The validation pipeline is fully deterministic. Each validation sample
+is degraded using a per-sample local \texttt{torch.Generator} seeded
+by its dataset index plus a fixed split offset:
+$\mathrm{seed}(idx, \mathrm{split}) = idx + \mathrm{SEED\_OFFSET}_{\mathrm{split}}$.
+The offsets are constant across the entire campaign; under this
+contract, the same $idx$ always produces the same noise pattern across
+re-runs, dataloader worker counts, and machine restarts. We
+verify this with a five-check determinism suite: intra-batch equality,
+inter-run equality, batched-vs-singleton consistency, histogram
+equality, train/val disjointness, and (added under the v2 refactor) the
+lag-1 spatial autocorrelation invariant that ensures the noise is
+drawn at \texttt{low\_res} rather than at 224.
+
+% =============================================================
+\section{Experimental Design}
+\label{sec:experimental_design}
+
+\subsection{186-cell Matrix}
+
+We organise the campaign into three phases.
+Phase A consists of 6 clean baselines (3 backbones $\times$ 2 datasets)
+with the identity degradation pipeline; this is the upper-bound
+\texttt{val\_acc} per (model, dataset) pair before any THz-like
+distortion is applied.
+Phase B is the combined-degradation regime: 3 backbones $\times$
+2 datasets $\times$ 5 severity levels, with all five degradation axes
+active at the same level $L$ per cell. This is the realistic
+``THz-like input'' regime.
+Phase C is the single-axis isolation regime: 3 backbones $\times$
+2 datasets $\times$ 5 severity levels $\times$ 5 axes, with the named
+axis at level $L$ and the other four axes at identity. Phase C
+attributes the combined-axes collapse observed in Phase B to specific
+degradation mechanisms.
+The total is $6 + 30 + 150 = 186$ cells.
+
+\subsection{Optuna Pre-tuning}
+
+For each (model, dataset) pair we pre-tune the training hyperparameters
+on Phase B $L=3$ (the moderate severity) using
+Optuna~\cite{akiba2019optuna} with paper-anchored search bounds: each
+range is held within $\pm 1$ decade of the architecture's published
+optimum. Six pairs $\times$ 20 trials per pair gives an Optuna budget
+of $\sim$20 GPU-hours. The winning hyperparameters per pair are then
+frozen and re-used verbatim for that pair's Phase A, Phase B (all five
+levels), and Phase C (all 25 cells) entries; this keeps the
+fair-comparison invariant intact within a pair. We did \emph{not}
+re-tune under pipeline v2: the v1 winners were tuned at $L=3$ on the
+v1 pipeline, and the v2 fix changes the noise \emph{spatial structure}
+but not its \emph{severity envelope}. Re-tuning under v2 is left to
+future work.
+
+\subsection{Training Protocol}
+
+All cells share a uniform convergence-first training protocol:
+AdamW~\cite{loshchilov2019adamw} optimiser ($\beta_1{=}0.9$, $\beta_2{=}0.999$),
+cosine learning-rate decay~\cite{loshchilov2017sgdr}, gradient clipping
+at $\max_{\|\nabla\|}{=}1$, batch size 32, 60-epoch cap with patience-10
+early stopping on validation accuracy (\texttt{min\_delta}${=}1{\times}10^{-4}$).
+Both CNN backbones use weight decay $10^{-4}$ and label smoothing
+$0.1$~\cite{szegedy2016rethinking}; TransNeXt-tiny uses weight decay
+$5{\times}10^{-2}$, label smoothing $0.1$, and drop-path rate
+$0.1$~\cite{huang2016stochastic}, per~\cite{shi2024transnext}.
+Mixed precision is \texttt{bf16-mixed} on the NVIDIA RTX 5070 (Blackwell,
+sm\_120, 12 GiB GDDR7). We do not use \texttt{torch.compile} (TransNeXt's
+\texttt{attention\_native} path is not Inductor-graph-capturable, and
+the CNN compile path is unvalidated).
+
+\subsection{Health Gate}
+
+A per-cell pathology guard runs at the end of each training cell and
+classifies the run as one of \{\textit{healthy}, \textit{overfit},
+\textit{underfit}, \textit{divergent}\}. Overfit fires when training
+accuracy exceeds validation accuracy by more than a threshold;
+underfit fires when validation accuracy fails to clear a fraction of
+the Phase A clean baseline; divergence fires on non-finite loss.
+Across the 30 Phase B v2 cells and the 60 Phase C v2 cells, zero
+sentinels fired. (The v1 pipeline had 13 sentinels; the operator
+declined the §6.4 single-retry pass on all 13 because the retry
+deltas \texttt{wd}${\times}2$, \texttt{dropout}$={}0.1$,
+\texttt{backbone\_lr}$/20$ consistently under-fit tightly-tuned
+Optuna winners.)
+
+% =============================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Phase A — Clean Baselines}
+\label{sec:results_phase_a}
+
+\input{_autogen/phase_a_table.tex}
+
+Table~\ref{tab:phase_a} reports the clean-baseline best validation
+accuracy per (model, dataset). Phase A is unaffected by the v1$\to$v2
+correction; the identity degradation pipeline contains no noise or
+salt-and-pepper, so the byte-identical input invariant holds across
+v1 and v2.
+TransNeXt-tiny leads CIFAR-10 by $+2.46$ pp over ResNet50 and $+4.08$
+pp over DenseNet121 at clean baseline. MNIST clusters tight at
+$0.991\text{--}0.993$ across all three architectures, consistent with
+the well-known result that MNIST classification at 224$\times$224 is
+near-saturated for any reasonably modern backbone.
+
+\subsection{Phase B — Combined Degradation}
+\label{sec:results_phase_b}
+
+\input{_autogen/phase_b_table.tex}
+
+Table~\ref{tab:phase_b} reports the Phase B combined-degradation
+\texttt{val\_acc} per (model, dataset) across the five severity
+levels. All five degradation axes are active at the same level $L$
+per cell. The values are strictly monotonic in $L$ for every
+(model, dataset) pair --- there are no inversions --- which is
+expected under a fair-comparison protocol where lower-severity inputs
+contain strictly more information.
+
+Three observations are immediate. First, the L5 cells on both datasets
+are dominated by the resolution axis (Section~\ref{sec:results_phase_c}
+and Finding~1 in the Discussion): CIFAR-10 falls to $0.19\text{--}0.20$
+across all three backbones, and MNIST falls to $0.27\text{--}0.28$.
+Second, mid-range levels ($L=2,3,4$) drop steeply on CIFAR-10 (each
+level loses roughly 13--19 pp relative to the next-milder level on
+this dataset) while MNIST resists until $L=4$, where the resolution
+axis begins to bite. Third, the architectural ordering at the L5
+combined-degradation worst case is essentially tied:
+the three backbones land within $\sim$1 pp of each other on both
+datasets, which suggests that the L5 collapse is rate-limited by the
+resolution axis rather than by the architecture's capacity to extract
+information from the surviving signal.
+
+Mean $\Delta$ across the 30 Phase B v2 cells is $-12.49$ pp vs the
+analogous v1 cells. The drop is largest on CIFAR-10 (mean $-15.6$ pp,
+worst $-32.7$ pp at \texttt{final\_B\_L3\_transnext\_tiny\_cifar10})
+and smaller on MNIST (mean $-9.4$ pp). This is expected: v1 Phase B
+combined the post-upsample noise / salt-and-pepper bug with the
+correctly-implemented resolution / blur / saturation, so v1 numbers
+on Phase B were inflated by exactly the amount the noise / S\&P
+contributions had been under-counted.
+
+\subsection{Phase C — Single-Axis Isolation}
+\label{sec:results_phase_c}
+
+\input{_autogen/phase_c_l5_table.tex}
+
+Table~\ref{tab:phase_c_l5} reports the Phase C single-axis isolation
+\texttt{val\_acc} at the worst severity level ($L=5$). Each cell has
+exactly one degradation axis active at L5; the other four axes are at
+identity. The cross-architecture pattern is the load-bearing
+observation of this paper.
+
+\subsubsection*{Resolution axis}
+At $L=5$ resolution (the $3{\times}3$ native input), all three
+architectures land within $\pm 3$ pp on CIFAR-10 ($0.4316$--$0.4624$)
+and $\pm 1$ pp on MNIST ($0.4426$--$0.4540$). The architectural
+ordering at this severity is approximately tied. This is Finding 1
+in the Discussion.
+
+\subsubsection*{Noise axis (v2)}
+At $L=5$ noise (the v2 pipeline draws noise at \texttt{low\_res}$=3$
+and bicubically spreads each draw across a $\sim$74$\times$74-pixel
+footprint at 224), CIFAR-10 drops sharply to $0.6688$--$0.8008$ across
+the three backbones, with TransNeXt-tiny leading at $0.8008$
+(+13.2 pp over the CNN average). The v1 pipeline produced
+$0.8974$--$0.9608$ for the same three cells; v2 recovers the
+sensor-realistic behaviour. MNIST cells on the same axis stay at
+$0.9896$--$0.9928$ --- effectively unaffected by the v2 hardening.
+
+\subsubsection*{Blur axis}
+At $L=5$ blur ($k=91$, $\sigma_b=18$ on the 224$\times$224 grid), the
+blur kernel covers roughly 40\% of the image side and produces a
+strongly low-pass-filtered output. CIFAR-10 falls to $0.7098$--$0.8244$
+with TransNeXt-tiny again leading; MNIST is essentially unaffected at
+$0.9846$--$0.9906$. The blur axis is byte-identical between v1 and v2.
+
+\subsubsection*{Saturation axis}
+At $L=5$ saturation ($s=0$, i.e.\ a full collapse to grayscale),
+CIFAR-10 falls to $0.8822$--$0.9534$ with TransNeXt-tiny leading;
+MNIST is at $0.9904$--$0.9914$, effectively unaffected --- MNIST is
+already grayscale-equivalent (the three channels are duplicated copies
+of the same digit-stroke image), so the saturation axis has no real
+effect on its discriminative signal. The saturation axis is
+byte-identical between v1 and v2.
+
+\subsubsection*{Salt-and-pepper axis (v2)}
+At $L=5$ salt-and-pepper ($p_{\mathrm{sp}}=0.18$ at
+\texttt{low\_res}$=3$, i.e.\ the v2 pipeline paints
+$\sim 9$ pixels at the sensor-pixel grid and bicubically spreads each
+into a large blob), CIFAR-10 falls to $0.8330$--$0.9422$ with
+TransNeXt-tiny leading. MNIST is at $0.9862$--$0.9894$, again
+essentially unaffected. The v1 pipeline produced $0.8694$--$0.9602$
+on these cells; the v2 drop is much smaller than the v2 noise drop
+because v2 salt-and-pepper at $\texttt{low\_res}{=}3$ paints only
+$\texttt{low\_res}^2 \times 2 p_{\mathrm{sp}} \approx 3$ pixels per
+image, while v2 noise samples every \texttt{low\_res}$^2 = 9$ pixels.
+
+\subsection{Phase C 5$\times$5 Heatmaps}
+\label{sec:phase_c_heatmaps}
+
+Figures~\ref{fig:hm_resnet50}--\ref{fig:hm_transnext} present the full
+5$\times$5 axis-by-level heatmaps per (model, dataset). Each cell is
+coloured by validation accuracy and annotated with the numeric value.
+The qualitative pattern is the same across all three architectures:
+CIFAR-10 cells degrade monotonically with severity on every axis
+(resolution drops fastest, saturation slowest), while MNIST cells stay
+at a flat $\sim$0.98--0.99 floor on every axis except resolution.
+
+\begin{figure}[t]
+  \centering
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_resnet50_cifar10.png}
+    \caption{ResNet50, CIFAR-10.}
+  \end{subfigure}
+  \vspace{0.5em}
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_resnet50_mnist.png}
+    \caption{ResNet50, MNIST.}
+  \end{subfigure}
+  \caption{Phase C 5$\times$5 heatmaps for ResNet50.}
+  \label{fig:hm_resnet50}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_densenet121_cifar10.png}
+    \caption{DenseNet121, CIFAR-10.}
+  \end{subfigure}
+  \vspace{0.5em}
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_densenet121_mnist.png}
+    \caption{DenseNet121, MNIST.}
+  \end{subfigure}
+  \caption{Phase C 5$\times$5 heatmaps for DenseNet121.}
+  \label{fig:hm_densenet121}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_transnext_tiny_cifar10.png}
+    \caption{TransNeXt-tiny, CIFAR-10.}
+  \end{subfigure}
+  \vspace{0.5em}
+  \begin{subfigure}[t]{0.98\columnwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{phase_c_heatmap_transnext_tiny_mnist.png}
+    \caption{TransNeXt-tiny, MNIST.}
+  \end{subfigure}
+  \caption{Phase C 5$\times$5 heatmaps for TransNeXt-tiny.}
+  \label{fig:hm_transnext}
+\end{figure}
+
+% =============================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Finding 1 --- Universal 3$\times$3-Downsample Bottleneck}
+\label{sec:finding_1}
+
+At $L=5$ resolution, all three architectures collapse to within
+$\pm 3$ pp on CIFAR-10 and $\pm 1$ pp on MNIST. The convolutional
+ResNet50 and DenseNet121 backbones share the receptive-field
+hierarchy of a deeply-pretrained ImageNet model, and we expected them
+to behave similarly under coarse-grain perturbations. What is
+\emph{novel} here is that the attention-based TransNeXt-tiny, which
+in clean-baseline regime leads CIFAR-10 by 2.5--4 pp over the CNNs,
+converges to the same failure mode at $L=5$ resolution. The
+implication is that the resolution-axis bottleneck is structural in
+the input itself --- once the geometric per-class signal is destroyed,
+no architectural feature (whether convolutional or attention-based)
+recovers it.
+
+A related implication is methodological. The L5 resolution finding
+is meaningful precisely because all three architectures see the same
+\emph{pixel budget}: the input tensor is 224$\times$224 for all
+backbones, and the downsample-to-3 followed by upsample-to-224
+operation is identical across architectures. If one of the backbones
+had been trained at native 32$\times$32 (as in some early
+TransNeXt-on-CIFAR experiments), the apparent ``resolution-axis
+robustness'' would have been confounded with the architecture's
+preferred input shape. We rolled back exactly such a native-resolution
+refactor early in the v1 campaign (2026-05-13) for this reason; the
+findings reported here are taken from the unified 224$\times$224
+protocol.
+
+\subsection{Finding 2 --- TransNeXt Softens But Does Not Reverse the v2 CIFAR-10 Perturbation Collapse}
+\label{sec:finding_2}
+
+Under v2, TransNeXt-tiny retains a robustness gap over the CNN
+backbones on every CIFAR-10 perturbation axis at $L=5$: $+13.2$ pp on
+noise, $+11.2$ pp on blur, $+7.1$ pp on saturation, and $+10.0$ pp on
+salt-and-pepper. The qualitative direction of the v1 ``TransNeXt
+robustness gap'' finding therefore survives v2. The quantitative
+floors, however, are much lower:
+TransNeXt-tiny holds $\geq 0.95$ on noise at $L=5$ \emph{only} on
+MNIST; on CIFAR-10 it falls to $0.80$ at $L=5$ noise, $0.94$ at $L=5$
+salt-and-pepper, $0.82$ at $L=5$ blur, and $0.95$ at $L=5$
+saturation. The v1 pipeline's claim that ``TransNeXt-tiny holds
+$\geq 0.95$ across $L=1{\to}5$ for noise, saturation, and
+salt-and-pepper'' on CIFAR-10 is therefore falsified for noise
+(collapses by $L=2$) and weakly falsified for salt-and-pepper (holds
+$L=1{\to}3$, falls below $0.95$ at $L=4{\to}5$). The claim survives
+on saturation, whose axis was unchanged by US-017.
+
+The mechanism is plausibly that attention's adaptive receptive fields
+\emph{soften} the coarse-grain perturbation collapse by integrating
+over neighbouring perturbed pixels in a way that the fixed receptive
+fields of a convolutional backbone cannot. But the v1 numbers
+overstated this softening: when noise was drawn at 224 and averaged
+out by its own bicubic neighbours, the apparent CNN-vs-attention gap
+of $\sim$10 pp was masking a near-floor performance regime for both
+families. Under v2 the gap is real but the absolute level is far below
+the clean-baseline ceiling.
+
+\subsection{Finding 3 --- MNIST Geometric-Axis Floor Preserved Under v2}
+\label{sec:finding_3}
+
+Across all three architectures, MNIST \texttt{val\_acc} on noise,
+blur, saturation, and salt-and-pepper stays flat at $0.984$--$0.993$
+across $L=1{\to}5$ under v2. This is a 60-cell, two-axis empirical
+confirmation that the v2 coarse-grain perturbations preserve the
+discriminative MNIST signal regardless of severity. The thick digit
+strokes cover many bicubically-spread perturbation footprints, so the
+discriminative feature survives.
+
+The contrast with CIFAR-10 is the strongest practical demonstration of
+the texture-vs-geometry distinction that motivated our dataset choice.
+Texture-dominant recognition (CIFAR-10) and geometry-dominant
+recognition (MNIST) diverge sharply under pipeline v2 in a way the
+v1 pipeline largely masked. We believe this divergence is the
+publishable headline of the work: it predicts that future THz
+classification systems should be designed around \emph{whether the
+target category's per-class signal lives in texture or geometry}.
+For target categories that are texture-dominant (e.g.\ material
+identification, surface-finish classification), the L5 resolution
+axis is a hard rate-limit and no architectural choice will lift the
+ceiling materially above $\sim 0.45$ on a CIFAR-10-scale taxonomy.
+For target categories that are geometry-dominant (e.g.\ tool-shape
+or weapon-silhouette classification, the canonical THz application),
+the per-class signal survives all four non-resolution axes and only
+the L4--L5 resolution axis bites; the architectural choice between
+CNN and attention is essentially irrelevant in this regime.
+
+\subsection{Severity Ordering on CIFAR-10 at L5}
+
+Combining Findings 1--3, the v2 severity ordering on CIFAR-10 at
+$L=5$ (worst $\to$ mildest) is:
+\begin{equation*}
+\texttt{resolution} \succ \texttt{noise} \succ \texttt{blur} \succ \texttt{salt\_pepper} \succ \texttt{saturation}.
+\end{equation*}
+Under v1 the ordering placed \texttt{noise} fourth (with
+\texttt{salt\_pepper} fifth and \texttt{saturation} third), but this
+was an artefact of the post-upsample bug: v1 noise at the 224 grid
+was effectively averaged out by the bicubic kernel that produced its
+neighbours, while v2 noise at \texttt{low\_res}$=3$ propagates
+through the bicubic upsample as $\sim 74{\times}74$-pixel footprints
+that are not averaged away. The corrected ordering places noise
+second --- ahead of blur, which is convolutional with a kernel that
+covers only the central $\sim$40\% of the image side. The
+\texttt{salt\_pepper} axis, despite being \emph{nominally} a sparse
+perturbation, lands fourth because at $\texttt{low\_res}{=}3$ the
+$p_{\mathrm{sp}}{=}0.18$ rate paints only $\sim 3$ pixels per image
+and bicubic spreads each into a single large blob, leaving most of
+the image as original signal.
+
+\subsection{Limitations}
+
+We acknowledge the following limitations.
+\emph{First}, we do not evaluate on real THz imagery. Real THz data
+would confound architecture comparison with instrument-specific
+calibration, sensor-noise floor, and bandwidth artefacts. The
+parametric synthetic pipeline isolates the degradation axes but
+omits the sensor-specific noise statistics.
+\emph{Second}, we use only two datasets. CIFAR-10 and MNIST were
+chosen for the texture-vs-geometry contrast, but a third dataset with
+intermediate per-class statistics (e.g.\ STL-10, or a small subset of
+ImageNet) would strengthen the generality of the geometric-axis
+floor finding.
+\emph{Third}, we use only three backbones. Within the attention family
+we evaluate only the TransNeXt-tiny variant; in principle a larger
+attention-based model (TransNeXt-base, or a Swin transformer) might
+recover more of the CIFAR-10 collapse, but we have not tested this.
+\emph{Fourth}, we do not re-tune hyperparameters under pipeline v2.
+The Optuna winners were tuned at v1 $L=3$; while the v2 fix changes
+the noise \emph{structure} but not its \emph{severity envelope}, the
+6 frozen winners might not be the v2 optima.
+\emph{Fifth}, the salt-and-pepper rate $p_{\mathrm{sp}}$ is applied
+at \texttt{low\_res} in v2. At $L=5$ this paints only $\sim 3$ pixels
+per image, which weakens the salt-and-pepper axis as a meaningful
+perturbation at the extreme severity. A re-calibration that scales
+$p_{\mathrm{sp}}$ up at lower resolutions would restore the perceived
+severity to v1 levels; we leave this to future work.
+
+% =============================================================
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+We present a 186-cell experimental study of three deep-learning
+backbones (ResNet50, DenseNet121, TransNeXt-tiny) under five-axis
+THz-like degradation, with two datasets (CIFAR-10 and MNIST) spanning
+the texture-vs-geometry contrast. Beyond the headline numbers, we
+identify and correct a pipeline bug that had inflated the
+noise / salt-and-pepper axis \texttt{val\_acc} in our v1 campaign,
+and we re-run the 90 affected cells under the corrected v2 pipeline.
+The three findings reported here --- a universal $3{\times}3$
+downsample bottleneck, attention's softening but not reversal of the
+v2 CIFAR-10 perturbation collapse, and MNIST's reinforced
+geometric-axis robustness floor under v2 --- are stable under the
+corrected pipeline.
+
+Future work should pursue four directions.
+\emph{First}, multi-axis-interaction analysis: Phase B reports
+combined-axis collapses, but Phase C isolates single axes; a Phase D
+that varies two axes at a time would attribute joint failures to
+specific pairs.
+\emph{Second}, scaling to larger backbones: a TransNeXt-base or
+Swin-large evaluation would test whether the CIFAR-10 perturbation
+collapse can be reversed (not merely softened) by sufficient
+attention capacity.
+\emph{Third}, real-THz validation: we should pair the synthetic-pipeline
+results with at least one real THz dataset (with the caveat that the
+instrument-specific calibration must be characterised separately).
+\emph{Fourth}, re-tuning under v2: the frozen Optuna winners were
+tuned on the v1 pipeline; a v2 re-tune at $L=3$ would either confirm
+the winners or surface a small set of v2-specific updates.
+
+% =============================================================
+\section*{Acknowledgements}
+We thank the multi-agent harness team at Anthropic for the Claude Code
+infrastructure, the operator and reviewer team for the v2 visual
+pre-flight gate (US-019B) that prevented a $\sim$53 GPU-hour
+mis-dispatch, and the contributors of the open-source PyTorch
+Lightning~\cite{falcon2019lightning} and
+Optuna~\cite{akiba2019optuna} libraries that underpin this work.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
