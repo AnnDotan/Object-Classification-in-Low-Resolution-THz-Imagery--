@@ -188,7 +188,10 @@ architectures (no inversions). MNIST holds ≥ 0.96 through L2 for all models,
 then falls fast at L4 / L5 — driven by the resolution axis (see Phase C) and
 amplified by the v2-hardened noise + S&P axes (mean ΔL3 vs v1 is roughly
 −7 pp on MNIST). v2 Phase B mean Δ across the 30 cells is −12.49 pp vs v1
-(operator-locked under US-020 close 2026-05-21).
+(operator-locked under US-020 close 2026-05-21). For comparison, Phase C
+noise mean Δ vs v1 is −5.15 pp and Phase C salt-and-pepper mean Δ vs v1 is
+−0.81 pp; the per-axis severity arithmetic is in §"Cross-Architecture
+Headline Findings" below.
 
 ### Full Phase B Result Table
 

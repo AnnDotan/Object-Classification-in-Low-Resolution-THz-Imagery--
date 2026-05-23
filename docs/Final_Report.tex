@@ -315,6 +315,14 @@ for $\{\mathrm{saturation}, \mathrm{low\_res}, \mathrm{noise\_std}, \mathrm{salt
 
 \subsubsection*{Pipeline v1$\to$v2 correction}
 \label{sec:v2_correction}
+The fix is gated by a single integer constant
+\texttt{PIPELINE\_VERSION\,=\,2} (defined in
+\texttt{src/data/degradation\_levels.py} and stamped into each cell's
+\texttt{metrics.json}) so downstream tooling can distinguish v1 and v2
+cells programmatically. The pre-fix code path is preserved in the
+git history of this project at commit \texttt{3e1d089}; v1 numbers
+on the 90 affected cells are not re-presented here.
+
 In the v1 pipeline, the noise and salt-and-pepper steps were
 mistakenly placed \emph{after} the upsample, i.e.\ between
 $\mathbf{x}_{\mathrm{up}}$ and the blur step. Each
@@ -500,11 +508,20 @@ information from the surviving signal.
 Mean $\Delta$ across the 30 Phase B v2 cells is $-12.49$ pp vs the
 analogous v1 cells. The drop is largest on CIFAR-10 (mean $-15.6$ pp,
 worst $-32.7$ pp at \texttt{final\_B\_L3\_transnext\_tiny\_cifar10})
-and smaller on MNIST (mean $-9.4$ pp). This is expected: v1 Phase B
-combined the post-upsample noise / salt-and-pepper bug with the
-correctly-implemented resolution / blur / saturation, so v1 numbers
-on Phase B were inflated by exactly the amount the noise / S\&P
-contributions had been under-counted.
+and smaller on MNIST (mean $-9.4$ pp). For comparison, the two Phase C
+v2 re-run axes give a mean $\Delta$ vs v1 of $-5.15$ pp (Phase C noise,
+30 cells) and $-0.81$ pp (Phase C salt-and-pepper, 30 cells). The
+ordering Phase B $>$ Phase C noise $>$ Phase C S\&P is consistent with
+the perturbed-pixel-count arithmetic: Phase B exposes the model to all
+five degradations including the v2-hardened noise and S\&P axes; Phase
+C noise exposes only one axis (and noise samples every
+\texttt{low\_res}$^2$ pixel); Phase C S\&P also exposes one axis but
+paints only $\texttt{low\_res}^2 \cdot 2 p_{\mathrm{sp}}$ pixels per
+image, which is much smaller at $\texttt{low\_res}{=}3$.
+This is expected: v1 Phase B combined the post-upsample noise /
+salt-and-pepper bug with the correctly-implemented resolution / blur
+/ saturation, so v1 numbers on Phase B were inflated by exactly the
+amount the noise / S\&P contributions had been under-counted.
 
 \subsection{Phase C — Single-Axis Isolation}
 \label{sec:results_phase_c}
