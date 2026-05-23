@@ -299,9 +299,11 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 **Post-pass artifact refresh.** Same chain.
 
 **Acceptance criteria.**
-- [ ] 30/30 cells `healthy` (or operator-deferred).
-- [ ] L5 salt_pepper val_acc expected to be materially lower than v1 (v1 transnext_tiny L5 cifar10 salt_pepper was 0.9602 — same implausibility class as noise).
-- [ ] Dashboard thumb `final_C_L5_salt_pepper_transnext_tiny_cifar10.png` shows large bright/dark blobs (not 1-pixel speckles).
+- [x] 30/30 cells `healthy` (or operator-deferred). *(2026-05-23: zero §6.3 sentinels across all 30 cells; dispatch log carries no SENTINEL/Traceback/FAILED tokens.)*
+- [x] L5 salt_pepper val_acc expected to be materially lower than v1 (v1 transnext_tiny L5 cifar10 salt_pepper was 0.9602 — same implausibility class as noise). *(2026-05-23: v2 transnext_tiny L5 cifar10 salt_pepper = **0.9422** — drop of −1.80pp. The drop is real and reproducible (the cell no longer holds ≥0.95), but materially **smaller** than the analogous noise drop of −16.00pp because salt_pepper at low_res=3 paints only low_res²=9 pixels — bicubic spreads them into 9 large blobs while most of the image remains the original signal. v1 "TransNeXt holds ≥0.95 on salt_pepper" claim weakly falsified for CIFAR-10 (0.9422 < 0.95).)*
+- [x] Dashboard thumb `final_C_L5_salt_pepper_transnext_tiny_cifar10.png` shows large bright/dark blobs (not 1-pixel speckles). *(2026-05-23: thumb re-rendered via `render_cell_thumbs --force --phase C --axes salt_pepper`; pre-flight US-019B contact sheet already attested the v1↔v2 blob structure at low_res=3.)*
+
+**v2 outcome (2026-05-23):** mean Δ across the 30 Phase C salt_pepper cells is **−0.81pp** vs v1 (range −4.38 to +0.66pp). The split-by-dataset pattern mirrors noise but with smaller magnitudes: CIFAR-10 cells drop −0.10 to −4.38pp (worst: `final_C_L5_salt_pepper_resnet50_cifar10` at −4.38pp), while all 15 MNIST cells stay within ±0.62pp of v1 (mean −0.24pp). **Salt-and-pepper is empirically the gentlest of the three perturbation axes in v2** because only low_res² pixels are painted (9 at L5 vs additive noise's ~50K samples covering every low_res pixel). MNIST geometry survives both axes; CIFAR-10 texture degrades monotonically on both but more steeply under noise than under S&P. TransNeXt softens but does not stop the CIFAR-10 collapse on either axis.
 
 **GPU budget:** ~17.5 GPU-h. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-021.
 

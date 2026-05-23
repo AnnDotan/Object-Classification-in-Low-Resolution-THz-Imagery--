@@ -1,6 +1,6 @@
 # Object Classification in Low-Resolution THz-like Imagery — Final Research Report
 
-**Status:** 186 / 186 cells complete · **Generated:** 2026-05-22 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
+**Status:** 186 / 186 cells complete · **Generated:** 2026-05-23 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
 
 ---
 
@@ -43,8 +43,8 @@ overall L5 accuracy: with all five axes active at L5, CIFAR-10 best-val-acc fall
 ## Campaign Statistics
 
 - **Total cells:** 186 (6 Phase A + 30 Phase B + 150 Phase C)
-- **Total accumulated GPU runtime:** ~89.5 GPU-hours
-- **Total training epochs across all cells:** 4,199
+- **Total accumulated GPU runtime:** ~108.5 GPU-hours
+- **Total training epochs across all cells:** 5,121
 - **Architectures evaluated:** 3 (ResNet50, DenseNet121, TransNeXt-tiny)
 - **Datasets:** 2 (CIFAR-10, MNIST upsampled 28 → 224)
 - **Degradation severities:** 5 (L1 Mild → L5 Extreme)
@@ -214,7 +214,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.8914 | 0.8470 | 0.7806 | 0.7276 | 0.6688 |
 | blur | 0.9354 | 0.8988 | 0.8678 | 0.8146 | 0.7098 |
 | saturation | 0.9206 | 0.9282 | 0.9256 | 0.9178 | 0.8822 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9042 | 0.8992 | 0.8652 | 0.8464 | 0.8330 |
 
 #### resnet50 · mnist
 
@@ -224,7 +224,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9910 | 0.9916 | 0.9910 | 0.9910 | 0.9896 |
 | blur | 0.9932 | 0.9914 | 0.9918 | 0.9920 | 0.9882 |
 | saturation | 0.9894 | 0.9918 | 0.9936 | 0.9918 | 0.9910 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9908 | 0.9898 | 0.9888 | 0.9890 | 0.9862 |
 
 #### DenseNet121
 
@@ -236,7 +236,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.8892 | 0.8364 | 0.7954 | 0.7506 | 0.6846 |
 | blur | 0.9054 | 0.9040 | 0.8644 | 0.8204 | 0.7142 |
 | saturation | 0.9184 | 0.9142 | 0.9166 | 0.9130 | 0.8834 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9072 | 0.8898 | 0.8796 | 0.8644 | 0.8508 |
 
 #### densenet121 · mnist
 
@@ -246,7 +246,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9934 | 0.9926 | 0.9924 | 0.9934 | 0.9928 |
 | blur | 0.9906 | 0.9934 | 0.9896 | 0.9928 | 0.9846 |
 | saturation | 0.9932 | 0.9924 | 0.9926 | 0.9928 | 0.9914 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9918 | 0.9914 | 0.9906 | 0.9876 | 0.9872 |
 
 #### TransNeXt-tiny
 
@@ -258,7 +258,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9598 | 0.9334 | 0.8940 | 0.8598 | 0.8008 |
 | blur | 0.9766 | 0.9724 | 0.9496 | 0.9088 | 0.8244 |
 | saturation | 0.9792 | 0.9778 | 0.9754 | 0.9756 | 0.9534 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9728 | 0.9660 | 0.9548 | 0.9474 | 0.9422 |
 
 #### transnext_tiny · mnist
 
@@ -268,7 +268,7 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | noise | 0.9916 | 0.9928 | 0.9924 | 0.9916 | 0.9914 |
 | blur | 0.9924 | 0.9896 | 0.9914 | 0.9928 | 0.9906 |
 | saturation | 0.9936 | 0.9896 | 0.9918 | 0.9924 | 0.9904 |
-| salt⁠_⁠pepper | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.9900 | 0.9916 | 0.9882 | 0.9876 | 0.9894 |
 
 ### Full Phase C Result Table
 
@@ -298,12 +298,12 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 58 | densenet121 | mnist | L1 Mild | saturation | 0.9932 | 28 | 22m |
 | 59 | transnext⁠_⁠tiny | cifar10 | L1 Mild | saturation | 0.9792 | 17 | 44m |
 | 60 | transnext⁠_⁠tiny | mnist | L1 Mild | saturation | 0.9936 | 30 | 77m |
-| 61 | resnet50 | cifar10 | L1 Mild | salt⁠_⁠pepper | — | — | — |
-| 62 | resnet50 | mnist | L1 Mild | salt⁠_⁠pepper | — | — | — |
-| 63 | densenet121 | cifar10 | L1 Mild | salt⁠_⁠pepper | — | — | — |
-| 64 | densenet121 | mnist | L1 Mild | salt⁠_⁠pepper | — | — | — |
-| 65 | transnext⁠_⁠tiny | cifar10 | L1 Mild | salt⁠_⁠pepper | — | — | — |
-| 66 | transnext⁠_⁠tiny | mnist | L1 Mild | salt⁠_⁠pepper | — | — | — |
+| 61 | resnet50 | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9042 | 17 | 9m |
+| 62 | resnet50 | mnist | L1 Mild | salt⁠_⁠pepper | 0.9908 | 37 | 19m |
+| 63 | densenet121 | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9072 | 37 | 28m |
+| 64 | densenet121 | mnist | L1 Mild | salt⁠_⁠pepper | 0.9918 | 27 | 21m |
+| 65 | transnext⁠_⁠tiny | cifar10 | L1 Mild | salt⁠_⁠pepper | 0.9728 | 24 | 62m |
+| 66 | transnext⁠_⁠tiny | mnist | L1 Mild | salt⁠_⁠pepper | 0.9900 | 16 | 41m |
 | 67 | resnet50 | cifar10 | L2 Light | resolution | 0.7898 | 22 | 11m |
 | 68 | resnet50 | mnist | L2 Light | resolution | 0.9850 | 37 | 18m |
 | 69 | densenet121 | cifar10 | L2 Light | resolution | 0.7960 | 52 | 39m |
@@ -328,12 +328,12 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 88 | densenet121 | mnist | L2 Light | saturation | 0.9924 | 22 | 17m |
 | 89 | transnext⁠_⁠tiny | cifar10 | L2 Light | saturation | 0.9778 | 13 | 33m |
 | 90 | transnext⁠_⁠tiny | mnist | L2 Light | saturation | 0.9896 | 14 | 36m |
-| 91 | resnet50 | cifar10 | L2 Light | salt⁠_⁠pepper | — | — | — |
-| 92 | resnet50 | mnist | L2 Light | salt⁠_⁠pepper | — | — | — |
-| 93 | densenet121 | cifar10 | L2 Light | salt⁠_⁠pepper | — | — | — |
-| 94 | densenet121 | mnist | L2 Light | salt⁠_⁠pepper | — | — | — |
-| 95 | transnext⁠_⁠tiny | cifar10 | L2 Light | salt⁠_⁠pepper | — | — | — |
-| 96 | transnext⁠_⁠tiny | mnist | L2 Light | salt⁠_⁠pepper | — | — | — |
+| 91 | resnet50 | cifar10 | L2 Light | salt⁠_⁠pepper | 0.8992 | 33 | 17m |
+| 92 | resnet50 | mnist | L2 Light | salt⁠_⁠pepper | 0.9898 | 27 | 14m |
+| 93 | densenet121 | cifar10 | L2 Light | salt⁠_⁠pepper | 0.8898 | 45 | 34m |
+| 94 | densenet121 | mnist | L2 Light | salt⁠_⁠pepper | 0.9914 | 41 | 32m |
+| 95 | transnext⁠_⁠tiny | cifar10 | L2 Light | salt⁠_⁠pepper | 0.9660 | 15 | 38m |
+| 96 | transnext⁠_⁠tiny | mnist | L2 Light | salt⁠_⁠pepper | 0.9916 | 46 | 2.0h |
 | 97 | resnet50 | cifar10 | L3 Moderate | resolution | 0.6846 | 23 | 11m |
 | 98 | resnet50 | mnist | L3 Moderate | resolution | 0.9348 | 49 | 24m |
 | 99 | densenet121 | cifar10 | L3 Moderate | resolution | 0.6768 | 19 | 14m |
@@ -358,12 +358,12 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 118 | densenet121 | mnist | L3 Moderate | saturation | 0.9926 | 37 | 29m |
 | 119 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | saturation | 0.9754 | 14 | 36m |
 | 120 | transnext⁠_⁠tiny | mnist | L3 Moderate | saturation | 0.9918 | 22 | 57m |
-| 121 | resnet50 | cifar10 | L3 Moderate | salt⁠_⁠pepper | — | — | — |
-| 122 | resnet50 | mnist | L3 Moderate | salt⁠_⁠pepper | — | — | — |
-| 123 | densenet121 | cifar10 | L3 Moderate | salt⁠_⁠pepper | — | — | — |
-| 124 | densenet121 | mnist | L3 Moderate | salt⁠_⁠pepper | — | — | — |
-| 125 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | salt⁠_⁠pepper | — | — | — |
-| 126 | transnext⁠_⁠tiny | mnist | L3 Moderate | salt⁠_⁠pepper | — | — | — |
+| 121 | resnet50 | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.8652 | 18 | 9m |
+| 122 | resnet50 | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9888 | 31 | 16m |
+| 123 | densenet121 | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.8796 | 49 | 37m |
+| 124 | densenet121 | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9906 | 46 | 35m |
+| 125 | transnext⁠_⁠tiny | cifar10 | L3 Moderate | salt⁠_⁠pepper | 0.9548 | 13 | 33m |
+| 126 | transnext⁠_⁠tiny | mnist | L3 Moderate | salt⁠_⁠pepper | 0.9882 | 18 | 46m |
 | 127 | resnet50 | cifar10 | L4 Severe | resolution | 0.6050 | 60 | 29m |
 | 128 | resnet50 | mnist | L4 Severe | resolution | 0.8122 | 43 | 21m |
 | 129 | densenet121 | cifar10 | L4 Severe | resolution | 0.5776 | 17 | 13m |
@@ -388,12 +388,12 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 148 | densenet121 | mnist | L4 Severe | saturation | 0.9928 | 45 | 35m |
 | 149 | transnext⁠_⁠tiny | cifar10 | L4 Severe | saturation | 0.9756 | 14 | 36m |
 | 150 | transnext⁠_⁠tiny | mnist | L4 Severe | saturation | 0.9924 | 19 | 49m |
-| 151 | resnet50 | cifar10 | L4 Severe | salt⁠_⁠pepper | — | — | — |
-| 152 | resnet50 | mnist | L4 Severe | salt⁠_⁠pepper | — | — | — |
-| 153 | densenet121 | cifar10 | L4 Severe | salt⁠_⁠pepper | — | — | — |
-| 154 | densenet121 | mnist | L4 Severe | salt⁠_⁠pepper | — | — | — |
-| 155 | transnext⁠_⁠tiny | cifar10 | L4 Severe | salt⁠_⁠pepper | — | — | — |
-| 156 | transnext⁠_⁠tiny | mnist | L4 Severe | salt⁠_⁠pepper | — | — | — |
+| 151 | resnet50 | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.8464 | 21 | 11m |
+| 152 | resnet50 | mnist | L4 Severe | salt⁠_⁠pepper | 0.9890 | 31 | 16m |
+| 153 | densenet121 | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.8644 | 44 | 34m |
+| 154 | densenet121 | mnist | L4 Severe | salt⁠_⁠pepper | 0.9876 | 20 | 15m |
+| 155 | transnext⁠_⁠tiny | cifar10 | L4 Severe | salt⁠_⁠pepper | 0.9474 | 28 | 72m |
+| 156 | transnext⁠_⁠tiny | mnist | L4 Severe | salt⁠_⁠pepper | 0.9876 | 19 | 49m |
 | 157 | resnet50 | cifar10 | L5 Extreme | resolution | 0.4316 | 15 | 7m |
 | 158 | resnet50 | mnist | L5 Extreme | resolution | 0.4426 | 20 | 10m |
 | 159 | densenet121 | cifar10 | L5 Extreme | resolution | 0.4432 | 19 | 14m |
@@ -418,12 +418,12 @@ identity** — see `docs/phase_c.md` for the scientific rationale and the
 | 178 | densenet121 | mnist | L5 Extreme | saturation | 0.9914 | 20 | 16m |
 | 179 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | saturation | 0.9534 | 44 | 1.9h |
 | 180 | transnext⁠_⁠tiny | mnist | L5 Extreme | saturation | 0.9904 | 18 | 46m |
-| 181 | resnet50 | cifar10 | L5 Extreme | salt⁠_⁠pepper | — | — | — |
-| 182 | resnet50 | mnist | L5 Extreme | salt⁠_⁠pepper | — | — | — |
-| 183 | densenet121 | cifar10 | L5 Extreme | salt⁠_⁠pepper | — | — | — |
-| 184 | densenet121 | mnist | L5 Extreme | salt⁠_⁠pepper | — | — | — |
-| 185 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | salt⁠_⁠pepper | — | — | — |
-| 186 | transnext⁠_⁠tiny | mnist | L5 Extreme | salt⁠_⁠pepper | — | — | — |
+| 181 | resnet50 | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.8330 | 23 | 12m |
+| 182 | resnet50 | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9862 | 31 | 16m |
+| 183 | densenet121 | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.8508 | 44 | 33m |
+| 184 | densenet121 | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9872 | 22 | 17m |
+| 185 | transnext⁠_⁠tiny | cifar10 | L5 Extreme | salt⁠_⁠pepper | 0.9422 | 59 | 2.5h |
+| 186 | transnext⁠_⁠tiny | mnist | L5 Extreme | salt⁠_⁠pepper | 0.9894 | 40 | 1.7h |
 
 ---
 
@@ -454,7 +454,7 @@ salt-and-pepper, while both CNN backbones drop to ~0.87 — a +~8 to +10 pp gap:
 |----------------------|----------|-------------|----------------|---------------|
 | noise | 0.6688 | 0.6846 | 0.8008 | ~+8 pp |
 | saturation | 0.8822 | 0.8834 | 0.9534 | ~+7 pp |
-| salt_pepper | — | — | — | ~+9 pp |
+| salt_pepper | 0.8330 | 0.8508 | 0.9422 | ~+9 pp |
 | blur | 0.7098 | 0.7142 | 0.8244 | ~+10 pp |
 | resolution | 0.4316 | 0.4432 | 0.4624 | +3 pp |
 
@@ -480,7 +480,7 @@ CIFAR-10 natural-image class signal.
 | noise | 0.6688 | 0.9896 | 0.6846 | 0.9928 | 0.8008 | 0.9914 |
 | blur | 0.7098 | 0.9882 | 0.7142 | 0.9846 | 0.8244 | 0.9906 |
 | saturation | 0.8822 | 0.9910 | 0.8834 | 0.9914 | 0.9534 | 0.9904 |
-| salt⁠_⁠pepper | — | — | — | — | — | — |
+| salt⁠_⁠pepper | 0.8330 | 0.9862 | 0.8508 | 0.9872 | 0.9422 | 0.9894 |
 
 ---
 
@@ -586,5 +586,5 @@ with sentinels) is documented inline.
 
 ---
 
-*Report generated 2026-05-22 from `artifacts/Final_Exp.json` (state of disk after
+*Report generated 2026-05-23 from `artifacts/Final_Exp.json` (state of disk after
 Iteration 25 closure). Regenerate with* `python scripts/build_final_exp_report.py`.
