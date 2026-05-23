@@ -3980,3 +3980,136 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
        the collapse."
     This is from Iter 40 learnings and supersedes v1 Finding #2.
 ---
+## Iteration 42 (2026-05-23) — US-023 [2/4]: README findings + Recent scientific changes re-derived from v2
+- What was done:
+  (a) Rewrote Headline Research Finding #2 in README.md from v2
+      data. v1 framing ("TransNeXt-tiny holds >=0.95 on noise /
+      saturation / salt_pepper across L1->L5") was empirically
+      falsified by the v2 campaign — noise drops to 0.8008 at
+      L5 cifar10, salt_pepper to 0.9422. New title:
+      "TransNeXt softens but does not reverse the v2 CIFAR-10
+       perturbation collapse." Lists per-axis L5 robustness
+      gaps over the CNN average (+13.2pp noise, +11.2pp blur,
+      +7.1pp saturation, +10.0pp salt-and-pepper) and the new
+      >=0.95 survival map: saturation across L1->L5 (axis
+      unchanged by US-017), salt_pepper L1-L3 only. Explicit
+      v1 supersession callout.
+  (b) Rewrote Finding #3 (MNIST robustness floor) with v2
+      data. Floor still holds across all four perturbation
+      axes (~0.984-0.993 at L5); v2 actually STRENGTHENS the
+      claim because v2 noise/S&P are demonstrably harsher
+      (CIFAR-10 collapses 22.9pp and 4.4pp respectively) yet
+      MNIST shrugs them off. Cited per-axis MNIST L5
+      r50/d121/tnx triplets verbatim from artifacts/Final_Exp.json.
+      Coined the "60-cell, two-axis" framing for the corroborated
+      result (Iter 40 + Iter 41 learnings carried in).
+  (c) Added a 2026-05-23 entry to "Recent scientific changes"
+      (above the 2026-05-20 v1-closure entry). Documents:
+      - US-017 pipeline move (noise + S&P pre-upsample at low_res)
+      - PIPELINE_VERSION = 2 stamp on metrics.json
+      - 90 cells re-run, 96 byte-identical to v1
+      - lag-1 spatial autocorrelation 0.993 at low_res=8
+      - v1 <-> v2 incomparability rule
+      - git history pointer (commit 3e1d089) for v1 baseline
+      - new CIFAR-10 L5 severity ordering under v2: resolution >
+        noise > blur > salt_pepper > saturation
+      - Phase B / Phase C noise / Phase C salt_pepper mean Delta
+        (-12.49pp / -5.15pp / -0.81pp)
+      - perturbed-pixel-count arithmetic explaining the
+        severity ordering: noise samples every low_res^2 pixel,
+        salt_pepper paints only low_res^2 * (sp * 2) pixels
+      - Optuna winners carry forward unchanged
+      Also tweaked the 2026-05-20 entry to mark v1 numbers on the
+      90 cells as superseded by the 2026-05-23 v2 close.
+  (d) Updated the top-of-README banner (line 3) to reflect both
+      v1 close (2026-05-20) and v2 noise-fix close (2026-05-23)
+      with the PIPELINE_VERSION = 2 stamp.
+  (e) Did NOT touch progress.txt iteration 27, Final_Exp_Report.md,
+      or Final_Exp.pdf — those are the remaining 2 US-023
+      acceptance criteria.
+- Files affected:
+  - README.md: §"Final Research Campaign" banner + §"Headline
+    Research Findings" #2 + #3 + §"Recent scientific changes"
+    new 2026-05-23 entry + tweaked 2026-05-20 entry.
+  - PRD.md: US-023 acceptance criterion #2 ticked.
+  - progress.txt: this Iteration 42 entry.
+- Validation:
+  - Programmatic check (scripts/tmp_validate_findings_v2.py,
+    removed after green): 14 must-include substring assertions
+    + 2 must-not-include (orphan v1 claims) all green.
+    Verified specific v2 floor values appear in prose
+    (0.8008, 0.9422, 0.9896/0.9928/0.9914, 0.9862/0.9872/0.9894),
+    the "supersedes the v1" phrase is present, PIPELINE_VERSION = 2
+    is referenced, lag-1 autocorr 0.993 is in the Recent changes
+    entry, mean-Delta numbers (-12.49 / -5.15 / -0.81) are present,
+    commit 3e1d089 is named, and the v1 "holds >= 0.95" phrasing
+    no longer appears unqualified in the README.
+- Learnings for next cycles:
+  - Patterns: For "no orphan v1 claims" assertions, dual-test
+    with must-include + must-not-include substring checks.
+    The must-not-include side catches drift where a prose
+    rewrite *added* the new framing but failed to remove
+    the old one. First-attempt rewrites are prone to this
+    failure mode because copy-paste structure tempts you
+    to keep the old paragraph alongside the new.
+  - Patterns: When a v1 claim is empirically falsified by v2
+    data, lead the rewrite with the WORD "softens", "preserves",
+    "holds", etc. that captures the v2 finding's polarity,
+    THEN explicitly call out which v1 claim is superseded.
+    This avoids ambiguity for downstream readers (poster
+    authors, scientific-report writers) who don't have the
+    git history loaded.
+  - Patterns: When a v1 claim survives partially under v2 (the
+    >=0.95 saturation case here), document the survival
+    explicitly with the per-level breakdown. Don't blanket-strike
+    or blanket-keep; readers need the survival boundary
+    (saturation: all L1->L5; salt_pepper: L1->L3 only).
+  - Traps: The "Recent scientific changes" entries are ordered
+    most-recent-first in README. New entries go ABOVE the
+    previous most-recent entry, not below. Easy to mis-order
+    when scanning by visual position. Confirmed correct
+    ordering by reading README lines 126-132 post-edit.
+  - Traps: Don't introduce contradictions between the Phase B
+    table (Iter 41) and the Findings prose (this iter). The
+    Phase B section header already documents mean Delta=-12.49pp;
+    the new Recent-changes entry references the same number.
+    Cross-check by grepping for "-12.49" and confirming both
+    citations point at the same scope (Phase B v2 30-cell mean).
+  - Traps: The validator's "must_not_include" for the v1
+    framing used the EXACT v1 paragraph text. If the v2 rewrite
+    happened to quote that v1 wording verbatim (e.g. in a
+    "v1 claimed X" callout), the must_not assertion would
+    false-fire. Picked a unique substring ("holds ≥ 0.95
+    best-val-acc on CIFAR-10 across L1 → L5 for noise,
+    saturation, and salt-and-pepper") that only appeared in
+    the original Finding #2 — safe to assert it's gone.
+    Lesson: when must_not'ing, pick a substring distinctive
+    enough that a v2 callout won't contain it.
+  - Helpful context: US-023 remaining acceptance criteria:
+    (3) progress.txt iteration 27 entry (the "everything done
+        so far" summary; PRD says "iteration 27" but actual
+        progress.txt now sits at iter 42 — operator
+        clarification needed on whether to: (a) write iter 27
+        retroactively into the past iter-26 slot, (b) write
+        iter 43 with the iter-27-equivalent content, or
+        (c) skip the renumbering and accept the offset.
+        Recommended: option (b) — write the canonical
+        "everything done so far" summary as the next-iter
+        entry under whatever number is current at the time.
+        The PRD text "iteration 27" is stale by ~15 iters.)
+    (4) Final_Exp_Report.md narrative regeneration — needs a
+        prose rewrite for the v2 severity-ordering finding
+        and the 60-cell two-axis MNIST result. Either
+        scripts/build_final_exp_report.py emits this from
+        Final_Exp.json (auto-regen, low risk) or it needs
+        manual prose edits to the headline-findings section
+        of the rendered markdown. Check the script's
+        behavior in next cycle.
+  - Helpful context: With #1 + #2 of US-023 done, the README
+    is the canonical v2 surface. All downstream artifacts
+    (Final_Exp.md table, Final_Exp.html dashboard, Final_Exp.pdf,
+    Final_Exp.json) were refreshed end-of-Iter-40 and reflect
+    v2 numerically; only the narrative prose in
+    Final_Exp_Report.md and progress.txt remain to be
+    synchronized with the new headline framings written here.
+---
