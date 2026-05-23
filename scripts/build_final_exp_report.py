@@ -203,27 +203,60 @@ salt-and-pepper, and desaturation. All three models are trained at the same
 differential learning rates), so accuracy differences are attributable to architecture
 and not to input shape.
 
-**Two headline cross-architecture findings emerged from the 150-cell Phase C
-single-axis isolation:**
+**Pipeline version:** all numbers in this report are under
+`PIPELINE_VERSION = 2` (see [`src/data/degradation_levels.py`](../src/data/degradation_levels.py)).
+The 90 noise / salt-and-pepper / Phase B cells were re-run 2026-05-21 → 2026-05-23
+after US-017 moved both stochastic pixel-level perturbations from POST-upsample
+(at 224 × 224, where each `torch.randn` sample landed on a single output pixel)
+to PRE-upsample (at `low_res`, where bicubic subsequently spreads each sample
+across a wider footprint at 224 — sensor-realistic coarse-grain structure).
+The 96 unaffected cells (Phase A clean + Phase C resolution / blur / saturation)
+are byte-identical to the v1 pipeline. v1 ↔ v2 are not directly comparable on
+the 90 re-run cells; v1 numbers survive only in git history (commit `3e1d089`).
+
+**Three headline cross-architecture findings emerged from the 150-cell Phase C
+single-axis isolation under pipeline v2:**
 
 1. **Universal 3 × 3-downsample bottleneck.** At the most aggressive resolution
    axis level (L5 = 3 × 3 native pixels upsampled to 224), every architecture
-   collapses to ~0.43-0.46 best-val-acc on CIFAR-10 and ~0.45 on MNIST, within
-   ±3 pp across architectures. The pretrain receptive-field hierarchy fails uniformly
-   when sub-class geometric structure is destroyed, regardless of whether the
-   backbone is convolutional or attention-based.
+   collapses to ~0.43-0.46 best-val-acc on CIFAR-10 and ~0.44-0.45 on MNIST,
+   within ±3 pp across architectures. The pretrain receptive-field hierarchy
+   fails uniformly when sub-class geometric structure is destroyed, regardless
+   of whether the backbone is convolutional or attention-based. The resolution
+   axis is untouched by US-017, so this finding carries forward verbatim from v1.
 
-2. **TransNeXt robustness gap on perturbation axes.** TransNeXt-tiny holds
-   ≥ 0.96 best-val-acc on CIFAR-10 across L1 → L5 for noise, saturation, and
-   salt-and-pepper, while both CNN backbones drop to ~0.87 at L5 — a ~+8 to +10 pp
-   robustness gap that grows monotonically with severity. The attention mechanism
-   integrates over local perturbations in a way the fixed CNN receptive fields
-   do not.
+2. **TransNeXt softens but does not reverse the v2 CIFAR-10 perturbation
+   collapse.** Under pipeline v2, TransNeXt-tiny retains a single-digit-to-low-
+   double-digit robustness gap over both CNN backbones on every CIFAR-10
+   perturbation axis at L5 (+13.2 pp on noise, +11.2 pp on blur, +7.1 pp on
+   saturation, +10.0 pp on salt-and-pepper), but the underlying absolute floor
+   is much lower than the v1 noise / S&P numbers suggested: tnx cifar10 noise
+   drops to 0.80 at L5 (v1 reported 0.96 under the post-upsample bug). The v1
+   "≥ 0.95 across L1 → L5" claim survives intact only on saturation (axis
+   unchanged by US-017) and partially on salt-and-pepper (holds L1-L3, falls
+   below 0.95 at L4-L5). Attention's adaptive receptive fields *soften* the
+   coarse-grain perturbation collapse without preventing it — the texture-statistic
+   destruction is too severe for TransNeXt-tiny to fully compensate at low_res = 3.
+
+3. **MNIST geometric-axis robustness floor preserved under pipeline v2.** Across
+   all three architectures, MNIST val_acc on noise / blur / saturation /
+   salt-and-pepper stays flat at 0.984-0.993 across L1 → L5 — including the
+   v2-hardened noise axis (where CIFAR-10 collapses by up to 22.9 pp) and the
+   v2-hardened salt-and-pepper axis (CIFAR-10 drops up to 4.4 pp). Only the
+   resolution axis bites on MNIST (and only at L4-L5). This is a 60-cell,
+   two-axis empirical confirmation that the THz-like coarse-grain perturbations
+   preserve digit-shape signal in MNIST regardless of severity — the thick digit
+   strokes cover many bicubically-spread perturbation footprints, so the
+   discriminative feature survives. Texture-dominant recognition (CIFAR-10) and
+   geometry-dominant recognition (MNIST) diverge sharply under pipeline v2 in
+   a way the v1 pipeline largely masked.
 
 Combined-axis Phase B confirms that the resolution-axis collapse dominates the
-overall L5 accuracy: with all five axes active at L5, CIFAR-10 best-val-acc falls to
-0.26 (DenseNet121) to 0.29 (ResNet50, TransNeXt-tiny), while MNIST holds at
-0.40-0.42 — bounded by the same resolution-axis floor exposed in Phase C.
+overall L5 accuracy: under pipeline v2, with all five axes active at L5,
+CIFAR-10 best-val-acc falls to 0.19-0.20 across all three models, while MNIST
+falls to 0.27-0.28 — both bounded by the same resolution-axis floor exposed in
+Phase C, with the v2-hardened noise / S&P now pulling the combined-axes
+trajectory ~12.5 pp lower than v1.
 
 ---
 
@@ -321,9 +354,12 @@ simultaneously.
 
 {_render_phase_b_curve(idx)}
 
-**Reading:** Strictly monotonic on CIFAR-10 across all three architectures (no
-inversions). MNIST holds ≥ 0.98 through L2 for all models, then falls fast at
-L4 / L5 — driven by the resolution axis (see Phase C).
+**Reading (pipeline v2).** Strictly monotonic on CIFAR-10 across all three
+architectures (no inversions). MNIST holds ≥ 0.96 through L2 for all models,
+then falls fast at L4 / L5 — driven by the resolution axis (see Phase C) and
+amplified by the v2-hardened noise + S&P axes (mean ΔL3 vs v1 is roughly
+−7 pp on MNIST). v2 Phase B mean Δ across the 30 cells is −12.49 pp vs v1
+(operator-locked under US-020 close 2026-05-21).
 
 ### Full Phase B Result Table
 
@@ -386,32 +422,48 @@ structure is destroyed, regardless of whether the backbone is convolutional or
 attention-based. The L5 resolution axis is the rate-limiting degradation for
 both Phase B (combined) collapses and the campaign's overall worst-case cells.
 
-### Finding 2 — TransNeXt robustness gap on perturbation axes
+### Finding 2 — TransNeXt softens but does not reverse the v2 CIFAR-10 perturbation collapse
 
-At L5 on CIFAR-10, TransNeXt-tiny holds ≥ 0.95 on noise, saturation, and
-salt-and-pepper, while both CNN backbones drop to ~0.87 — a +~8 to +10 pp gap:
+At L5 on CIFAR-10 under pipeline v2, TransNeXt-tiny retains a robustness gap over
+both CNN backbones on every perturbation axis, but the absolute floor is much
+lower than the v1 noise / S&P numbers suggested. The v1 "≥ 0.95 across L1 → L5"
+claim now survives intact only on saturation (axis unchanged by US-017) and
+partially on salt-and-pepper (holds L1-L3, falls below 0.95 at L4-L5):
 
-| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | {_nb('transnext_tiny')} | TransNeXt gap |
-|----------------------|----------|-------------|----------------|---------------|
-| noise | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"noise"),{}).get("val_acc"))} | ~+8 pp |
-| saturation | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"saturation"),{}).get("val_acc"))} | ~+7 pp |
-| salt_pepper | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | ~+9 pp |
-| blur | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"blur"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"blur"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"blur"),{}).get("val_acc"))} | ~+10 pp |
+| Axis @ L5 — CIFAR-10 | resnet50 | densenet121 | {_nb('transnext_tiny')} | TransNeXt gap vs avg CNN |
+|----------------------|----------|-------------|----------------|--------------------------|
+| noise (v2) | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"noise"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"noise"),{}).get("val_acc"))} | ~+13.2 pp |
+| saturation | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"saturation"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"saturation"),{}).get("val_acc"))} | ~+7.1 pp |
+| salt_pepper (v2) | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"salt_pepper"),{}).get("val_acc"))} | ~+10.0 pp |
+| blur | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"blur"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"blur"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"blur"),{}).get("val_acc"))} | ~+11.2 pp |
 | resolution | {_fmt_acc(idx.get(("C","resnet50","cifar10",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","densenet121","cifar10",5,"resolution"),{}).get("val_acc"))} | {_fmt_acc(idx.get(("C","transnext_tiny","cifar10",5,"resolution"),{}).get("val_acc"))} | +3 pp |
 
-Attention's adaptive receptive fields integrate over pixel-level perturbations in
-a way the fixed-receptive-field CNNs cannot. This robustness advantage extends
-to the blur axis (~+10 pp at L5) but vanishes at L5 resolution, where the
-geometric bottleneck dominates.
+Read-out: attention's adaptive receptive fields *soften* the coarse-grain
+perturbation collapse without preventing it. The texture-statistic destruction
+under pipeline v2 (where noise samples every low_res² pixel and bicubic spreads
+each draw into a ~74-px footprint at low_res = 3) is too severe for
+TransNeXt-tiny to fully compensate. Under the v1 post-upsample bug the same
+TransNeXt-tiny architecture appeared to "hold ≥ 0.95" on noise — that was an
+artefact of the bug, not architectural robustness, and is corrected here.
 
-### Finding 3 — MNIST robustness floor on perturbation axes
+### Finding 3 — MNIST geometric-axis robustness floor preserved under pipeline v2
 
-For all three architectures, MNIST val_acc on noise, blur, salt-and-pepper, and
-saturation stays flat at ~0.991 ± 0.003 across L1 → L5. Only the resolution
-axis bites on MNIST (and only at L4-L5). This validates that the
-THz-like degradation pipeline preserves digit-shape signal for all five
-perturbation axes except the geometric one, while consistently destroying
-CIFAR-10 natural-image class signal.
+For all three architectures, MNIST val_acc on noise / blur / saturation /
+salt-and-pepper stays flat at 0.984-0.993 across L1 → L5 under pipeline v2 —
+including the v2-hardened noise axis (where CIFAR-10 collapses by up to 22.9 pp)
+and the v2-hardened salt-and-pepper axis (CIFAR-10 drops up to 4.4 pp). Only the
+resolution axis bites on MNIST (and only at L4-L5). This is now a 60-cell,
+two-axis empirical confirmation that the THz-like coarse-grain perturbations
+preserve digit-shape signal in MNIST regardless of severity — the thick digit
+strokes cover many bicubically-spread perturbation footprints, so the
+discriminative feature survives. Texture-dominant recognition (CIFAR-10) and
+geometry-dominant recognition (MNIST) diverge sharply under pipeline v2 in a way
+the v1 pipeline largely masked.
+
+The v2 severity ordering on CIFAR-10 at L5 (worst → mildest) becomes
+`resolution > noise > blur > salt_pepper > saturation` — noise leapfrogs blur as
+the second-worst axis under v2, masked in v1 because post-upsample noise was
+effectively averaged out by the bicubic kernel.
 
 ### Complete cross-model L5 axis table
 
@@ -435,10 +487,14 @@ CIFAR-10 natural-image class signal.
    in single-axis isolation surfaced both findings.
 
 3. **CIFAR-10 vs MNIST gap at L5 quantifies natural-image vs digit-shape
-   robustness.** Phase B L5 CIFAR-10 collapses to 0.26-0.29 across all three
-   models, while MNIST holds at 0.40-0.42 — a +12 to +15 pp gap that persists
-   across architectures. The gap is driven entirely by the resolution axis;
-   for all other axes, MNIST is essentially uniform at all severities.
+   robustness.** Phase B L5 CIFAR-10 collapses to 0.19-0.20 across all three
+   models under pipeline v2, while MNIST falls to 0.27-0.28 — a +7 to +8 pp
+   gap that persists across architectures. The gap is driven entirely by the
+   resolution axis; for all other axes, MNIST is essentially uniform at all
+   severities (Finding 3). Under v1 the gap was wider (+12-15 pp) because v1
+   noise / S&P did not depress MNIST val_acc, but v2 confirms that even under
+   genuinely sensor-realistic coarse-grain perturbations MNIST geometry survives
+   while CIFAR-10 texture statistics do not.
 
 4. **§6.4 pathology-guard retry path is ineffective on Optuna-tuned models.**
    Across the entire campaign, the pathology guard flagged 13 cells (1 in
@@ -500,7 +556,8 @@ stories. After US-014 closure, US-015 (end-of-campaign verification + three
 phase-boundary SYNCHRONIZER pushes + SECURITY leak audit) completes the campaign.
 
 Closure decisions were recorded in `progress.txt` as `Iteration N` blocks
-(currently 25 iterations across Phase B and Phase C dispatches), each with
+(43 iterations across the v1 186-cell campaign and the v2 90-cell noise-fix
+re-run), each with
 the dispatch command, background task id, first-pass readings, pathology-guard
 outcomes, and operator decisions. The §6.4 retry decline streak (5-for-5
 across all Phase B/C CNN dispatches + the one TransNeXt Phase C dispatch
@@ -513,16 +570,17 @@ with sentinels) is documented inline.
 - `artifacts/Final_Exp.html` — interactive dashboard with sortable rows + filters
 - `artifacts/reports/phase_a_{{model}}_summary.md` — Phase A REPORTER summaries
 - `docs/phase_a.md` / `docs/phase_c.md` — LIBRARIAN per-phase docs
-- `progress.txt` — full iteration log (Iterations 1-25)
-- `PRD.md` — 9-story execution roadmap (US-006 through US-015)
+- `progress.txt` — full iteration log (Iterations 1-43 — covers v1 + v2)
+- `PRD.md` — v2 roadmap (US-017 through US-025; v1 US-001..US-016 closed)
 - `CLAUDE.md` — protocol invariants + multi-agent guidance
 - `scripts/build_final_exp_report.py` — this report generator
 - `scripts/render_final_exp_pdf.py` — Markdown → PDF renderer
 
 ---
 
-*Report generated {today} from `artifacts/Final_Exp.json` (state of disk after
-Iteration 25 closure). Regenerate with* `python scripts/build_final_exp_report.py`.
+*Report generated {today} from `artifacts/Final_Exp.json` (state of disk under
+`PIPELINE_VERSION = 2`, after the v2 noise-fix 90-cell re-run closed
+2026-05-23 / Iteration 40). Regenerate with* `python scripts/build_final_exp_report.py`.
 """
 )
     return "".join(parts)

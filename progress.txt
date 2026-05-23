@@ -4350,3 +4350,133 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     prose section is what needs auditing for orphan v1
     claims).
 ---
+
+## Iteration 44 (2026-05-23) — US-023 [4/4] CLOSED: Final_Exp_Report.md regen + Final_Exp.pdf rebuild under v2 narrative
+- What was done:
+  (a) Rewrote the hardcoded headline-findings prose in
+      scripts/build_final_exp_report.py to v2 framing:
+      - Executive summary: lifted findings count from 2 -> 3,
+        added a "Pipeline version: PIPELINE_VERSION = 2" callout
+        documenting US-017, the 90-cell re-run scope, the
+        96-byte-identical-cells claim, the v1<->v2 incomparability
+        rule, and the commit-3e1d089 git-history pointer.
+      - Finding 2 replaced: v1 "TransNeXt-tiny holds >=0.96 on
+        noise / saturation / S&P, both CNNs drop to ~0.87 at L5" ->
+        v2 "TransNeXt softens but does not reverse the v2 CIFAR-10
+        perturbation collapse" with per-axis robustness gaps
+        (+13.2pp noise, +11.2pp blur, +7.1pp saturation, +10.0pp
+        S&P), the new >=0.95 survival map (saturation across
+        L1->L5; salt_pepper L1-L3 only), and an explicit
+        attribution that v1 noise 0.96 was a post-upsample-bug
+        artefact, not architectural robustness.
+      - Finding 3 replaced: v1 "MNIST stays flat at ~0.991 +/-
+        0.003 across L1->L5" -> v2 "MNIST geometric-axis robustness
+        floor preserved under pipeline v2" with the 60-cell
+        two-axis empirical confirmation phrasing and the
+        "thick digit strokes cover bicubically-spread footprints"
+        mechanism. Appended the v2 severity ordering
+        resolution > noise > blur > S&P > saturation.
+      - Phase B "Reading" section: "MNIST holds >= 0.98 through
+        L2" -> "MNIST holds >= 0.96 through L2" + mean-Delta
+        annotation (-12.49pp Phase B v2 vs v1).
+      - Research Conclusions #3: Phase B L5 cifar10 range
+        0.26-0.29 -> 0.19-0.20 cifar10, mnist 0.40-0.42 ->
+        0.27-0.28; gap was +12-15pp under v1, +7-8pp under v2.
+      - Appendix B + Appendix C: iteration count 25 -> 43;
+        PRD reference updated to "v2 roadmap (US-017..US-025)";
+        closing footer references "v2 noise-fix 90-cell re-run
+        closed 2026-05-23 / Iteration 40".
+  (b) Regenerated docs/Final_Exp_Report.md via
+      scripts/build_final_exp_report.py — 35,750 chars (was
+      31,427 at Iter 40 close; growth = +4,323 chars from the
+      v2 prose expansions).
+  (c) Rebuilt artifacts/Final_Exp.pdf via
+      scripts/render_final_exp_pdf.py — 441,815 bytes (was
+      438,518 at Iter 40 close).
+  (d) Re-checked update_final_exp.py --check + build_final_exp_json
+      — both green; Final_Exp.md matches disk state; 186/186
+      complete in JSON.
+  (e) Ticked US-023 acceptance criterion #4 with provenance note.
+- Files affected:
+  - scripts/build_final_exp_report.py: 5 prose blocks rewritten
+    (exec summary + Phase B reading + Finding 2 + Finding 3 +
+    Conclusion #3 + Appendix B/C + footer).
+  - docs/Final_Exp_Report.md: regenerated (auto-derived).
+  - artifacts/Final_Exp.pdf: rebuilt (auto-derived).
+  - PRD.md: US-023 #4 ticked.
+  - progress.txt: this Iteration 44 entry.
+- Validation:
+  - Programmatic check (scripts/tmp_validate_final_exp_report.py,
+    removed after green): 12 must-include + 4 must-not-include
+    substring assertions all pass. The v1 "holds >= 0.96"
+    orphan claim is gone; the v1 "0.991 +/- 0.003" range
+    orphan is gone; the v1 "0.26-0.29" Phase B L5 cifar10
+    range orphan is gone. v2 floor values 0.8008 (tnx cifar10
+    noise L5), 0.9422 (tnx cifar10 salt_pepper L5), 0.4316
+    (resnet50 cifar10 resolution L5) all present in report.
+  - update_final_exp.py --check -> exit 0 ("Final_Exp.md
+    matches disk state").
+  - build_final_exp_json -> 186 rows, complete=186, failed=0.
+  - All 3 v2-supersession callouts wire through: exec summary
+    references PIPELINE_VERSION = 2 + commit 3e1d089; Finding 2
+    references "v1 reported 0.96 under the post-upsample bug";
+    Finding 3 references "v1 pipeline largely masked" the
+    texture/geometry divergence.
+- Learnings for next cycles:
+  - Patterns: build_final_exp_report.py has TWO classes of
+    content — auto-generated tables (data-driven from
+    Final_Exp.json, automatically v2-correct after each
+    refresh) and HARDCODED PROSE (executive summary, Phase B
+    reading, the 3 findings, the 5 conclusions, the appendix
+    pointers). Only the latter requires manual editing for
+    v1->v2 framing rewrites. Future maintainers MUST audit
+    the hardcoded prose every time the underlying numbers
+    shift materially (>1pp); tables will look v2-correct
+    while the prose still describes v1 magnitudes.
+  - Patterns: Substring "must_not" assertions caught the v1
+    orphan claims this iter (0.991 +/- 0.003, 0.26-0.29,
+    holds >= 0.96). Continue to dual-test rewrites with
+    must + must_not for any prose that supersedes a prior
+    claim.
+  - Traps: Multi-line bullet wraps in markdown break naive
+    single-string substring assertions ("60-cell, two-axis"
+    landed across a newline). Either grep both halves
+    separately or strip newlines+whitespace before substring
+    checks. Caught this on the first validation pass; fixed
+    in one iter.
+  - Traps: Final_Exp_Report.md is rendered to a PDF by
+    render_final_exp_pdf.py via PyMuPDF Story API, which has
+    a quirky underscore-break heuristic — the _nb() helper
+    inserts U+2060 word-joiners around underscores to keep
+    identifiers like transnext_tiny and salt_pepper on one
+    line in the rendered PDF. When editing prose, do NOT
+    hand-wrap "transnext_tiny" or "salt_pepper" at
+    underscores in the source; let _nb() handle them.
+  - Helpful context: US-023 is now FULLY CLOSED (4/4
+    acceptance criteria green). Next: US-024 (IEEEtran
+    scientific report). Pre-conditions met:
+    - docs/references.bib already authored (13 entries,
+      committed earlier).
+    - LaTeX toolchain available via MiKTeX at
+      /c/Users/ib94/AppData/Local/Programs/MiKTeX/miktex/bin/x64/
+      (pdflatex + bibtex confirmed via `which` and
+      `pdflatex --version` -> MiKTeX-pdfTeX 4.23 / MiKTeX 25.12).
+    - artifacts/Final_Exp.json carries all 186 cells under
+      pipeline v2; the auto-generated tables for the LaTeX
+      report can pull from it directly via the same
+      _render_phase_a / _render_phase_b_table /
+      _render_phase_c_table helpers used by
+      build_final_exp_report.py (or a parallel set rewritten
+      for booktabs).
+    - 6 (model, dataset) pairs need 5x5 axis-by-level heatmaps;
+      tooling required: src/tools/render_phase_c_heatmaps.py
+      (matplotlib helper, ~150 LOC). PNG outputs to
+      docs/_autogen/figs/.
+    - scripts/render_final_report_tex.py is the two-stage
+      builder (autogen tables + invoke pdflatex). PRD spec is
+      in §US-024 "New files".
+  - Helpful context: US-025 only depends on US-024 (and on
+    the existing pytest / mypy / ignore tests being green).
+    The pytest determinism suite was last verified at US-017
+    close (2026-05-20); should be re-run as part of US-025.
+---
