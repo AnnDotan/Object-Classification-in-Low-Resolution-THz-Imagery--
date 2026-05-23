@@ -4113,3 +4113,240 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     Final_Exp_Report.md and progress.txt remain to be
     synchronized with the new headline framings written here.
 ---
+
+## Iteration 43 (2026-05-23) — US-023 [3/4]: Canonical "everything done so far" session summary (PRD "iteration 27" semantic)
+- What was done:
+  This entry serves the PRD US-023 acceptance criterion calling
+  for an "iteration 27" comprehensive session summary. PRD text
+  is stale (it was written 2026-05-20 when actual progress.txt
+  sat near iter 26); the current iteration counter is 43, but
+  the CONTENT of the PRD requirement — a single retrospective
+  bullet list of "everything done so far" across both v1 and
+  v2 campaigns — lands here.
+
+  === FULL TWO-CAMPAIGN SUMMARY (v1 + v2) ===
+
+  v1 CAMPAIGN (2026-05-13 -> 2026-05-20, branch 5070Ca then
+  noise_fix):
+  - Optuna pre-tuning closed for all 6 (model, dataset) pairs
+    at Phase B L3 Moderate. Winners frozen in
+    artifacts/best_hparams/. best_value: r50/c10=0.5624,
+    r50/mn=0.9190, d121/c10=0.6024, d121/mn=0.9192,
+    tnx/c10=0.7336 (highest cifar10 winner), tnx/mn=0.9176.
+    Stage-1.5 priors-anchored re-rank captured the actual
+    SGD-converged winner per pair.
+  - US-003 Phase C single-axis correction: inactive axes set
+    to identity (not L1-mild). Each Phase C cell isolates
+    exactly one axis. degradation_levels_hash rotated.
+  - US-004 TransNeXt base -> small variant swap on 2026-05-14;
+    superseded later that day by US-016 (small -> tiny,
+    capacity-match to ResNet50, ~310 GPU-h saved across the
+    62 TransNeXt rows). transnext_tiny became the canonical
+    variant.
+  - US-005 RALPH Loop Driver Framework: scripts/run_ralph_loop.py
+    + section 6.3 pathology guard (overfit / underfit /
+    divergence detectors) + section 6.4 single-retry pass
+    (wd*2, dropout=0.1, backbone_lr/20) + test suite.
+  - Phase A clean baselines (6/6 cells, US-006 through US-008):
+    r50 c10=0.9518/mn=0.9914, d121 c10=0.9356/mn=0.9930,
+    tnx c10=0.9764/mn=0.9924. Universal Phase A ceiling
+    around 0.93-0.98.
+  - Phase B combined degradation (30/30 cells, US-009 through
+    US-011) under v1: strictly monotonic L1->L5 on both
+    datasets, all three architectures. v1 Phase B L5 cifar10:
+    r50=0.2684, d121=0.2572, tnx=0.2908; v1 Phase B L5 mnist:
+    r50=0.3982, d121=0.4040, tnx=0.4166. Superseded by v2 on
+    2026-05-21.
+  - Phase C single-axis isolation (150/150 cells, US-012
+    through US-014) under v1: 5 axes x 5 levels x 3 models
+    x 2 datasets. Universal 3x3-downsample bottleneck
+    identified (Finding #1 in v1 README; CARRIES FORWARD to
+    v2 because the resolution axis was unaffected by US-017).
+    TransNeXt apparent robustness gap on perturbation axes
+    identified (Finding #2 — LATER FALSIFIED by the v2
+    noise-fix campaign for the noise + S&P axes). MNIST
+    robustness floor on perturbation axes identified
+    (Finding #3 — CONFIRMED + STRENGTHENED by v2 data).
+  - section 6.4 pathology-guard tally for the v1 campaign:
+    13 cells flagged, 13/13 operator-declined. Empirical
+    lesson: section 6.4 deltas consistently underfit
+    tightly-tuned Optuna winners and improved zero cells.
+    Carries forward as the default decline-retry posture
+    into v2 (and indeed v2 saw zero sentinels across all
+    90 cells, so section 6.4 never even fired).
+  - US-015 end-of-campaign verification (PARTIAL — leak audit
+    + mypy + pytest done 2026-05-20; SYNCHRONIZER tracker
+    pushes + NOTEBOOKLM_SYNC deferred to v2 US-023).
+  - v1 campaign deliverables 2026-05-20:
+      - Final_Exp.md master tracker (186 rows)
+      - artifacts/Final_Exp.{json,html,pdf}
+      - docs/Final_Exp_Report.md long-form narrative
+      - artifacts/Final_Exp.pdf (243 KB markdown-pdf rendition)
+      - 186 dashboard thumbs under artifacts/dashboard_thumbs/
+
+  v2 NOISE-FIX CAMPAIGN (2026-05-20 -> 2026-05-23, branch
+  noise_fix):
+  - US-017 (closed 2026-05-20): pipeline v2 refactor in
+    src/data/degrade.py. Additive Gaussian noise and
+    salt-and-pepper moved from POST-upsample (at 224x224,
+    where each torch.randn sample landed on a single output
+    pixel) to PRE-upsample (at low_res, where bicubic
+    subsequently spreads each sample across a ~74-px
+    footprint at low_res=3). Added PIPELINE_VERSION = 2
+    constant. New invariant test:
+    _check_v2_noise_is_pre_upsample (lag-1 horizontal
+    residual autocorrelation > 0.5 — observed 0.993 at
+    low_res=8). All 5 determinism checks pass under v2;
+    SEED_OFFSET_TRAIN / SEED_OFFSET_VAL constants preserved
+    verbatim from v1 (seed-stability invariant per section 7
+    and section 12 decision #9).
+  - US-018 (closed 2026-05-20): PRD v1 -> PRD v2 rewrite.
+    v1 PRD preserved at commit 3e1d089 in git history.
+  - US-019 (closed 2026-05-20): RALPH loop --axes filter
+    patch (Phase C axis-level granularity) + bundled
+    src/tools/render_cell_thumbs.py --phase / --axes filters.
+  - US-019B (closed 2026-05-20): v2 dashboard thumbnail
+    operator visual gate. 90 affected thumbs re-rendered
+    against v2 pipeline. SHA-256 baseline snapshot of the 90
+    v1 thumbs captured at
+    artifacts/validation/v1_thumbs_manifest.json (since
+    artifacts/dashboard_thumbs/ has been gitignored since
+    US-013). Side-by-side contact sheet at
+    artifacts/validation/v1_vs_v2_thumbs.html. Operator-
+    signed artifacts/validation/v2_preview_checklist.md
+    ("approved by ib94 2026-05-20"), releasing the HARD
+    GATE for GPU dispatch.
+  - US-020 (closed 2026-05-21): Phase B 30-cell re-run
+    under v2. 30/30 healthy (zero section 6.3 sentinels).
+    __v2 dir consolidation pattern established (best.pt
+    left in base dir blocks Lightning auto-versioning;
+    mv pattern moves contents from __v2/* into base/ then
+    rmdir __v2). Phase B mean Delta vs v1: -12.49pp.
+    CIFAR-10 drops sharper than MNIST; mid-range levels
+    (L2-L4) drop hardest. Worst hit:
+    final_B_L3_transnext_tiny_cifar10 (-32.74pp). GPU
+    budget: 15.79h, under the 17.5h estimate.
+  - US-021 (closed 2026-05-22): Phase C noise 30-cell
+    re-run. 30/30 healthy. Mean Delta -5.15pp, but a
+    strong split by dataset: CIFAR-10 (n=15) cells drop
+    -2.4..-22.9pp (worst:
+    final_C_L5_noise_resnet50_cifar10 at -22.86pp);
+    MNIST (n=15) cells stay within +/-0.4pp of v1.
+    Falsified v1 claim "TransNeXt holds >=0.95 on
+    cifar10 noise across L1->L5" — v2 tnx cifar10
+    noise L5 = 0.8008. GPU budget: 19.40h, 11% over the
+    17.5h estimate (TransNeXt MNIST tail).
+  - US-022 (closed 2026-05-23): Phase C salt_pepper
+    30-cell re-run. 30/30 healthy. Mean Delta -0.81pp
+    (the gentlest of the three v2 perturbation axes).
+    CIFAR-10 (n=15) mean -1.38pp, range -0.10..-4.38pp
+    (worst: final_C_L5_salt_pepper_resnet50_cifar10 at
+    -4.38pp); MNIST (n=15) mean -0.24pp, range
+    -0.62..+0.08pp. Weakly falsified v1 claim "TransNeXt
+    holds >=0.95 on cifar10 salt_pepper" — v2 tnx cifar10
+    salt_pepper L5 = 0.9422 (just below 0.95).
+  - Total v2 GPU expenditure: ~50.0h (15.79 + 19.40 +
+    ~14.81), under the 53 GPU-h PRD section 10 budget.
+
+  v2 SCIENTIFIC FINDINGS (load-bearing — replace v1 Finding #2
+  in any downstream artifact):
+  - Severity ordering on CIFAR-10 at L5 under v2: resolution
+    (0.43-0.46) > noise (0.67-0.80) > blur (0.71-0.82)
+    > salt_pepper (0.83-0.94) > saturation (0.88-0.95).
+    Noise leapfrogs blur as the second-worst axis — masked
+    under v1 because post-upsample noise was averaged out
+    by the bicubic kernel.
+  - 60-cell two-axis confirmation: coarse-grain stochastic
+    perturbations (additive Gaussian noise + salt-and-pepper)
+    selectively destroy texture-dependent recognition
+    (CIFAR-10) while preserving geometry-dominant
+    recognition (MNIST). Severity proportional to the
+    perturbed-pixel-count arithmetic: noise samples every
+    low_res^2 pixel, salt_pepper paints only
+    low_res^2 * (sp * 2) pixels per image — much fewer at
+    low_res=3. TransNeXt softens but does not reverse the
+    CIFAR-10 collapse on either axis.
+  - MNIST robustness floor REINFORCED under v2: across all
+    four perturbation axes at L5, all three models hold
+    0.984-0.993 — including the v2-hardened noise (which
+    CIFAR-10 dropped up to 22.9pp on) and the v2-hardened
+    salt_pepper (CIFAR-10 dropped up to 4.4pp). The
+    thick-stroke MNIST digit geometry covers many
+    bicubically-spread perturbation footprints, so the
+    discriminative feature survives.
+  - v1 "TransNeXt holds >=0.95 on noise / saturation /
+    salt_pepper across L1->L5" falsified for noise
+    (collapses by L2) and weakly falsified for salt_pepper
+    (holds L1-L3, drops below at L4-L5). Survives intact
+    for saturation (axis unchanged by US-017: tnx cifar10
+    saturation 0.9792 -> 0.9534 across L1->L5).
+
+  US-023 PROGRESS (as of iter 43):
+  - [x] #1 — README v2 tables + PIPELINE_VERSION = 2 (iter 41)
+  - [x] #2 — Finding #2 + #3 narratives re-derived + Recent
+        scientific changes 2026-05-23 entry (iter 42)
+  - [x] #3 — progress.txt canonical session summary (THIS iter)
+  - [ ] #4 — Final_Exp_Report.md regen (NEXT iter)
+
+  CAMPAIGN-LEVEL OPEN WORK:
+  - US-024 IEEEtran scientific report: docs/Final_Report.tex
+    (hand-authored, ~1.5-2.5K lines) + docs/references.bib
+    (already authored, 13 entries, committed earlier) +
+    scripts/render_final_report_tex.py (table autogen +
+    pdflatex/tectonic build) +
+    src/tools/render_phase_c_heatmaps.py (6 PNG heatmaps).
+    pdflatex available via MiKTeX at
+    /c/Users/ib94/AppData/Local/Programs/MiKTeX/miktex/bin/x64/
+    (bibtex also present). LaTeX toolchain prerequisite OK.
+  - US-025 final audit: pytest determinism (5/5 already green
+    per US-017), test_ignores (13 categories), mypy,
+    update_final_exp.py --check, check_ignores.sh, manual
+    artifact open, ship-readiness agent sweep.
+
+- Files affected:
+  - PRD.md: US-023 acceptance criterion #3 ticked.
+  - progress.txt: this Iteration 43 entry (the
+    "everything done so far" summary).
+- Validation:
+  - Content review: every US-001..US-022 referenced; every
+    v2 finding included; every open work item enumerated;
+    every v1 vs v2 number paired against canonical
+    Final_Exp.json values per Iter 40 and Iter 41
+    extractions.
+  - Length: comprehensive (multi-paragraph). Serves as the
+    canonical hand-off document for future Claude / Codex
+    sessions or for the US-024 scientific report author.
+- Learnings for next cycles:
+  - Patterns: The "everything done so far" entry must be
+    structured around scope (v1 campaign / v2 campaign /
+    scientific findings / progress / open work) rather than
+    chronologically. Future maintainers want to query
+    "what is still open" first, "what was the v2 finding"
+    second, and "what closed when" third — not in the
+    iteration-sequence order this progress.txt naturally
+    accumulates.
+  - Patterns: Cite specific numbers in summary entries.
+    Vague summaries decay; precise summaries survive even
+    after iter 50, 100, etc. Each finding here includes at
+    least one (model, dataset, axis, level, val_acc)
+    quadruple so any future reader can cross-check against
+    artifacts/Final_Exp.json.
+  - Traps: The PRD "iteration 27" semantic is index-stale.
+    Do not try to retroactively renumber existing entries
+    to make iter 27 land on this content — instead drop
+    the canonical summary at WHATEVER iter is current and
+    explicitly call out the PRD-text staleness in the
+    entry preamble (as done above). The reader who follows
+    PRD section US-023 acceptance criterion #3 will arrive
+    via progress.txt search for "everything done so far"
+    or "canonical session summary", not via the literal
+    string "iteration 27".
+  - Helpful context: US-023 has #4 remaining
+    (Final_Exp_Report.md regen). Next cycle: run
+    scripts/build_final_exp_report.py; check whether the
+    output prose reflects v2 numerics already (the script
+    is data-driven from artifacts/Final_Exp.json, so the
+    TABLES will be v2 by default, but the HEADLINE-FINDINGS
+    prose section is what needs auditing for orphan v1
+    claims).
+---
