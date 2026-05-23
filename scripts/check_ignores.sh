@@ -19,7 +19,6 @@ declare -a SHOULD_IGNORE=(
   "artifacts/optuna_thz.db"
   "artifacts/dashboard_thumbs/final_clean_resnet50_cifar10.png"
   "artifacts/best_hparams/resnet50_cifar10.json"
-  "artifacts/Final_Exp.html"
   "runs/final/final_clean_resnet50_cifar10/best.ckpt"
   "runs/systematic/legacy_run/best.ckpt"
   "runs/final/x/model_last.pt"
@@ -29,12 +28,16 @@ declare -a SHOULD_IGNORE=(
   "weights/foo.pth"
 )
 
-# Paths that MUST be tracked (paper-anchored config).
+# Paths that MUST be tracked (paper-anchored config + SYNCHRONIZER-committed
+# canonical dashboard). artifacts/Final_Exp.html is committed at every phase
+# boundary by SYNCHRONIZER per US-016 — the remote always reflects the latest
+# campaign snapshot. Mirrors src/tests/test_ignores.py.
 declare -a SHOULD_TRACK=(
   "artifacts/priors/_schema.json"
   "artifacts/priors/resnet50.json"
   "artifacts/priors/densenet121.json"
   "artifacts/priors/transnext_tiny.json"
+  "artifacts/Final_Exp.html"
 )
 
 failures=0
