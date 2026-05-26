@@ -28,10 +28,15 @@ if str(_REPO_ROOT) not in sys.path:
 
 from src.experiments.cells import (  # noqa: E402
     EXPECTED_COUNTS,
+    EXPECTED_COUNTS_WITH_ALL,
     EXPECTED_COUNTS_WITH_D,
     EXPECTED_TOTAL,
+    EXPECTED_TOTAL_WITH_ALL,
     EXPECTED_TOTAL_WITH_D,
     all_cells,
+    phase_b2_present_on_disk,
+    phase_b2nr_present_on_disk,
+    phase_c2_present_on_disk,
     phase_d_present_on_disk,
 )
 from src.experiments.run_status import (  # noqa: E402
@@ -250,6 +255,78 @@ def _phase_d_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, d
     return "\n".join(rows), counts
 
 
+def _phase_b2_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, dict]:
+    """Render Phase B2 — THz-protocol simplification table (US-038)."""
+    rows = [
+        "| # | Model | Dataset | Level | Treatment | Tag | Status | Best Val Acc | PSNR | SSIM | Started | Duration |",
+        "|---|-------|---------|-------|-----------|-----|--------|--------------|------|------|---------|----------|",
+    ]
+    counts = _empty_counts()
+    for i, spec in enumerate(cells, start=start_idx):
+        m = read_metrics(spec.tag, runs_root)
+        q = read_image_quality(spec.tag, runs_root)
+        status = _resolve_status(spec, runs_root, m)
+        counts[status] += 1
+        rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
+        rows.append(_row(i, [
+            spec.model, spec.dataset, LEVEL_NAMES[spec.level],
+            spec.treatment or EM_DASH,
+            f"`{spec.tag}`", _fmt_status_md(status),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
+        ]))
+    return "\n".join(rows), counts
+
+
+def _phase_b2nr_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, dict]:
+    """Render Phase B2-nr — no-regularization L3 arm table (US-038)."""
+    rows = [
+        "| # | Model | Dataset | Level | Tag | Status | Best Val Acc | PSNR | SSIM | Started | Duration |",
+        "|---|-------|---------|-------|-----|--------|--------------|------|------|---------|----------|",
+    ]
+    counts = _empty_counts()
+    for i, spec in enumerate(cells, start=start_idx):
+        m = read_metrics(spec.tag, runs_root)
+        q = read_image_quality(spec.tag, runs_root)
+        status = _resolve_status(spec, runs_root, m)
+        counts[status] += 1
+        rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
+        rows.append(_row(i, [
+            spec.model, spec.dataset, LEVEL_NAMES[spec.level],
+            f"`{spec.tag}`", _fmt_status_md(status),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
+        ]))
+    return "\n".join(rows), counts
+
+
+def _phase_c2_table(cells: list, runs_root: Path, start_idx: int) -> tuple[str, dict]:
+    """Render Phase C2 — THz-protocol single-axis isolation table (US-038)."""
+    rows = [
+        "| # | Model | Dataset | Level | Axis | Treatment | Tag | Status | Best Val Acc | PSNR | SSIM | Started | Duration |",
+        "|---|-------|---------|-------|------|-----------|-----|--------|--------------|------|------|---------|----------|",
+    ]
+    counts = _empty_counts()
+    for i, spec in enumerate(cells, start=start_idx):
+        m = read_metrics(spec.tag, runs_root)
+        q = read_image_quality(spec.tag, runs_root)
+        status = _resolve_status(spec, runs_root, m)
+        counts[status] += 1
+        rd = runs_root / spec.tag
+        dm, dq = _display_payload(spec, status, m, q)
+        rows.append(_row(i, [
+            spec.model, spec.dataset, LEVEL_NAMES[spec.level],
+            spec.axis or EM_DASH,
+            spec.treatment or EM_DASH,
+            f"`{spec.tag}`", _fmt_status_md(status),
+            _fmt_acc(dm), _fmt_psnr(dq), _fmt_ssim(dq),
+            _fmt_started(rd, dm), _fmt_duration(rd, dm),
+        ]))
+    return "\n".join(rows), counts
+
+
 # Backward-compat alias (US-029.5): the canonical helper now lives in
 # `src.experiments.cells.phase_d_present_on_disk`. This private wrapper is
 # preserved for any internal call sites that already reference the original
@@ -265,33 +342,114 @@ def render(runs_root: Path, today: Optional[_dt.date] = None) -> str:
     directory exists, the 90-cell Phase D table is appended after Phase C
     and totals reflect 276 cells. Empty disk state preserves the historical
     186-cell view byte-identical.
-    """
-    include_phase_d = _phase_d_present_on_disk(runs_root)
-    expected_total = EXPECTED_TOTAL_WITH_D if include_phase_d else EXPECTED_TOTAL
-    expected_counts = EXPECTED_COUNTS_WITH_D if include_phase_d else EXPECTED_COUNTS
 
-    by_phase: dict[str, list] = {"A": [], "B": [], "C": [], "D": []}
-    for c in all_cells(include_phase_d=include_phase_d):
+    Phase B2 / B2nr / C2 rendering (US-038): each is gated by its
+    `phase_*_present_on_disk` helper so the legacy 186- and 276-cell views
+    stay byte-identical until the corresponding phase launches.
+    """
+    include_phase_d   = _phase_d_present_on_disk(runs_root)
+    include_phase_b2  = phase_b2_present_on_disk(runs_root)
+    include_phase_b2nr = phase_b2nr_present_on_disk(runs_root)
+    include_phase_c2  = phase_c2_present_on_disk(runs_root)
+
+    expected_counts = dict(EXPECTED_COUNTS)
+    if include_phase_b2:
+        expected_counts["B2"] = EXPECTED_COUNTS_WITH_ALL["B2"]
+    if include_phase_b2nr:
+        expected_counts["B2nr"] = EXPECTED_COUNTS_WITH_ALL["B2nr"]
+    if include_phase_c2:
+        expected_counts["C2"] = EXPECTED_COUNTS_WITH_ALL["C2"]
+    if include_phase_d:
+        expected_counts["D"] = EXPECTED_COUNTS_WITH_ALL["D"]
+    expected_total = sum(expected_counts.values())
+
+    by_phase: dict[str, list] = {
+        "A": [], "B": [], "B2": [], "B2nr": [], "C": [], "C2": [], "D": [],
+    }
+    for c in all_cells(
+        include_phase_d=include_phase_d,
+        include_phase_b2=include_phase_b2,
+        include_phase_b2nr=include_phase_b2nr,
+        include_phase_c2=include_phase_c2,
+    ):
         by_phase[c.phase].append(c)
     assert sum(len(v) for v in by_phase.values()) == expected_total
 
     a_table, a_counts = _phase_a_table(by_phase["A"], runs_root, 1)
     b_start = 1 + expected_counts["A"]
     b_table, b_counts = _phase_b_table(by_phase["B"], runs_root, b_start)
-    c_start = b_start + expected_counts["B"]
-    c_table, c_counts = _phase_c_table(by_phase["C"], runs_root, c_start)
 
-    total_complete = a_counts["Complete"] + b_counts["Complete"] + c_counts["Complete"]
-    total_deferred = a_counts["Deferred"] + b_counts["Deferred"] + c_counts["Deferred"]
+    next_start = b_start + expected_counts["B"]
+
+    phase_b2_section = ""
+    phase_b2_summary_line = ""
+    if include_phase_b2:
+        b2_table, b2_counts = _phase_b2_table(by_phase["B2"], runs_root, next_start)
+        next_start += expected_counts["B2"]
+        phase_b2_summary_line = (
+            f"\n- Phase B2 (THz protocol + T3): {b2_counts['Complete']}/{expected_counts['B2']}"
+        )
+        phase_b2_section = f"""
+## Phase B2 — THz Protocol + T3 ({expected_counts['B2']})
+
+US-038 (2026-05-26): duplicate of Phase B with `saturation = 0.0` +
+`gaussian_noise_std = 0.0` DegradeConfig overrides AND T3 regularization
+layered on top. Rationale: [`docs/phase_b2.md`](../docs/phase_b2.md).
+
+{b2_table}
+"""
+    else:
+        b2_counts = _empty_counts()
+
+    phase_b2nr_section = ""
+    phase_b2nr_summary_line = ""
+    if include_phase_b2nr:
+        b2nr_table, b2nr_counts = _phase_b2nr_table(by_phase["B2nr"], runs_root, next_start)
+        next_start += expected_counts["B2nr"]
+        phase_b2nr_summary_line = (
+            f"\n- Phase B2-nr (B2 protocol, no T3): "
+            f"{b2nr_counts['Complete']}/{expected_counts['B2nr']}"
+        )
+        phase_b2nr_section = f"""
+## Phase B2-no-regularization — L3-only ({expected_counts['B2nr']})
+
+US-038 (2026-05-26): same DegradeConfig as Phase B2 L3 but WITHOUT T3
+deltas. Provides the pure-protocol Δ_B1→B2nr at L3.
+
+{b2nr_table}
+"""
+    else:
+        b2nr_counts = _empty_counts()
+
+    c_table, c_counts = _phase_c_table(by_phase["C"], runs_root, next_start)
+    next_start += expected_counts["C"]
+
+    phase_c2_section = ""
+    phase_c2_summary_line = ""
+    if include_phase_c2:
+        c2_table, c2_counts = _phase_c2_table(by_phase["C2"], runs_root, next_start)
+        next_start += expected_counts["C2"]
+        phase_c2_summary_line = (
+            f"\n- Phase C2 (THz axis attribution): "
+            f"{c2_counts['Complete']}/{expected_counts['C2']}"
+        )
+        phase_c2_section = f"""
+## Phase C2 — THz Single-Axis Attribution ({expected_counts['C2']})
+
+US-038 (2026-05-26): legacy Phase C single-axis isolation under the B2
+protocol (sat = 0 + noise = 0) + T3 regularization; axes restricted to
+{{resolution, blur, salt_pepper}}. Rationale: [`docs/phase_c2.md`](../docs/phase_c2.md).
+
+{c2_table}
+"""
+    else:
+        c2_counts = _empty_counts()
 
     phase_d_section = ""
     phase_d_summary_line = ""
     if include_phase_d:
-        # Phase A starts at 1, B at 1+6=7, C at 7+30=37, D at 37+150=187.
-        d_start = 1 + expected_counts["A"] + expected_counts["B"] + expected_counts["C"]
-        d_table, d_counts = _phase_d_table(by_phase["D"], runs_root, d_start)
-        total_complete += d_counts["Complete"]
-        total_deferred += d_counts["Deferred"]
+        d_table, d_counts = _phase_d_table(by_phase["D"], runs_root, next_start)
+        next_start += expected_counts["D"]
         phase_d_summary_line = (
             f"\n- Phase D (Regularization): {d_counts['Complete']}/{expected_counts['D']}"
         )
@@ -311,6 +469,19 @@ existing Phase B runs. Each Phase D row may be compared against its
 
 {d_table}
 """
+    else:
+        d_counts = _empty_counts()
+
+    total_complete = (
+        a_counts["Complete"] + b_counts["Complete"] + c_counts["Complete"]
+        + b2_counts["Complete"] + b2nr_counts["Complete"]
+        + c2_counts["Complete"] + d_counts["Complete"]
+    )
+    total_deferred = (
+        a_counts["Deferred"] + b_counts["Deferred"] + c_counts["Deferred"]
+        + b2_counts["Deferred"] + b2nr_counts["Deferred"]
+        + c2_counts["Deferred"] + d_counts["Deferred"]
+    )
 
     today = today or _dt.date.today()
     header_title = f"# Final Experiment Matrix — {expected_total} Runs"
@@ -322,8 +493,8 @@ Regenerated by `scripts/update_final_exp.py` after every run; do not hand-edit r
 
 ## Status Summary
 - Phase A (Clean): {a_counts['Complete']}/{expected_counts['A']}
-- Phase B (Combined): {b_counts['Complete']}/{expected_counts['B']}
-- Phase C (Isolation): {c_counts['Complete']}/{expected_counts['C']}{phase_d_summary_line}
+- Phase B (Combined): {b_counts['Complete']}/{expected_counts['B']}{phase_b2_summary_line}{phase_b2nr_summary_line}
+- Phase C (Isolation): {c_counts['Complete']}/{expected_counts['C']}{phase_c2_summary_line}{phase_d_summary_line}
 - **Total: {total_complete}/{expected_total}**
 - Last updated: {today.isoformat()}
 
@@ -358,7 +529,7 @@ PSNR/SSIM live in a sibling `image_quality.json` written by
 ## Phase B — Combined Degradation ({expected_counts['B']})
 
 {b_table}
-
+{phase_b2_section}{phase_b2nr_section}
 ## Phase C — Single-Axis Isolation ({expected_counts['C']})
 
 Phase C pins every axis at L1 (mild) values and sweeps only the named axis through L1→L5.
@@ -366,7 +537,7 @@ At L1, every isolation cell collapses to the Phase B L1 row for the same (model,
 `run_all_phases.py --skip-existing` deduplicates these at runtime.
 
 {c_table}
-{phase_d_section}
+{phase_c2_section}{phase_d_section}
 ## How this file is updated
 
 - Every Lightning run writes a `metrics.json` and `metrics.csv` under `runs/final/<tag>/`.
@@ -407,8 +578,18 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(new_content, encoding="utf-8")
-    n_cells = EXPECTED_TOTAL_WITH_D if _phase_d_present_on_disk(runs_root) else EXPECTED_TOTAL
-    print(f"[update_final_exp] wrote {out_path} ({n_cells} cells)")
+    # US-038: total reflects whichever opt-in phases are present on disk.
+    n_cells = EXPECTED_TOTAL
+    if phase_b2_present_on_disk(runs_root):
+        n_cells += EXPECTED_COUNTS_WITH_ALL["B2"]
+    if phase_b2nr_present_on_disk(runs_root):
+        n_cells += EXPECTED_COUNTS_WITH_ALL["B2nr"]
+    if phase_c2_present_on_disk(runs_root):
+        n_cells += EXPECTED_COUNTS_WITH_ALL["C2"]
+    if _phase_d_present_on_disk(runs_root):
+        n_cells += EXPECTED_COUNTS_WITH_ALL["D"]
+    print(f"[update_final_exp] wrote {out_path} ({n_cells} cells; "
+          f"canonical = {EXPECTED_TOTAL_WITH_ALL})")
     return 0
 
 

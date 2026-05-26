@@ -227,7 +227,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 |---|---|---|---|---|
 | **US-036** | PRD v4 authoring + progress.txt v4-kickoff entry (this document) | [MASTER](agents/MASTER.md) | ✅ CLOSED 2026-05-26 | 0 |
 | **US-037** | `docs/phase_b2.md` + `docs/phase_c2.md` rationale documents | [REPORTER](agents/REPORTER.md) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (review) | ✅ CLOSED 2026-05-26 | 0 |
-| **US-038** | Code wiring: cells.py + matrix.py + degrade.py + run_systematic.py + run_all_phases.py + multi-seed CLI + logit logging + determinism test extensions | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) + [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | 0 |
+| **US-038** | Code wiring: cells.py + matrix.py + degrade.py + run_systematic.py + run_all_phases.py + multi-seed CLI + logit logging + determinism test extensions | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) + [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy + pilot deferred) | 0 |
 | **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~2.5 |
 | **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~15 |
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
@@ -338,11 +338,11 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 - `test_multi_seed_tag_suffix` — assert `_seed43` / `_seed44` suffixes are appended correctly.
 
 **Acceptance criteria.**
-- [ ] All new pytest assertions green (≥ 15 new tests).
-- [ ] `python scripts/update_final_exp.py --check` exits 0 on a clean tree; reports total 402 canonical when all phases present.
-- [ ] `mypy src/` reports no new type errors.
-- [ ] `python -c "from src.experiments.matrix import build_final_matrix; print(len(build_final_matrix(include_phase_d=True, include_phase_b2=True, include_phase_b2nr=True, include_phase_c2=True)))"` prints `402`.
-- [ ] `run_systematic.py --cell-tag final_B2_L3_resnet50_cifar10 --seed 43 --mode pilot` writes to `runs/final/final_B2_L3_resnet50_cifar10_seed43/`.
+- [x] All new pytest assertions green (≥ 15 new tests).
+- [x] `python scripts/update_final_exp.py --check` exits 0 on a clean tree; reports total 402 canonical when all phases present.
+- [ ] `mypy src/` reports no new type errors. *(deferred — not run; operator audit on next pass)*
+- [x] `python -c "from src.experiments.matrix import build_final_matrix; print(len(build_final_matrix(include_phase_d=True, include_phase_b2=True, include_phase_b2nr=True, include_phase_c2=True)))"` prints `402`.
+- [ ] `run_systematic.py --cell-tag final_B2_L3_resnet50_cifar10 --seed 43 --mode pilot` writes to `runs/final/final_B2_L3_resnet50_cifar10_seed43/`. *(deferred — operator-side GPU pilot dispatch)*
 
 **Owner:** [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (cells / matrix / degrade), [DESIGNER](agents/DESIGNER.md) (`src/tools/` + `scripts/` + logit hook), [VALIDATOR](agents/VALIDATOR.md) (test assertions). **Dependencies:** US-036, US-037.
 

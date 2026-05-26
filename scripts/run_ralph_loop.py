@@ -485,21 +485,49 @@ def _default_hparams_loader(c: CellMeta) -> dict:
 # CLI
 # ---------------------------------------------------------------------------
 
+_PHASE_CHOICES = ("A", "B", "B2", "B2nr", "C", "C2", "D", "multiseed")
+_C2_AXES = ("resolution", "blur", "salt_pepper")
+
+
+def _parse_seeds_arg(raw: str) -> list[int]:
+    """Comma-separated seeds (US-038, v4). Used with --phase multiseed."""
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    seeds: list[int] = []
+    for s in parts:
+        try:
+            seeds.append(int(s))
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"--seeds expects integers; got {s!r}"
+            )
+    if not seeds:
+        raise argparse.ArgumentTypeError("--seeds requires at least one integer")
+    return seeds
+
+
 def _build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="RALPH Loop Driver — 186-cell sequential dispatch (PRD US-005)."
+        description="RALPH Loop Driver — sequential dispatch (PRD US-005 + US-038)."
     )
     p.add_argument("--plan", default="final", choices=["final"],
                    help="Cell plan to iterate. Only 'final' is supported.")
-    p.add_argument("--phase", default=None, choices=["A", "B", "C"],
-                   help="Filter cells by phase.")
+    p.add_argument("--phase", default=None, choices=list(_PHASE_CHOICES),
+                   help="Filter cells by phase. 'multiseed' iterates a "
+                        "named --cells list at each seed in --seeds.")
     p.add_argument("--model", default=None,
                    help="Filter cells by model (e.g. resnet50).")
     p.add_argument("--dataset", default=None, choices=["cifar10", "mnist"],
                    help="Filter cells by dataset.")
     p.add_argument("--axes", default=None, type=_parse_axes_arg,
-                   help="Comma-separated Phase C axes to dispatch (subset of "
-                        f"{list(AXES)}). Only valid with --phase C.")
+                   help="Comma-separated axes to dispatch. Valid with --phase C "
+                        f"(any subset of {list(AXES)}) and with --phase C2 "
+                        f"(subset of {list(_C2_AXES)}).")
+    p.add_argument("--cells", default=None,
+                   help="Comma-separated cell tag list (--phase multiseed only).")
+    p.add_argument("--seeds", default=None, type=_parse_seeds_arg,
+                   help="Comma-separated integer seeds (--phase multiseed only). "
+                        "e.g. --seeds 43,44 dispatches each --cells tag at both "
+                        "seeds, writing to runs/final/<tag>_seed{N}/.")
     p.add_argument("--mode", default="full", choices=["full", "pilot"],
                    help="Training mode. --plan final rejects --mode pilot.")
     p.add_argument("--engine", default="lightning", choices=["lightning", "legacy"])
@@ -524,17 +552,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "convergence-first invariant (60 epochs / patience 10)."
     )
 
-    # US-019: --axes is a Phase C concept (single-axis isolation). Reject the
-    # combination with Phase A (no axes) or Phase B (all axes combined).
-    if args.axes is not None and args.phase != "C":
+    # US-019 / US-038: --axes is a single-axis-isolation concept. Phase C
+    # accepts the full 5-axis set; Phase C2 restricts to {resolution, blur,
+    # salt_pepper}; other phases reject --axes outright.
+    if args.axes is not None and args.phase not in ("C", "C2"):
         phase_label = args.phase if args.phase is not None else "all"
         parser.error(
-            f"--axes is only valid with --phase C; got --phase {phase_label} "
-            "(axes are a Phase C single-axis-isolation concept)"
+            f"--axes is only valid with --phase C or --phase C2; got "
+            f"--phase {phase_label} (axes are a single-axis-isolation concept)"
         )
+    if args.axes is not None and args.phase == "C2":
+        bad = [a for a in args.axes if a not in _C2_AXES]
+        if bad:
+            parser.error(
+                f"--phase C2 only supports axes in {list(_C2_AXES)}; got {bad} "
+                f"(noise + saturation are protocol-invariant under the C2 override)"
+            )
 
+    # US-038: multi-seed dispatch path.
+    if args.phase == "multiseed":
+        if not args.cells:
+            parser.error("--phase multiseed requires --cells <tag,tag,...>")
+        if not args.seeds:
+            parser.error("--phase multiseed requires --seeds <int,int,...>")
+        return _run_multiseed(args, parser)
+
+    # US-038: opt-in flags routed by phase token.
+    include_phase_d   = (args.phase == "D")
+    include_phase_b2  = (args.phase == "B2")
+    include_phase_b2nr = (args.phase == "B2nr")
+    include_phase_c2  = (args.phase == "C2")
+
+    cells_iter = iter_cells(
+        include_phase_d=include_phase_d,
+        include_phase_b2=include_phase_b2,
+        include_phase_b2nr=include_phase_b2nr,
+        include_phase_c2=include_phase_c2,
+    )
     cells = filter_cells(
-        iter_cells(),
+        cells_iter,
         phase=args.phase, model=args.model, dataset=args.dataset,
         axes=args.axes,
     )
@@ -550,6 +606,32 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         mode=args.mode, engine=args.engine,
         skip_existing=args.skip_existing,
     )
+
+
+def _run_multiseed(args, parser) -> int:
+    """US-038 (v4) — re-dispatch a named list of cells at each non-default seed.
+
+    For each (tag, seed) pair in product(args.cells, args.seeds), invokes
+    run_systematic.run_cell(tag, seed=N), which writes to
+    runs/final/<tag>_seed{N}/ (when N != 42).
+    """
+    from run_systematic import run_cell as _run_cell
+
+    tags = [t.strip() for t in args.cells.split(",") if t.strip()]
+    if not tags:
+        parser.error("--cells must contain at least one tag")
+    failed = 0
+    for tag in tags:
+        for seed in args.seeds:
+            print(f"[multiseed] dispatching {tag} at seed={seed} ...")
+            if args.dry_run:
+                continue
+            try:
+                _run_cell(tag, mode=args.mode, engine=args.engine, seed=int(seed))
+            except Exception as e:  # noqa: BLE001 — surface, keep dispatching
+                print(f"[multiseed][ERROR] {tag} seed={seed}: {e}")
+                failed += 1
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

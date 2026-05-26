@@ -155,13 +155,18 @@ def render_thumbs(
 
     Returns a {written, skipped, failed} count summary.
     """
-    if axes is not None and phase is not None and phase != "C":
+    if axes is not None and phase is not None and phase not in ("C", "C2"):
         raise ValueError(
-            f"axes filter is only valid with phase='C'; got phase={phase!r} "
-            "(axes are a Phase C single-axis-isolation concept)"
+            f"axes filter is only valid with phase='C' or 'C2'; got phase={phase!r} "
+            "(axes are a single-axis-isolation concept)"
         )
     out_dir.mkdir(parents=True, exist_ok=True)
-    matrix = build_final_matrix(include_phase_d=True)
+    matrix = build_final_matrix(
+        include_phase_d=True,
+        include_phase_b2=True,
+        include_phase_b2nr=True,
+        include_phase_c2=True,
+    )
     if tags is not None:
         tag_set = set(tags)
         by_tag = cells_by_tag(matrix)
@@ -202,13 +207,16 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Render only these cell tags (default: all 186).",
     )
     p.add_argument(
-        "--phase", default=None, choices=["A", "B", "C", "D"],
-        help="Restrict rendering to cells of this phase (default: all phases — 276 with Phase D included).",
+        "--phase", default=None,
+        choices=["A", "B", "B2", "B2nr", "C", "C2", "D"],
+        help="Restrict rendering to cells of this phase (default: all phases — "
+             "up to 402 with B2/B2nr/C2/D included).",
     )
     p.add_argument(
         "--axes", default=None, type=_parse_axes_arg,
-        help="Comma-separated Phase C axes to render (subset of "
-             f"{list(AXES)}). Only valid with --phase C.",
+        help="Comma-separated axes to render. Valid with --phase C (subset of "
+             f"{list(AXES)}) and with --phase C2 (subset of "
+             "{resolution, blur, salt_pepper}).",
     )
     p.add_argument(
         "--force", action="store_true",
@@ -224,11 +232,11 @@ def _build_argparser() -> argparse.ArgumentParser:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
-    if args.axes is not None and args.phase != "C":
+    if args.axes is not None and args.phase not in ("C", "C2"):
         phase_label = args.phase if args.phase is not None else "all"
         parser.error(
-            f"--axes is only valid with --phase C; got --phase {phase_label} "
-            "(axes are a Phase C single-axis-isolation concept)"
+            f"--axes is only valid with --phase C or --phase C2; got "
+            f"--phase {phase_label} (axes are a single-axis-isolation concept)"
         )
     summary = render_thumbs(
         tags=args.tags,
