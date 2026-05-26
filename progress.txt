@@ -5500,3 +5500,273 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     This 2 + 2 + 1 + 1 chapter cadence keeps the
     report narratively coherent without padding.
 ---
+
+## Iteration 50 (2026-05-26) — US-037 CLOSED: docs/phase_b2.md + docs/phase_c2.md rationale documents
+- What was done:
+  (a) docs/phase_b2.md created (100 lines) mirroring
+      docs/phase_d.md's section structure exactly:
+      header + Status + What changed table + Why +
+      DegradeConfig override table + T3 reuse contract
+      + Phase B2-no-regularization subsection + Tag
+      scheme + degradation_levels_hash invariance +
+      Code paths + Migration note + Baseline
+      comparison rules.
+  (b) docs/phase_c2.md created (97 lines) same section
+      structure with one renamed section ("Relationship
+      to legacy Phase C") in place of phase_b2's
+      "Phase B2-no-regularization" subsection. Axis
+      attribution scope explicitly restricted to
+      {resolution, blur, salt_pepper}; saturation and
+      noise are protocol-invariant under the THz
+      DegradeConfig override (always zero).
+  (c) DegradeConfig override values stamped byte-for-
+      byte in both docs:
+      - B2: saturation = 0.0; gaussian_noise_std = 0.0;
+        every other axis flows through DEGRADATION_
+        LEVELS[level] unchanged.
+      - C2: saturation = 0.0; gaussian_noise_std = 0.0;
+        named axis ∈ {resolution, blur, salt_pepper}
+        at level L; all other non-{saturation,
+        noise_std} axes at IDENTITY_VALUES per
+        legacy Phase C / docs/phase_c.md.
+      Note: DegradeConfig field names are
+      `gaussian_noise_std` and `salt_pepper_amount`
+      (not `noise_std` / `salt_pepper` — those are
+      the level_params table keys). The helper
+      mapping table-key → DegradeConfig-field is
+      identical to the existing degrade_config_for
+      helper at src/data/degrade.py:224-234.
+  (d) T3 delta values stamped byte-for-byte from
+      run_systematic.py:_phase_d_treatment_deltas
+      (lines 243-262):
+      - CNN (resnet50, densenet121):
+        {"dropout": 0.2, "mixup_alpha": 0.2,
+         "cutmix_alpha": 1.0}
+      - TransNeXt (transnext_tiny):
+        {"drop_path_rate": 0.2, "mixup_alpha": 0.2,
+         "cutmix_alpha": 1.0}
+      Both docs cite the helper as source of truth
+      (no duplicate definition) and reference the
+      US-038 _apply_b2_or_c2_treatment(spec, hparams)
+      helper that recognizes phase ∈ {"B2", "C2"} as
+      T3 carriers and skips routing for "B2nr".
+  (e) PIPELINE_VERSION = 2 carry-forward note present
+      in each doc's degradation_levels_hash invariance
+      section AND in the Migration note's metrics.json
+      field list. Both docs explicitly state that the
+      DegradeConfig override is constructed at config
+      instantiation time, not by editing the 5-level
+      table — so degradation_levels_hash does NOT
+      rotate.
+  (f) Every claim cited to a file path (no invented
+      code paths or values). Cross-references include:
+      src/data/degrade.py (DegradeConfig + override
+      helpers); src/data/degradation_levels.py
+      (DEGRADATION_LEVELS + IDENTITY_VALUES + AXIS_
+      KEYS); run_systematic.py:_phase_d_treatment_
+      deltas + _apply_b2_or_c2_treatment; src/
+      experiments/cells.py (PHASE_B2/C2_TREATMENT,
+      iter_cells flags, EXPECTED_TOTAL_WITH_ALL =
+      402); src/experiments/matrix.py (build_final_
+      matrix flags); run_all_phases.py (FINAL_PHASES
+      tuple, 7-prefix collision assertions); scripts/
+      run_ralph_loop.py (--phase + --axes filter);
+      scripts/update_final_exp.py (per-phase tables
+      + --check arithmetic). Cross-doc references:
+      docs/phase_c.md (legacy single-axis isolation
+      rationale + US-003 identity-rewrite); PRD.md
+      §1/§4.1/§4.3/§12 decision #16/§7.
+  (g) Tag scheme + collision-safety notes locked
+      verbatim from PRD §7:
+      - Phase B2: final_B2_L{l}_{m}_{d}
+      - Phase B2-nr: final_B2nr_L3_{m}_{d}
+      - Phase C2: final_C2_L{l}_{axis}_{m}_{d}
+      The legacy Phase B check must use
+      startswith("final_B_L") (L-prefix distinguishes
+      it from final_B2_* and final_B2nr_*). The
+      legacy Phase C check must use startswith
+      ("final_C_L") (L-prefix distinguishes from
+      final_C2_*). Both noted in their respective
+      docs' Tag scheme sections.
+  (h) Baseline comparison rules stamped:
+      - Phase B2 cells compare against THREE refs:
+        (1) Phase B1 v2 sibling — combined-effect
+        Δ_B1→B2; (2) Phase D T3 sibling — pure
+        protocol-simplification Δ_D→B2 at fixed T3;
+        (3) Phase A clean sibling — absolute drop
+        Δ_A→B2 for the axis-attribution surface.
+      - Phase B2-nr cells compare against Phase B1
+        L3 sibling only — pure-protocol Δ_B1→B2nr
+        at no regularization.
+      - Phase C2 cells compare primarily against
+        Phase A clean sibling — Δ_A→C2 for axis
+        attribution; secondary comparisons to
+        Phase B2 sibling (combined-vs-single-axis)
+        and legacy Phase C sibling (sanity check
+        only, not directly comparable due to
+        protocol difference).
+      66-entry baseline manifest at artifacts/
+      validation/phase_b2_baseline_manifest.json
+      captured at US-039 pre-flight (30 B1 + 30 D-T3
+      + 6 A), re-verified at US-048 plot rendering.
+  (i) README.md §"Implementation Status" gained TWO
+      new rows (one per doc) per PRD US-037
+      deliverable spec. Both rows use the 📐
+      "documented" status emoji to distinguish from
+      ✅ "live" code rows and 🗑 "deprecated".
+      Pointers to docs/phase_b2.md + docs/phase_c2.md;
+      explicit forward-reference to US-038 (code
+      wiring) and US-039..US-044 (dispatch).
+- Files affected (modified):
+  - docs/phase_b2.md: NEW (100 lines).
+  - docs/phase_c2.md: NEW (97 lines).
+  - README.md: +2 rows in §"Implementation Status"
+    pointing to each new doc.
+  - PRD.md: 5 ACs ticked [ ] → [x]; US-037 status
+    in §8 table set to "✅ CLOSED 2026-05-26".
+  - progress.txt: append Iteration 50 (this entry).
+- Files NOT yet affected (US-038 deliverables):
+  - src/data/degrade.py:degrade_config_for_b2 +
+    degrade_config_for_c2 helpers (US-038(a))
+  - src/experiments/cells.py phase enum extensions
+    + EXPECTED_TOTAL_WITH_ALL = 402 (US-038(b))
+  - src/experiments/matrix.py build_final_matrix
+    flags (US-038(c))
+  - run_systematic.py:--seed CLI + tag suffix +
+    _apply_b2_or_c2_treatment (US-038(d))
+  - run_all_phases.py:FINAL_PHASES tuple + 7-prefix
+    collision asserts (US-038(e))
+  - scripts/run_ralph_loop.py:--phase + --axes +
+    multiseed (US-038(f))
+  - scripts/update_final_exp.py:per-phase renderers
+    + 402-canonical --check (US-038(g))
+  - src/tools/render_cell_thumbs.py:--phase {B2,B2nr,
+    C2} (US-038(h))
+  - src/lightning/module.py:logit-logging hook
+    (US-038(i))
+  - src/tests/test_degradation_determinism.py:5 new
+    groups (US-038(j))
+  - src/tests/test_matrix.py:≥ 10 new assertions
+    (US-038(k))
+- Validation:
+  - Line counts: phase_b2.md = 100 lines (within
+    80-120 spec); phase_c2.md = 97 lines (within
+    80-120 spec). Total = 197 lines of new
+    rationale documentation.
+  - DegradeConfig override values grep-verified
+    in both docs:
+    `gaussian_noise_std = 0.0` × 5 occurrences;
+    `saturation = 0.0` × 5 occurrences. Spread
+    across DegradeConfig override tables + Migration
+    notes + degradation_levels_hash invariance
+    sections.
+  - T3 delta values grep-verified in both docs:
+    dropout=0.2 / drop_path_rate=0.2 / mixup_alpha=
+    0.2 / cutmix_alpha=1.0 stamped verbatim in
+    each doc's "T3 reuse contract" section. Source
+    of truth cited as run_systematic.py:
+    _phase_d_treatment_deltas (lines 243-262).
+  - PIPELINE_VERSION = 2 explicit in both docs
+    (phase_b2.md degradation_levels_hash invariance
+    section; phase_c2.md degradation_levels_hash
+    invariance section + Migration note metrics.json
+    field list).
+  - Every claim cites a file path: cross-doc
+    references audited (no invented paths). Forward-
+    references to US-038-landing helpers explicitly
+    flagged as "lands at US-038" so reader is not
+    misled about current code state.
+  - Section structure mirrors docs/phase_d.md's
+    nine-section canonical layout (with one
+    phase-specific subsection swap between the two
+    new docs). Status block at the top includes
+    explicit US-036/US-037 closure dates + US-038
+    code-wiring dependency.
+  - Five US-037 ACs all met: (i) both files present
+    with phase_d.md-mirrored structure; (ii)
+    DegradeConfig override values byte-for-byte;
+    (iii) T3 delta values byte-for-byte; (iv)
+    PIPELINE_VERSION = 2 carry-forward note in
+    each; (v) every claim cited.
+  - README.md gained 2 new status rows; placement
+    immediately after the "click-to-toggle learning-
+    curve panels" deprecated row keeps the table
+    ordered "live → documented-future → deprecated".
+- Learnings for next cycles:
+  - Patterns: docs/phase_d.md is the canonical
+    template for per-phase rationale documents in
+    this repo. Its 9-section layout (Header + Status
+    / What changed / Why / Treatment-or-Override /
+    Tag scheme / hash invariance / Code paths /
+    Migration note / Baseline comparison rule) is
+    durable across v3 + v4 phase additions. Future
+    phases should copy the structure rather than
+    re-inventing per-doc layouts.
+  - Patterns: Forward-references to "lands at
+    US-X" code-wiring stories are load-bearing in
+    docs authored BEFORE the code lands. Without
+    them, the rationale doc reads as factual about
+    code paths that don't yet exist. Use the
+    explicit phrasing "lands at US-038" or
+    "landing at US-038" so the reader can grep the
+    PRD for the status of the wiring story.
+  - Traps: DegradeConfig field names are NOT the
+    same as the level_params table keys. The table
+    uses `noise_std` and `salt_pepper`; the
+    dataclass field names are `gaussian_noise_std`
+    and `salt_pepper_amount`. The byte-for-byte
+    mapping happens in degrade_config_for (lines
+    224-234). When citing override values, use the
+    DegradeConfig field name (e.g.
+    `gaussian_noise_std = 0.0`) and note the
+    mapping explicitly so the CI substring
+    assertions in US-038 land on the right strings.
+  - Traps: degrade_config_for_b2 and degrade_config
+    _for_c2 helpers DO NOT exist yet — they're
+    US-038(a) deliverables. The docs MUST forward-
+    reference them as "lands at US-038" rather
+    than asserting current existence; otherwise a
+    reader running the docs against the current
+    tree will be confused. The PRD §4.1 + §4.3
+    semantics are the operator-locked source of
+    truth that US-038 will implement.
+  - Traps: The "noise" and "saturation" axes are
+    explicitly EXCLUDED from Phase C2's axis scope
+    ({resolution, blur, salt_pepper}). Under the
+    THz protocol both are forced to zero, so
+    isolating them under that protocol would
+    produce a trivial no-op cell (== Phase A
+    clean baseline). US-038's dispatcher must
+    reject `noise` / `saturation` as Phase C2
+    axes at the CLI level; this is a HARD validation
+    point.
+  - Helpful context: 100 + 97 = 197 lines of new
+    rationale documentation is well-sized for both
+    NotebookLM pass-1 ingestion (per PRD G10 +
+    US-052) and human review during US-039 pilot
+    + US-043 pilot operator sign-offs. Don't pad
+    the docs further — the 80-120 line target per
+    doc was operator-set to keep them readable in
+    a single screen-scroll.
+  - Helpful context: The seven-prefix collision-
+    safety contract (final_clean_* / final_B_L* /
+    final_B2_* / final_B2nr_* / final_C_L* /
+    final_C2_* / final_D_*) is documented in two
+    places — the PRD §7 "Tag-prefix collision-
+    safety assertions" bullet + each docs/phase_*2.md
+    Tag scheme section. US-038 must wire ALL SEVEN
+    asserts in run_all_phases.py and add a pytest
+    test that the prefixes are mutually exclusive
+    under the actual startswith check used in the
+    dispatcher. Phase B's L-prefix dependency is
+    the load-bearing assertion.
+  - Helpful context: Phase B2-nr is only 6 cells
+    (L3 × 3 models × 2 datasets) but provides the
+    cleanest pure-protocol Δ measurement in the
+    entire v4 scope. Its small GPU-budget (~3.5h)
+    masks its scientific weight. Document it
+    co-located with Phase B2 in docs/phase_b2.md
+    (per PRD US-037 deliverable spec) — splitting
+    it into a separate file would fragment the
+    THz-protocol narrative.
+---

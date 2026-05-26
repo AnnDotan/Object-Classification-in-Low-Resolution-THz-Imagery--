@@ -31,6 +31,8 @@ How robust does image classification remain when visual information is severely 
 | `scripts/update_final_exp.py` (regenerates `Final_Exp.md` row data after each run) | ✅ live |
 | `scripts/fetch_transnext_weights.py` (pre-fetch checkpoint into `artifacts/weights/`) | ✅ live |
 | Click-to-toggle learning-curve panels in `Final_Exp.html` (`render_curve_thumbs.py`) | 🗑 deprecated — superseded by the chip-filtered FINAL_EXP Dashboard; thumbs still rendered for ad-hoc inspection. |
+| Phase B2 (+ B2-nr) THz-protocol simplification rationale — [`docs/phase_b2.md`](docs/phase_b2.md) | 📐 documented (US-037, 2026-05-26); code wiring lands at US-038, dispatch at US-039 → US-041. |
+| Phase C2 THz-protocol single-axis attribution rationale — [`docs/phase_c2.md`](docs/phase_c2.md) | 📐 documented (US-037, 2026-05-26); code wiring lands at US-038, dispatch at US-043 → US-044. |
 
 Legacy 33/36 results in `runs/systematic/` are frozen and kept for reference.
 
