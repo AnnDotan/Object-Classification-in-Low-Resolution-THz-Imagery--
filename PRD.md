@@ -1,9 +1,9 @@
-# PRD v2 — Noise/S&P Pipeline Fix, 90-Cell Re-run, IEEEtran Scientific Report
+# PRD v3 — Phase D Regularization Sweep + Documentation / Dashboard / NotebookLM Sync
 
 **Project:** p-2026-061 — Object Classification in Low-Resolution THz Imagery
-**Branch:** `noise_fix`
-**Supersedes:** PRD v1 (RTX 5070 RALPH Loop, 2026-05-13; closed 2026-05-20 with the 186/186 v1 campaign). v1 PRD preserved in git history at commit `3e1d089`.
-**Date:** 2026-05-20
+**Branch:** `PHASE_D` (current working branch; merge target `main`)
+**Supersedes:** PRD v2 (Noise/S&P Pipeline Fix + 90-Cell Re-run + IEEEtran Scientific Report, 2026-05-20; closed 2026-05-23 with US-017..US-025 all green). v2 PRD preserved in git history at commit `ced98ec`.
+**Date:** 2026-05-23
 **Author:** Itamar Bahat (ib94)
 **Target hardware:** NVIDIA RTX 5070 (12 GiB GDDR7, sm_120 / CUDA 12.8+, bf16-mixed Blackwell tensor cores).
 
@@ -11,384 +11,479 @@
 
 ## 1. Introduction
 
-The v1 186-cell campaign closed 2026-05-20 with all cells `healthy` per the §6.3 pathology guard and the comprehensive report rendered to [`artifacts/Final_Exp.pdf`](artifacts/Final_Exp.pdf). Post-mortem inspection of the Phase C `noise` axis numbers (TransNeXt-tiny holding ≥ 0.95 on CIFAR-10 across L1→L5 with `noise_std` up to 0.22) raised the question: *why is additive Gaussian noise barely denting accuracy?*
+The v2 campaign closed 2026-05-23 with US-017..US-025 all green: the noise / salt-and-pepper pipeline was corrected (`PIPELINE_VERSION = 2`), 90 cells re-ran under the corrected pipeline, and a publishable IEEEtran scientific report shipped to [`artifacts/Final_Report.pdf`](artifacts/Final_Report.pdf) (8 pages, 13 BibTeX entries, 3 tables + 6 heatmaps).
 
-**Root cause confirmed 2026-05-20** ([src/data/degrade.py](src/data/degrade.py) pre-US-017): Gaussian noise and salt-and-pepper were applied AFTER the bicubic upsample to 224×224. Each `torch.randn` sample landed on a single output pixel, so the perceived noise at the underlying low_res scale was a tiny fraction of the configured `noise_std`. The bug spanned every cell whose `noise_std > 0` or `salt_pepper > 0` — i.e., all of Phase B and the Phase C `noise` + `salt_pepper` axes (90 cells).
+The v2 numbers revealed a **−12.49 pp mean val_acc collapse** on Phase B vs v1 (range −0.0 to −32.74 pp), with the worst hit being `final_B_L3_transnext_tiny_cifar10` at −32.74 pp. The Optuna winners stored in `artifacts/best_hparams/*.json` were tuned at L3 Moderate against the v1 pipeline; they had no exposure to v2's coarse-grain noise structure (lag-1 spatial autocorrelation 0.993, verified by [src/tests/test_degradation_determinism.py:_check_v2_noise_is_pre_upsample](src/tests/test_degradation_determinism.py)).
 
-The fix moves both stochastic pixel-level perturbations to run BEFORE the upsample: noise is drawn at `low_res`, salt-and-pepper paints `low_res^2` pixels, then bicubic spreads each sample across a kernel footprint at 224. This produces the sensor-realistic *coarse-grain* noise structure that a true low-resolution detector (THz or otherwise) would record. The lag-1 spatial autocorrelation of the residual jumps from ~0 (v1) to **0.993** (v2 at low_res=8, out_size=224, verified by [src/tests/test_degradation_determinism.py:_check_v2_noise_is_pre_upsample](src/tests/test_degradation_determinism.py)).
+This raises the **operator-locked headline research question**:
 
-This PRD covers the **noise_fix follow-up**: re-running the 90 invalidated cells under pipeline v2, refreshing every downstream artifact in lockstep, and producing a publishable-quality IEEEtran scientific report as the project's final external deliverable. The 96 cells whose `noise_std == 0 AND salt_pepper == 0` (Phase A clean + Phase C `resolution` / `blur` / `saturation`) are unaffected and not re-run.
+> *Does targeted regularization recover the Phase B v2 −12.49 pp mean collapse vs v1?*
+
+PRD v3 introduces **Phase D — Regularization Sweep**: 90 new cells (3 treatments × 5 levels × 3 models × 2 datasets) that layer regularization deltas on top of the frozen v2 Phase B baselines. The pipeline is unchanged (`PIPELINE_VERSION` stays at 2), the Optuna winners are unchanged, and the 5-level degradation table is unchanged. The only axis of variation is the regularization treatment.
+
+Phase D is **purely additive**: the default 186-cell matrix is preserved byte-identical when `include_phase_d=False`. The 90 Phase D cells become reachable when `include_phase_d=True` is passed to `iter_cells()`, `build_final_matrix()`, or `run_all_phases.py --phase D`. Total campaign size with Phase D included is 276 cells; the v1/v2 186-cell view continues to render byte-identical when no `final_D_*` directories exist on disk.
+
+The treatments — already wired in [src/experiments/cells.py:37-87](src/experiments/cells.py) and [run_systematic.py:243-282](run_systematic.py):
+
+| Treatment | CNN delta | TransNeXt delta | Rationale |
+|---|---|---|---|
+| **T1 — Architectural dropout** | `dropout=0.2` (timm `drop_rate`) | `drop_path_rate=0.2` (stochastic depth) | Isolates architectural regularization. CNN dropout flows through the classifier head; TransNeXt routes to stochastic depth because timm CNNs don't honor `drop_path_rate`. |
+| **T2 — Label-mixing** | `mixup_alpha=0.2, cutmix_alpha=0.0` | identical | Isolates label-mixing regularization. Model-agnostic; `timm.data.Mixup` wraps targets. |
+| **T3 — Combo (kitchen-sink)** | T1 ∪ T2 ∪ `cutmix_alpha=1.0` | T1 ∪ T2 ∪ `cutmix_alpha=1.0` | Most aggressive combined regularization. If recovery is achievable, T3 should show the strongest signal. |
+
+Source of truth: [run_systematic.py:_phase_d_treatment_deltas](run_systematic.py).
 
 ---
 
-## 2. Goals (v2)
+## 2. Goals (v3)
 
-1. **G1 — Corrected v2 results.** All 90 noise/S&P cells re-run under pipeline v2; `runs/final/<tag>/metrics.json` overwritten in place (no archive — v1 numbers stay only in git history per operator decision 2026-05-20).
-2. **G2 — Lockstep artifact freshness.** After every RALPH pass the four downstream artifacts ([Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf)) plus the 60 affected dashboard thumbnails are regenerated and committed in the same operator action. The dashboard is monitorable mid-campaign.
-3. **G3 — Scientific deliverable.** A new `docs/Final_Report.tex` (IEEEtran journal-class, hand-authored, ~1.5–2.5K lines including auto-generated tables) → `artifacts/Final_Report.pdf`. Contains abstract, methodology, full results (Phase A/B/C tables + 6 per-(model, dataset) Phase C heatmaps), discussion of v2 findings, references in BibTeX. Supersedes the markdown-pdf [`artifacts/Final_Exp.pdf`](artifacts/Final_Exp.pdf) as the canonical publishable artifact.
+1. **G1 — Recovery quantification.** All 90 Phase D cells produce v3 metrics that enable per-(model, dataset, level, treatment) Δ-vs-Phase-B-v2 measurement. Outputs: `artifacts/figures/phase_d_recovery_{model}_{dataset}.png` × 6 + a composite summary + an L3-anchored recovery table.
+
+2. **G2 — Lockstep artifact freshness.** After every Phase D RALPH pass the dashboard, `Final_Exp.json` / `.html` / `.md`, the 90 new dashboard thumbs, and the recovery PNGs regenerate in the same operator pass — extending v2 §7's artifact-freshness rule to Phase D.
+
+3. **G3 — Final_Report.pdf rev2 with §VII Phase D appendix.** A new §VII appendix added to [docs/Final_Report.tex](docs/Final_Report.tex) carrying the 6 per-(model, dataset) recovery plots, an L3-anchored Δ table, and a 1-paragraph headline answer to the §1 research question. Target ≥ 10 pages total, pdflatex/bibtex exit 0, zero `??` placeholders.
+
+4. **G4 — Two-pass NotebookLM alignment.** Pass 1 uploads PRD v3 NOW (immediately after this PRD lands) so subsequent planning context is grounded in the v3 work plan. Pass 2 (end-of-campaign, post-US-033) re-sources the full curated manifest after `README.md`, `CLAUDE.md`, `Final_Exp_Report.md`, `Final_Report.pdf`, `docs/phase_d.md`, and `progress.txt` close.
+
+5. **G5 — Test coverage for Phase D.** Add pytest assertions for `_phase_d_treatment_deltas` arithmetic (per-model routing of T1 to dropout vs drop_path_rate), matrix tag uniqueness (no `final_B_*` vs `final_D_*` collision), schema flow (treatment field round-trips through `Final_Exp.json`), and dashboard rendering (Phase D tab + chip group visibility logic).
 
 ---
 
-## 3. Non-Goals
+## 3. Non-Goals (v3)
 
-- **No re-tuning** of `artifacts/best_hparams/*.json`. The priors-anchored Optuna winners were tuned at L3 Moderate on v1 pipeline; the v2 fix changes the noise *spatial structure* but not its *severity envelope*, and the winners remain the operator-locked frozen set. Re-tuning is explicitly deferred to a future US.
-- **No model swaps** or architecture changes. ResNet50 / DenseNet121 / TransNeXt-tiny stay.
+- **No Phase D re-tune.** Optuna L3 winners in `artifacts/best_hparams/*.json` are reused verbatim as the baseline. Treatments are pure deltas. Re-tuning under regularization is explicitly deferred to a hypothetical v4 future-work bullet.
+- **No pipeline changes.** `PIPELINE_VERSION = 2` stays. `degradation_levels_hash` does NOT rotate. The Phase D cells share Phase B's exact `DegradeConfig` byte-for-byte.
+- **No model swaps.** ResNet50 / DenseNet121 / TransNeXt-tiny stay.
 - **No new datasets.** CIFAR-10 + MNIST remain the only two.
-- **No blur or saturation pipeline changes.** Blur stays post-upsample (kernels were calibrated for 224); saturation stays pre-downsample (RGB-correct luminance computation). Only noise and S&P move.
-- **No v1 archive.** Operator declined archival 2026-05-20; v1 metrics for the 90 cells are overwritten and exist only in git history.
+- **No re-run of Phase A/B/C v2.** The 186 prior cells stay as-is. Phase D is purely additive.
+- **No archival of v2 PRD into the tree.** v2 prose lives only in git history at commit `ced98ec`.
+- **No new degradation axes.** The 5-axis × 5-level matrix is unchanged.
 
 ---
 
-## 4. Pipeline v2 Specification
+## 4. Phase D Specification (carries v2 pipeline forward + treatment deltas)
 
-**File of record:** [src/data/degrade.py:degrade_image](src/data/degrade.py) (refactored 2026-05-20 as part of US-017).
-**Pipeline-version constant:** `src.data.degradation_levels.PIPELINE_VERSION = 2`.
+**Pipeline-version constant unchanged:** `PIPELINE_VERSION = 2`. v3 introduces **NO** step-order changes to the data pipeline. The v2 §4 pipeline diagram carries forward verbatim.
 
+**Treatment delta contract.** From [run_systematic.py:243-262](run_systematic.py):
+
+```python
+def _phase_d_treatment_deltas(treatment: str, model_name: str) -> dict[str, float]:
+    is_transnext = model_name.startswith("transnext_")
+    if treatment == "T1":
+        return {"drop_path_rate": 0.2} if is_transnext else {"dropout": 0.2}
+    if treatment == "T2":
+        return {"mixup_alpha": 0.2, "cutmix_alpha": 0.0}
+    if treatment == "T3":
+        arch = {"drop_path_rate": 0.2} if is_transnext else {"dropout": 0.2}
+        return {**arch, "mixup_alpha": 0.2, "cutmix_alpha": 1.0}
 ```
-Original ([C, H, W], H/W ∈ {32, 28})
-   ↓ Saturation lerp:  (1−s)·gray + s·img            ← at native resolution
-   ↓ Downsample to low_res (bilinear)                 ← skipped if low_res == out_size
-   ↓ Additive Gaussian noise (at low_res)             ← v2 MOVED HERE
-   ↓ Salt-and-pepper noise (at low_res)               ← v2 MOVED HERE
-   ↓ Upsample to out_size = 224 (bicubic)
-   ↓ Gaussian blur (separable conv, kernels calibrated for 224×224)
-   ↓ Clamp [0, 1]
-   → ImageNet normalization (in the DataModule, unchanged)
-Model input (224×224×3)
-```
 
-**Identity rules (unchanged from US-003, 2026-05-14):**
-- `low_res = 224` → downsample skipped; upsample still runs to bring native 32/28 input up to 224.
-- `blur_kernel ≤ 1` → blur skipped.
-- `gaussian_noise_std = 0` → noise step skipped.
-- `salt_pepper = 0` → S&P step skipped.
-- `saturation = 1.0` → lerp skipped.
+These deltas merge into `best_params` via `_apply_phase_d_treatment(spec, hparams)` ([run_systematic.py:265-282](run_systematic.py)). Each Phase D `metrics.json` carries:
 
-**Determinism contract preserved:** per-sample local `torch.Generator` seeded by `idx + SEED_OFFSET_*`; moving the noise/S&P consumers earlier in the function changes the number of random draws (low_res² vs out_size²) but the per-seed reproducibility still holds. Gate: [src/tests/test_degradation_determinism.py](src/tests/test_degradation_determinism.py) — five checks: intra/inter/batch/histogram equality, train/val disjointness, and the v2-specific `_check_v2_noise_is_pre_upsample` invariant (lag-1 autocorrelation > 0.5).
+- `hparams.best_params` (with treatment deltas merged in)
+- `phase_d_treatment` (one of `T1`, `T2`, `T3`)
+- `phase_d_deltas` (the exact delta dict that was applied)
+- `pipeline_version: 2`
 
-**Seed contract (load-bearing for the research — operator-locked 2026-05-20):**
-- The **same `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants** used by v1 carry forward verbatim into v2. `degrade_image(idx, ...)` for a given `(idx, split)` must consume randomness from a `torch.Generator` seeded by `idx + SEED_OFFSET_*` — exactly as in v1. No additional global RNG draws may be introduced between the per-sample seed and the noise/S&P calls.
-- v1↔v2 are pixel-incomparable (different number of draws at different stages — see §4 above), but **within v2** the seed contract guarantees: (a) the *same `idx`* always produces the *same noise pattern* across re-runs, dataloader-worker counts, and machine restarts; (b) train/val seeded sample sets remain disjoint; (c) shuffling `idx` order does not change per-sample noise.
-- Owner: DATA_ARCHITECT (per agent spec: "index-based seeding contract"). Any change here is P0 and MUST be blocked by VALIDATOR.
-- Gate: the existing `test_degradation_determinism.py` five-check suite (MSE = 0 intra/inter on val for both datasets) is the byte-level proof that the seed contract holds under v2.
+Per-cell delta attribution is post-hoc programmatic.
 
-**v1 vs v2 incomparability:** the level *values* in `DEGRADATION_LEVELS` are unchanged, but the *order of operations* differs. For any cell with `noise_std > 0` OR `salt_pepper > 0`, v1 and v2 metrics are NOT directly comparable. The 90 invalidated cells are exhaustively re-run under v2; the remaining 96 are unaffected because the moved steps are no-ops at their identity values.
+**Tag scheme.** `final_D_{T}_L{l}_{m}_{d}` (e.g., `final_D_T3_L3_transnext_tiny_cifar10`). The leading `final_D_` segment is the dashboard's Phase D filter key. Cannot collide with `final_B_L*_*_*` (defense-in-depth assertion at [run_all_phases.py:385-390](run_all_phases.py)).
+
+**Baseline identity.** Each Phase D `final_D_T{x}_L{l}_{m}_{d}` cell compares directly against `final_B_L{l}_{m}_{d}` (same (model, dataset, level), no other axes activated). Phase B v2 numbers are the reference; v1 numbers are out of scope for v3 analysis.
+
+**Determinism contract preserved.** Carried from v2 §4: `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants frozen; per-sample `torch.Generator` seeded by `idx + SEED_OFFSET_*`. Phase D adds **NO** additional global RNG draws beyond mixup/cutmix label-sampling, which gets its own seeded generator inside `THzClassifier`. The byte-identical pixel guarantee from v2's `test_degradation_determinism.py` holds for Phase D cells by construction (same DegradeConfig as Phase B siblings).
+
+**Lightning loop wiring (verified 2026-05-23).** All four treatment hyperparameters are first-class kwargs through the full Lightning call stack:
+- [src/lightning/train.py:102-105, 174-177, 253-256, 355-357, 403-405](src/lightning/train.py) — `mixup_alpha`, `cutmix_alpha`, `drop_path_rate`, `dropout` flow through.
+- [src/lightning/module.py:57-83](src/lightning/module.py) — `THzClassifier.__init__` instantiates `timm.data.Mixup` when `mixup_alpha > 0 or cutmix_alpha > 0` with `prob=1.0, switch_prob=0.5, mode="batch"`.
+- [src/lightning/module.py:113](src/lightning/module.py) — `drop_path_rate` flows into `create_transnext_model(...)`.
+- [src/lightning/module.py:131](src/lightning/module.py) — `dropout` flows into `timm.create_model(..., drop_rate=...)` for CNN backbones.
+- [src/lightning/module.py:177-185](src/lightning/module.py) — `training_step` calls `self.mixup_fn(x, y)` before forward when active.
+
+**No code change needed for US-028 pilot to train correctly.** The Lightning wiring is end-to-end complete; this is the load-bearing finding from the 2026-05-23 sub-agent research.
 
 ---
 
 ## 5. Environment & Hardware
 
-Unchanged from v1 PRD. The RTX 5070 / cu128 / bf16-mixed setup section is preserved verbatim in [README.md](README.md) §"Hardware Setup — RTX 5070" and applies to all v2 work. No env regressions expected; the v2 refactor is a pure Python-level reordering with no new dependencies.
+Unchanged from PRD v2 §5. The RTX 5070 / cu128 / bf16-mixed setup section in [README.md](README.md) §"Hardware Setup — RTX 5070" applies to all v3 work. No new dependencies; mixup/cutmix via `timm.data.Mixup` is already in the existing requirements lock.
 
-**Reproducibility audit trail:** add a `pipeline_version` field to `runs/final/<tag>/metrics.json` (write-side in the Lightning training callback) so v1 vs v2 cells can be filtered programmatically. Concretely: import `from src.data.degradation_levels import PIPELINE_VERSION` and emit `metrics["pipeline_version"] = int(PIPELINE_VERSION)` alongside the existing `degradation_levels_hash` documentary field. Backfill is not required for the 90 re-run cells (they will be overwritten); the 96 non-re-run cells get a one-time `pipeline_version` patch via `scripts/update_final_exp.py` if desired (cosmetic only).
+**Reproducibility audit trail (extended for Phase D).** Each Phase D `metrics.json` must round-trip `pipeline_version=2` AND a non-empty `phase_d_deltas` dict AND a non-null `phase_d_treatment` field. The dashboard's Phase D row-count assertion (`EXPECTED_COUNTS_WITH_D["D"] == 90`) is the campaign-level integrity check.
 
 ---
 
-## 6. RALPH Loop (carried over from v1)
+## 6. RALPH Loop (carried over from v1/v2)
 
-§6.1 (RALPH iteration shape), §6.2 (single-GPU sequential by design), §6.3 (pathology guard — overfit / underfit / divergence detectors), and §6.4 (single retry pass with `wd × 2`, `dropout = 0.1`, `backbone_lr ÷ 20`) are unchanged from the v1 PRD. The v1 §6.4 13-retries-all-declined empirical history (operator declined all 13 retry deltas across the v1 campaign; zero improved cells) carries the same operational lesson into v2: surface every flagged cell to operator and do **not** auto-accept the retry.
+§6.1 (RALPH iteration shape), §6.2 (single-GPU sequential), §6.3 (pathology guard — overfit / underfit / divergence detectors), and §6.4 (single retry pass with `wd × 2`, `dropout = 0.1`, `backbone_lr ÷ 20`) are unchanged from PRD v1/v2.
+
+**New §6.5 — Phase D dispatch.** Phase D is dispatched via:
+
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase D
+```
+
+The `--phase D` flag activates `include_phase_d=True` in `cells.iter_cells()` and `matrix.build_final_matrix()`. Optional `--treatments T1,T2,T3` filter (mirroring v2's `--axes` pattern from US-019) — OPTIMIZER scope-extension under MASTER approval — restricts dispatch to a treatment subset. Bundle the same `--treatments` filter into [src/tools/render_cell_thumbs.py](src/tools/render_cell_thumbs.py) for consistency.
+
+**§6.4 retry policy under Phase D.** Carried forward verbatim: §6.3 pathology guard flags → surface to operator → operator decides retry. v1's empirical lesson (13/13 retries declined across the v1 campaign, zero improved cells) carries the same operational default into v3. Track tally for the campaign summary.
 
 ---
 
 ## 7. Constraints & Guardrails
 
-Carried over from v1: weight-privacy contract (gitignore + claudeignore + `scripts/check_ignores.sh`); `pl.seed_everything(42, workers=True)` reproducibility lock; `--plan final --mode pilot` assertion; the fair-comparison invariant (same protocol, same dataset, same degradation across all three models).
+All v2 guardrails carried forward:
 
-**New (US-017 onward):** *artifact-freshness rule.* After every RALPH pass that touches one or more cells, the operator MUST regenerate [Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf), and the affected `artifacts/dashboard_thumbs/<tag>.png` files before opening the next pass. Drift between `runs/final/` and these artifacts is forbidden and detectable via `python scripts/update_final_exp.py --check`.
+- **Weight-privacy contract** (`.gitignore` + `.claudeignore` + `scripts/check_ignores.sh`).
+- **`pl.seed_everything(42, workers=True)`** reproducibility lock.
+- **`--plan final --mode pilot` is rejected** with an assertion (pilot mode is for smoke tests only; the 6-cell US-028 pilot uses `--mode pilot` on individual cell tags, NOT the full plan).
+- **Fair-comparison invariant**: same protocol / dataset / degradation across all three models within each (model, dataset, level, treatment) tuple.
+- **Artifact-freshness rule** (v2 §7): after every RALPH pass the operator MUST regenerate `Final_Exp.md` / `.json` / `.html` / `.pdf` + affected dashboard thumbs.
+- **Seed-stability invariant** (v2 §7): `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` frozen for the entire v3 campaign.
 
-**New (US-019B onward):** *visual pre-flight gate.* Before ANY of the 90 v2 training runs are dispatched (US-020/021/022), the affected 90 `artifacts/dashboard_thumbs/<tag>.png` files MUST be re-rendered against the v2 pipeline and reviewed by the operator. Burning ~53 GPU-h on a subtly-wrong pipeline is the failure mode this gate prevents. See US-019B for the protocol.
+**New (v3 only):**
 
-**New (US-017 onward):** *seed-stability invariant.* The `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants in [src/data/degrade.py](src/data/degrade.py) are frozen for the entire v2 campaign. Any PR that touches those constants, the per-sample `torch.Generator` construction, or the global RNG state in `degrade_image` is rejected automatically (DATA_ARCHITECT owns, VALIDATOR gates).
+- **Baseline-comparability invariant.** A Phase D cell must reference its Phase B v2 baseline by tag explicitly. The recovery plot script ([scripts/plot_phase_d_comparison.py](scripts/plot_phase_d_comparison.py)) rejects any Phase D row whose Phase B partner is missing or whose `pipeline_version != 2`.
+- **Phase B v2 baseline manifest lock.** At US-028 pre-flight, capture SHA-256 of every `final_B_L*_*/metrics.json` into `artifacts/validation/phase_b_v2_baseline_manifest.json` and commit. Re-verify hashes at US-031 plot rendering. Prevents silent baseline drift during the ~2.5-day campaign.
+- **6-cell pilot HARD GATE.** Like v2's US-019B visual gate, no 84-cell sweep dispatches (US-029) until US-028 (6-cell T3_L3 × all (model, dataset) pairs) lands healthy AND operator signs `artifacts/validation/phase_d_pilot_checklist.md`. Burning ~52 GPU-h on subtly-wrong delta arithmetic is the failure mode this gate prevents.
+- **NotebookLM 2-pass discipline.** Pass 1 (PRD v3 upload) executes immediately AFTER this PRD lands. Pass 2 (full re-source) executes AFTER US-033 closes. No mid-campaign incremental refresh.
 
-**Multi-agent protocol (carried over from v1).** Every code-touching US is dispatched through MASTER (see [agents/MASTER.md](agents/MASTER.md)). MASTER reviews the plan, delegates to the named sub-agent per their `agents/<NAME>.md` scope, and VALIDATOR signs off before LIBRARIAN/SYNCHRONIZER synchronize the narrative artifacts. The owner column in §8 is binding — agents may not write outside their declared file-system scope without a MASTER scope-extension note in the US.
+**Multi-agent protocol carried over from v1/v2.** Every code-touching US is dispatched through MASTER ([agents/MASTER.md](agents/MASTER.md)). MASTER reviews the plan, delegates to the named sub-agent per its `agents/<NAME>.md` scope, and VALIDATOR signs off before LIBRARIAN / SYNCHRONIZER synchronize the narrative artifacts. The owner column in §8 is binding — agents may not write outside their declared file-system scope without an explicit MASTER scope-extension note.
 
 ---
 
-## 8. User Stories (v2 active set)
+## 8. User Stories (v3 active set)
 
-Ten stories, dependency-ordered. US-017 and US-018 are already closed in the current session (2026-05-20) and listed here for completeness. US-019 through US-025 are unstarted and will be executed in a follow-up RALPH session. **Every owner below is a sub-agent defined in [agents/](agents/);** MASTER dispatches each US per [agents/MASTER.md](agents/MASTER.md).
+Eleven stories, dependency-ordered. US-026 (this PRD) is in-progress this session; US-027 through US-035 are unstarted and execute in follow-up RALPH sessions. Every owner below is a sub-agent defined in [agents/](agents/).
 
 | Story | Title | Owner (sub-agent) | Status |
 |---|---|---|---|
-| **US-017** | Pipeline v2 refactor + new invariant test | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) | ✅ **closed 2026-05-20** |
-| **US-018** | PRD v2 authoring (this document) | [MASTER](agents/MASTER.md) | ✅ **closed 2026-05-20** |
-| **US-019** | RALPH loop `--axes` filter patch (+ bundled `render_cell_thumbs` `--phase`/`--axes`) | [OPTIMIZER](agents/OPTIMIZER.md) (MASTER-approved scope extension to `scripts/run_ralph_loop.py` and `src/tools/render_cell_thumbs.py`) | ✅ **closed 2026-05-20** |
-| **US-019B** | **v2 degradation thumbnail preview (operator visual gate)** | [DESIGNER](agents/DESIGNER.md) (renders) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (verifies seed/noise structure) | ⏳ pending |
-| **US-020** | Phase B re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) (runs) + [DEBUGGER](agents/DEBUGGER.md) (on failure) + [VALIDATOR](agents/VALIDATOR.md) (gate) | ⏳ pending |
-| **US-021** | Phase C `noise` axis re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
-| **US-022** | Phase C `salt_pepper` axis re-run (30 cells) + dashboard refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
-| **US-023** | Post-campaign content sync (README + Final_Exp_Report.md + progress.txt) | [SYNCHRONIZER](agents/SYNCHRONIZER.md) + [LIBRARIAN](agents/LIBRARIAN.md) + [REPORTER](agents/REPORTER.md) | ⏳ pending |
-| **US-024** | IEEEtran scientific report (`docs/Final_Report.tex` → `artifacts/Final_Report.pdf`) | [REPORTER](agents/REPORTER.md) (LaTeX/prose, owns `docs/`) + [DESIGNER](agents/DESIGNER.md) (heatmap tooling under `src/tools/`) | ⏳ pending |
-| **US-025** | Final verification + ship-readiness audit | [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-026** | PRD v3 authoring + progress.txt rewrite (this document) | [MASTER](agents/MASTER.md) | ⏳ in-progress this session |
+| **US-027** | `docs/phase_d.md` rationale + treatment table | [REPORTER](agents/REPORTER.md) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (review) | ⏳ pending |
+| **US-028** | 6-cell pilot smoke test (T3_L3 × all 6 (model, dataset) pairs) + baseline-manifest snapshot | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-029** | Phase D full sweep (remaining 84 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-029.5** | `Final_Exp.json` schema + aggregator wiring for Phase D | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
+| **US-030** | Dashboard Phase D tab + Treatment chip group + Phase B-vs-Phase D `<details>` strip | [DESIGNER](agents/DESIGNER.md) | ⏳ pending |
+| **US-031** | `scripts/plot_phase_d_comparison.py` per-panel outputs + LaTeX recovery table | [DESIGNER](agents/DESIGNER.md) (plot) + [REPORTER](agents/REPORTER.md) (LaTeX review) | ⏳ pending |
+| **US-032** | Post-campaign content sync (README + CLAUDE.md + Final_Exp_Report.md + progress.txt) | [SYNCHRONIZER](agents/SYNCHRONIZER.md) + [LIBRARIAN](agents/LIBRARIAN.md) + [REPORTER](agents/REPORTER.md) | ⏳ pending |
+| **US-033** | `Final_Report.pdf` rev2 — new §VII Phase D appendix | [REPORTER](agents/REPORTER.md) + [DESIGNER](agents/DESIGNER.md) (heatmap helper) | ⏳ pending |
+| **US-034** | NotebookLM 2-pass sync (pass 1 immediate / pass 2 post-US-033) | [NOTEBOOKLM_SYNC](agents/NOTEBOOKLM_SYNC.md) | ⏳ pending |
+| **US-035** | Final verification + ship-readiness audit | [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending |
 
 ---
 
-### US-017 — Pipeline v2 refactor + new invariant test
+### US-026 — PRD v3 authoring + progress.txt rewrite
 
-**Goal.** Move noise + S&P from post-upsample to pre-upsample in `degrade_image`; preserve all other pipeline behavior; gate the change with a new determinism-suite invariant.
-
-**Files modified.**
-- [src/data/degrade.py](src/data/degrade.py) — `degrade_image` split downsample/upsample, moved noise + S&P between the two interpolations, updated docstring + step-order comments. Final `clamp(0, 1)` consolidated at function exit.
-- [src/data/degradation_levels.py](src/data/degradation_levels.py) — added `PIPELINE_VERSION: int = 2` constant with v1→v2 rationale comment.
-- [src/tests/test_degradation_determinism.py](src/tests/test_degradation_determinism.py) — added `_check_v2_noise_is_pre_upsample`: builds a constant-0.5 image, runs `degrade_image` with `low_res=8, out_size=224, noise_std=0.2, degradation_type='all'`, asserts (a) residual lag-1 horizontal autocorrelation > 0.5 (proves noise has bicubic-spread structure), (b) byte-identical re-run under same seed (proves determinism preserved).
+**Goal.** Replace PRD v2 with a v3 PRD reflecting the closed v2 campaign + the Phase D regularization-sweep follow-up + the documentation / dashboard / NotebookLM sync. v2 PRD content preserved only in git history (commit `ced98ec`). progress.txt preamble retired (the ≤200-line rule is formally rescinded; the file becomes an append-only journal).
 
 **Acceptance criteria.**
-- [x] `python -m src.tests.test_degradation_determinism` exits 0 — 5/5 checks green: cifar10@224, mnist@224, lightning cifar10@224, lightning mnist@224, v2-noise-pre-upsample.
-- [x] v2 invariant test reports lag-1 autocorrelation ≥ 0.5 (observed: **0.993**).
-- [x] No regression on the four pre-existing determinism checks (MSE = 0, histograms equal, train/val disjoint).
+- [ ] [PRD.md](PRD.md) rewritten end-to-end; eleven v3 user stories defined; v2 stories US-017..US-025 referenced as "closed; see git history."
+- [ ] PRD v3 enumerates Phase D specification (§4), goals (§2), non-goals (§3), constraints (§7), and an explicit dependency-ordered story map (§10).
+- [ ] [progress.txt](progress.txt) preamble (lines 1-3) updated: date stamp refreshed to 2026-05-23, ≤200-line rule formally retired with new "append-only journal" policy.
+- [ ] [progress.txt](progress.txt) Iteration 47 entry appended summarizing the PRD v3 authoring session.
 
-**Closed:** 2026-05-20.
-
----
-
-### US-018 — PRD v2 authoring
-
-**Goal.** Replace v1 PRD with a v2 PRD reflecting the closed 186-cell campaign + the noise-fix follow-up + the new IEEEtran deliverable. v1 PRD content preserved only in git history (commit `3e1d089`).
-
-**Acceptance criteria.**
-- [x] [PRD.md](PRD.md) rewritten end-to-end; nine v2 user stories defined; v1 stories US-001..US-016 referenced as "closed; see git history."
-- [x] PRD v2 enumerates pipeline-v2 specification (§4), goals (§2), non-goals (§3), constraints (§7), and an explicit dependency-ordered story map (§10).
-
-**Closed:** 2026-05-20.
+**Owner:** [MASTER](agents/MASTER.md).
 
 ---
 
-### US-019 — RALPH loop `--axes` filter patch
+### US-027 — `docs/phase_d.md` rationale + treatment table
 
-**Goal.** Enable a single-axis subset re-run in [scripts/run_ralph_loop.py](scripts/run_ralph_loop.py) without requiring an explicit tag list. Today the script filters only by `--phase` / `--model` / `--dataset`; we need axis-level granularity for US-021 and US-022.
+**Goal.** Create `docs/phase_d.md` mirroring [docs/phase_c.md](docs/phase_c.md)'s 56-line structure. Document the headline research question, the three treatment deltas, the tag scheme + collision-safety note, the `degradation_levels_hash` invariance note (Phase D does NOT touch the degradation table — same v2 pipeline, same hash, byte-identical per-sample noise patterns between Phase B and Phase D siblings), and the per-cell delta attribution invariant.
 
 **Deliverables.**
-- Add `--axes` argument (comma-separated, validated against `src.data.degradation_levels.AXES`).
-- When `--axes` is supplied AND `--phase C` is selected, restrict the dispatched cell tags to those whose axis is in the set.
-- When `--axes` is supplied with `--phase A` or `--phase B`, raise `argparse.ArgumentError` (axes are a Phase C concept).
-- Idempotent: `--skip-existing` still respected.
-- One-line dry-run preview: `python scripts/run_ralph_loop.py --phase C --axes noise --dry-run` prints the 30 tags it would dispatch.
+- New file [docs/phase_d.md](docs/phase_d.md), ~60-100 lines.
+- One sentence in [README.md](README.md) §"Implementation Status" pointing to it (LIBRARIAN scope; defer full README sync to US-032).
 
 **Acceptance criteria.**
-- [x] `--phase C --axes noise` dispatches exactly 30 tags (3 models × 2 datasets × 5 levels × 1 axis).
-- [x] `--phase C --axes noise,salt_pepper` dispatches 60 tags.
-- [x] `--phase B --axes noise` raises ArgumentError with a clear message.
-- [x] `--phase C --axes BOGUS` raises ArgumentError listing valid axes.
-- [x] Existing `--phase C` (no `--axes`) behavior unchanged: dispatches all 150.
+- [ ] Sections present: title, "What changed" table, rationale paragraph, treatment table (T1/T2/T3 × CNN/TransNeXt), tag scheme block, hash-invariance note, delta-attribution note.
+- [ ] Treatment table values match [run_systematic.py:_phase_d_treatment_deltas](run_systematic.py) byte-for-byte (CI substring assertion: `dropout=0.2`, `drop_path_rate=0.2`, `mixup_alpha=0.2`, `cutmix_alpha=1.0`).
+- [ ] Explicit `PIPELINE_VERSION = 2` carry-forward note present.
+- [ ] Explicit baseline-comparison rule documented (Phase D Tx_L{l} compares against `final_B_L{l}_{m}_{d}`).
+- [ ] Every claim cited to a file path; no invented code paths or values.
 
-**Bundled scope (US-019B note):** `src/tools/render_cell_thumbs.py` gained the same `--phase` and `--axes` filters (with the identical Phase-A/B reject and AXES-subset validation), so the US-019B dispatch commands (`--phase B`, `--phase C --axes noise`, `--phase C --axes salt_pepper`) work without touching the renderer again. Filter math verified: Phase B = 30, Phase C noise = 30, Phase C salt_pepper = 30 — exactly the 90 v2-affected cells.
-
-**Owner:** [OPTIMIZER](agents/OPTIMIZER.md), under a MASTER-approved scope extension to `scripts/run_ralph_loop.py` and `src/tools/render_cell_thumbs.py` (outside OPTIMIZER's default `src/models/` + `src/runner.py` write scope). **Dependencies:** US-017 (pipeline must be v2 before any re-runs are valid).
-
-**Closed:** 2026-05-20.
+**Owner:** [REPORTER](agents/REPORTER.md) (authors). [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) reviews the treatment table for parity with the actual code. **Dependencies:** US-026.
 
 ---
 
-### US-019B — v2 degradation thumbnail preview (operator visual gate)
+### US-028 — 6-cell pilot smoke test + Phase B v2 baseline manifest snapshot
 
-**Goal.** Before any of the 90 GPU re-runs are dispatched, regenerate the affected `artifacts/dashboard_thumbs/<tag>.png` images against the v2 pipeline so the operator can **visually confirm** that the noise/S&P fix produces the expected coarse-grain structure. This is the cheap, single-CPU-pass insurance policy against burning ~53 GPU-h on a subtly-wrong pipeline. The thumbnail renderer ([src/tools/render_cell_thumbs.py](src/tools/render_cell_thumbs.py)) only re-runs `degrade_image` on a fixed grid of sample indices — it does **not** touch model weights or training — so this US is GPU-free and takes minutes, not hours.
+**Goal.** Validate the Phase D pipeline end-to-end on 6 cells (T3_L3 × all 6 (model, dataset) pairs) BEFORE dispatching the full 84-cell sweep. T3 exercises all four delta keys (dropout / drop_path_rate + mixup_alpha + cutmix_alpha) per-model-routing; L3 is the Optuna-tuned operating point (strongest collapse signal); the 6-cell breadth validates per-model delta routing across CNN dropout vs TransNeXt drop_path_rate.
 
-**Deliverables.**
-- All 90 v2 thumbs re-rendered: 30 `final_B_L{1..5}_{model}_{dataset}.png` + 30 `final_C_L{1..5}_noise_{model}_{dataset}.png` + 30 `final_C_L{1..5}_salt_pepper_{model}_{dataset}.png`.
-- **v1 thumbnail baseline snapshot.** `artifacts/dashboard_thumbs/` has been gitignored since US-013, so the originally-planned `git show 3e1d089:...` recovery path does NOT work — the only v1 thumbs in existence live on the 5070 box's local disk. Before any `--force` re-render, the 90 affected v1 PNGs MUST be copied to `artifacts/validation/v1_thumbs/` and a SHA-256 manifest written to `artifacts/validation/v1_thumbs_manifest.json` (committed) for durable evidence. Use `python scripts/snapshot_v1_thumbs.py` (writes the snapshot + manifest) and `--verify` to re-check hashes later. The PNG blobs themselves stay gitignored — the operator visual gate runs locally and the manifest is the cross-machine audit trail.
-- A side-by-side contact sheet `artifacts/validation/v1_vs_v2_thumbs.html` (or `.md`) that pairs each v2 thumb against its snapshotted v1 counterpart (under `artifacts/validation/v1_thumbs/`) so the visual diff is one click, not a manual hunt.
-- A short markdown checklist `artifacts/validation/v2_preview_checklist.md` enumerating the **smoking-gun visual expectations** the operator must sign off on:
-  - L5 noise at low_res=3 shows ~74-px blob structure (single low_res samples bicubically spread across 224/3 ≈ 74-px footprints), NOT 1-px white speckles.
-  - L5 salt_pepper at low_res=3 shows large bright/dark blobs in ~9 distinct cells (low_res² = 9 pixels painted at low_res then bicubically spread), NOT 1-px speckles.
-  - L1 thumbs are nearly indistinguishable from v1 (mild noise_std=0.04 with low_res=18 → still fine grain).
-  - Saturation/blur/resolution axes are byte-identical to v1 (sanity check: those 96 cells are unaffected by US-017).
-  - All thumbs deterministic across two re-runs of the renderer (proves the seed contract from §4 holds).
-
-**Pre-flight.**
-1. Confirm `degradation_levels.PIPELINE_VERSION == 2`.
-2. Confirm pytest determinism suite green (US-017 acceptance).
-3. **Do NOT delete** the 90 stale `metrics.json` files yet — that happens in US-020 pre-flight. Only the thumbs are touched here.
-
-**Dispatch (CPU-only, no GPU needed).**
-```powershell
-.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase B
-.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase C --axes noise
-.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase C --axes salt_pepper
-.\.venv-gpu\Scripts\python.exe scripts\build_v1_v2_thumb_contact_sheet.py   # new helper
-```
-(The `--axes` flag on `render_cell_thumbs` may need a small patch mirroring US-019; if so, bundle that into US-019's deliverable.)
-
-**Acceptance criteria.**
-- [x] 90 v2 thumbs present on disk and visibly differ from their v1 git-history counterparts on the noise/S&P axes. *(verified 2026-05-20: all 90 SHA-256 hashes differ from `artifacts/validation/v1_thumbs_manifest.json` baseline.)*
-- [x] 96 unaffected thumbs (Phase A clean + Phase C resolution/blur/saturation) byte-identical to v1 — verified by `scripts/verify_unaffected_thumbs.py` (the gitignored `artifacts/dashboard_thumbs/` makes the original `git diff --stat` recipe impossible; the script captures a SHA-256 manifest of the on-disk v1 bytes, force-re-renders the 96 under v2, and asserts zero hash deltas). *(verified 2026-05-20: 96/96 byte-identical; manifest at `artifacts/validation/unaffected_thumbs_manifest.json`.)*
-- [x] Contact sheet `artifacts/validation/v1_vs_v2_thumbs.html` opens cleanly and shows all 90 pairs. *(verified 2026-05-20: `scripts/build_v1_v2_thumb_contact_sheet.py` emits 49 KiB HTML with 3 section headings, 90 pair divs, 90 v1 refs, 90 v2 refs; byte-identical across two consecutive runs.)*
-- [x] **Operator signs `artifacts/validation/v2_preview_checklist.md`** (writes "approved by ib94 YYYY-MM-DD" on the last line and commits). Without this signature, US-020 dispatch is forbidden. *(signed 2026-05-20 — operator authorized "continue to US-020" mid-Ralph-cycle; checklist's 5 smoking-gun bullets ticked, US-020 HARD GATE released.)*
-- [x] Re-running the renderer with no other changes produces byte-identical PNGs (seed determinism gate). *(verified 2026-05-20: second `--force` pass produced 0 hash deltas across 310 thumbs in `artifacts/dashboard_thumbs/`.)*
-
-**Owner:** [DESIGNER](agents/DESIGNER.md) (owns `src/tools/` per agent spec, renders the contact sheet) with **[DATA_ARCHITECT](agents/DATA_ARCHITECT.md)** verifying the seed contract held end-to-end (lag-1 autocorrelation re-spot-checked on the rendered PNGs). **Dependencies:** US-017, US-019 (the `--axes` filter on the renderer).
-
----
-
-### US-020 — Phase B re-run (30 cells)
-
-**Goal.** Re-run all 30 Phase B cells under pipeline v2, with overwrite-in-place semantics. Each cell trains to convergence under the locked protocol (60 ep / patience 10 / bf16-mixed / AdamW + cosine / paper-anchored hparams from `artifacts/best_hparams/{model}_{dataset}.json`).
+Concurrently, capture the SHA-256 manifest of every Phase B v2 `final_B_L*_*/metrics.json` as the immutable baseline reference for US-031's recovery plot.
 
 **Pre-flight (operator-executed before dispatch).**
-1. **HARD GATE — US-019B must be closed with operator signature on `artifacts/validation/v2_preview_checklist.md`.** No dispatch without it.
-2. Delete the 30 stale `runs/final/final_B_L*_{model}_{dataset}/metrics.json` files (and `metrics.csv`, `log.txt`, `history.json` for full hygiene). Keep `best.pt` / `model_last.pt` — they are local-only and will be replaced by the new Lightning run.
-3. Confirm `degradation_levels.PIPELINE_VERSION == 2`.
-4. Confirm pytest determinism suite green (US-017 acceptance).
-5. Confirm `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants unchanged since the v1 campaign (seed-stability invariant, §7).
+1. Confirm `degradation_levels.PIPELINE_VERSION == 2`.
+2. Confirm pytest determinism suite green.
+3. Capture baseline: `python scripts/snapshot_phase_b_v2_baseline.py` writes `artifacts/validation/phase_b_v2_baseline_manifest.json` with `{tag: sha256(metrics.json)}` for all 30 Phase B v2 cells. Commit.
+4. Confirm `runs/final/final_D_T3_L3_*/` are empty (no leftover pilot dirs).
 
 **Dispatch.**
 ```powershell
-.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase B
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_resnet50_cifar10 --mode pilot
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_resnet50_mnist --mode pilot
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_densenet121_cifar10 --mode pilot
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_densenet121_mnist --mode pilot
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_transnext_tiny_cifar10 --mode pilot
+.\.venv-gpu\Scripts\python.exe run_systematic.py --cell-tag final_D_T3_L3_transnext_tiny_mnist --mode pilot
 ```
+
+(Pilot mode is the v2 smoke-test path: 5 epochs / patience 2. Convergence is NOT the gate; the gate is that `metrics.json` is well-formed and carries `phase_d_treatment=T3` + `phase_d_deltas`.)
+
+**Operator visual gate.** After the 6 pilot cells complete, operator inspects `runs/final/final_D_T3_L3_*/metrics.json` and signs `artifacts/validation/phase_d_pilot_checklist.md` confirming:
+- All 6 `metrics.json` carry `pipeline_version=2`, `phase_d_treatment=T3`, and non-empty `phase_d_deltas`.
+- CNN dropout vs TransNeXt drop_path_rate routing visible in the `phase_d_deltas` field (CNN cells have `dropout`, TransNeXt cells have `drop_path_rate`).
+- Mixup labels show up in the training log (training accuracy decoupled from labels for the first epoch — signature of active Mixup).
+- No CUDA / bf16 crashes in the dispatch log; no SENTINEL tokens.
+
+**Pilot cleanup.** After operator sign-off, delete the 6 pilot `runs/final/final_D_T3_L3_*/` directories so the full sweep (US-029) re-trains those cells at full convergence (60 epochs / patience 10).
+
+**Acceptance criteria.**
+- [ ] `phase_b_v2_baseline_manifest.json` committed with 30/30 SHA-256 entries.
+- [ ] 6/6 `final_D_T3_L3_*/metrics.json` written with `phase_d_treatment=T3` and the expected delta keys (CNN: `dropout` + `mixup_alpha` + `cutmix_alpha`; TransNeXt: `drop_path_rate` + `mixup_alpha` + `cutmix_alpha`).
+- [ ] Zero §6.3 sentinels across the 6 pilot cells; no Traceback / FAILED tokens in dispatch logs.
+- [ ] Operator signs `artifacts/validation/phase_d_pilot_checklist.md` (last line: `approved by ib94 YYYY-MM-DD`). HARD GATE for US-029.
+- [ ] Pilot dirs cleaned up post-sign-off (`runs/final/final_D_T3_L3_*/` empty before US-029 dispatch).
+- [ ] GPU-h tracked (~3.5h expected at pilot speed).
+
+**GPU budget.** ~6 × 35 min = ~3.5 GPU-h (pilot mode at 5 epochs is much faster than full FT; actual likely ~3 GPU-h).
+
+**Owner:** [EXECUTOR](agents/EXECUTOR.md) (dispatches), [DEBUGGER](agents/DEBUGGER.md) (failure triage), [VALIDATOR](agents/VALIDATOR.md) (signs off the pilot checklist). **Dependencies:** US-026, US-027.
+
+---
+
+### US-029 — Phase D full sweep (remaining 84 cells)
+
+**Goal.** Re-run the 84 non-pilot Phase D cells at full convergence (60 epochs / patience 10 / bf16-mixed / AdamW + cosine / paper-anchored hparams from `artifacts/best_hparams/{model}_{dataset}.json` PLUS the treatment delta).
+
+**Pre-flight.**
+1. **HARD GATE — US-028 must be closed with operator signature on `artifacts/validation/phase_d_pilot_checklist.md`.** No dispatch without it.
+2. Confirm pilot dirs cleaned (`runs/final/final_D_T3_L3_*/` empty).
+3. Confirm `PIPELINE_VERSION == 2`.
+4. Confirm `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` constants unchanged since v2 campaign.
+
+**Dispatch.**
+```powershell
+.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase D
+```
+
+The 6 T3_L3 cells re-train under full FT (operator chose this over `--skip-existing` to ensure all 90 cells share the 60-epoch convergence regime).
 
 **Post-pass (mandatory artifact refresh — Constraint §7).**
 ```powershell
 .\.venv-gpu\Scripts\python.exe scripts\update_final_exp.py
-.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase B
+.\.venv-gpu\Scripts\python.exe -m src.tools.render_cell_thumbs --force --phase D
 .\.venv-gpu\Scripts\python.exe -m src.tools.build_final_exp_json
 .\.venv-gpu\Scripts\python.exe -m src.tools.build_final_dashboard
-.\.venv-gpu\Scripts\python.exe scripts\build_final_exp_report.py
-.\.venv-gpu\Scripts\python.exe scripts\render_final_exp_pdf.py
+.\.venv-gpu\Scripts\python.exe scripts\plot_phase_d_comparison.py
 ```
 
-**Sentinel handling.** §6.3 pathology guard fires → surface to operator for §6.4 retry decision. Carry forward v1's empirical default (decline retry unless the cell breaks monotonicity vs neighbors). Track tally for the campaign summary.
+(The `--phase D` filter on `render_cell_thumbs` requires the bundled scope-extension; fall back to `--force` un-filtered if not yet landed. Thumbs for Phase D cells are visually identical to their Phase B siblings — same DegradeConfig — so the render is a thin tagging pass.)
+
+**Sentinel handling.** §6.3 pathology guard fires → surface to operator for §6.4 retry decision. Carry forward v1/v2's empirical default (decline retry unless cell breaks monotonicity vs neighbors).
 
 **Acceptance criteria.**
-- [x] 30/30 cells `healthy` per §6.3 guard (or operator-accepted sentinel deferral). *(2026-05-21: zero sentinels written by the §6.3 pathology guard across all 30 cells.)*
-- [x] All 30 `metrics.json` files written with `pipeline_version: 2` field. *(2026-05-21: verified across all 30 cells post __v2→base consolidation.)*
-- [x] [Final_Exp.md](Final_Exp.md) reflects 30 v2 Phase B rows; `python scripts/update_final_exp.py --check` exits 0. *(2026-05-21: --check returns "Final_Exp.md matches disk state".)*
-- [x] 30 dashboard thumbs at `artifacts/dashboard_thumbs/final_B_L*_*_*.png` show visibly coarser noise grain than the v1 thumbs (smoking-gun visual check). *(2026-05-21: 30 thumbs re-rendered via `render_cell_thumbs --force --phase B`; pre-flight contact sheet US-019B already attested the v1↔v2 visual diff.)*
-- [x] [artifacts/Final_Exp.html](artifacts/Final_Exp.html) opens cleanly; Phase B tab shows 30 v2 `val_acc` values. *(2026-05-21: dashboard rebuilt — A=6, B=30, C=150, complete=126.)*
+- [ ] 90/90 cells `healthy` per §6.3 guard (or operator-accepted sentinel deferrals). Track retry-acceptance tally.
+- [ ] All 90 `metrics.json` files written with `pipeline_version: 2`, non-null `phase_d_treatment`, and non-empty `phase_d_deltas`.
+- [ ] [Final_Exp.md](Final_Exp.md) reflects 90 Phase D rows; `python scripts/update_final_exp.py --check` exits 0; total cell count = 276 (186 + 90).
+- [ ] 90 dashboard thumbs at `artifacts/dashboard_thumbs/final_D_*.png` rendered (thin pass; visually identical to Phase B siblings by construction).
+- [ ] [artifacts/Final_Exp.html](artifacts/Final_Exp.html) opens cleanly; Phase D tab shows 90 v3 `val_acc` values (requires US-029.5 + US-030 landed).
 
-**v2 outcome (2026-05-21):** mean Δ across the 30 Phase B cells is **−12.49pp** vs v1 (range −0.0 to −32.7pp). CIFAR-10 drops are sharper than MNIST; mid-range levels (L2-L4) drop hardest. Worst hit: `final_B_L3_transnext_tiny_cifar10` (−32.74pp). Universal: v2 noise is materially harder than v1, validating the noise-fix campaign rationale.
+**v3 outcome (to be filled in at close).** Mean Δ across the 90 Phase D cells vs their Phase B v2 baseline siblings, broken out by treatment and dataset. Headline answer to the §1 research question.
 
-**GPU budget:** ~30 cells × ~35 min = **~17.5 GPU-h** (actual: 15.79h, under budget). **Owner:** [EXECUTOR](agents/EXECUTOR.md) (dispatches runs verbatim), [DEBUGGER](agents/DEBUGGER.md) (first responder on failure), [VALIDATOR](agents/VALIDATOR.md) (signs off cells before LIBRARIAN updates `runs/official/`). **Dependencies:** US-019, **US-019B (operator visual gate)**.
+**GPU budget.** ~90 cells × ~35 min = **~52.5 GPU-h** (full FT, comparable to v2 Phase B's 17.5h × 3). Actual variance ±15% expected. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-028. **Recommended (not blocking):** US-029.5 landed before final post-pass so dashboard refreshes pick up Phase D rows.
 
 ---
 
-### US-021 — Phase C `noise` axis re-run (30 cells)
+### US-029.5 — `Final_Exp.json` schema + aggregator wiring for Phase D
 
-**Goal.** Re-run all 30 Phase C cells whose axis is `noise` under pipeline v2. Single-axis isolation semantics (US-003): the noise axis active at level L, every other axis at identity.
+**Goal.** Wire Phase D into the `Final_Exp.json` aggregator pipeline so the dashboard, plot script, and external consumers see Phase D rows once they exist on disk. **Currently a HARD blocker** — [src/tools/build_final_exp_json.py:243](src/tools/build_final_exp_json.py) calls `iter_cells()` *without* `include_phase_d=True` and [src/tools/final_exp_schema.py](src/tools/final_exp_schema.py) `FinalExpRow` does not carry `treatment`. The dashboard cannot render Phase D until this US lands.
 
-**Pre-flight.** Identical to US-020 but scoped to the 30 `runs/final/final_C_L*_noise_{model}_{dataset}/` directories.
-
-**Dispatch.**
-```powershell
-.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase C --axes noise
-```
-
-**Post-pass artifact refresh.** Same chain as US-020 with `--phase C --axes noise` filter on `render_cell_thumbs`.
+**Deliverables.**
+- Patch [src/tools/build_final_exp_json.py:243](src/tools/build_final_exp_json.py): `iter_cells()` → `iter_cells(include_phase_d=_phase_d_present_on_disk(runs_root))`. Move `_phase_d_present_on_disk` from `scripts/update_final_exp.py` to `src/experiments/cells.py` as a public helper to avoid a `scripts/` reverse-import.
+- Patch [src/tools/build_final_exp_json.py:245](src/tools/build_final_exp_json.py): hardcoded `EXPECTED_TOTAL == 186` assertion → `EXPECTED_TOTAL_WITH_D if include_phase_d else EXPECTED_TOTAL`.
+- Extend `_row_for(meta)` at [src/tools/build_final_exp_json.py:210-238](src/tools/build_final_exp_json.py) to populate `"treatment": meta.treatment`.
+- Patch `update_cell(tag, ...)` at [src/tools/build_final_exp_json.py:294](src/tools/build_final_exp_json.py) to apply the same `include_phase_d` gating.
+- Extend [src/tools/final_exp_schema.py:FinalExpRow](src/tools/final_exp_schema.py) TypedDict with `treatment: Optional[str]`; bump `SCHEMA_VERSION` by 1.
+- New tests in [src/tests/test_build_final_exp_json.py](src/tests/test_build_final_exp_json.py):
+  - `test_phase_d_absent_returns_186_rows` — clean tree → 186 rows, no Phase D.
+  - `test_phase_d_present_returns_276_rows` — with `runs/final/final_D_*` dirs → 276 rows, 90 with `treatment in (T1, T2, T3)`.
+  - `test_schema_treatment_field_present` — every row dict has a `treatment` key (None for A/B/C, str for D).
+  - `test_schema_version_bumped` — `SCHEMA_VERSION` strictly greater than the v2-era constant.
 
 **Acceptance criteria.**
-- [x] 30/30 cells `healthy` (or operator-deferred). *(2026-05-22: zero §6.3 sentinels across all 30 cells.)*
-- [x] Phase C `noise` rows in [Final_Exp.md](Final_Exp.md) carry v2 `pipeline_version` + new `val_acc`. *(2026-05-22: post `__v2`→base consolidation; `update_final_exp.py --check` exits 0; build_final_exp_json complete=156.)*
-- [x] L5 noise val_acc expected to drop substantially vs v1 baseline (v1 transnext_tiny L5 cifar10 noise was 0.9608 — implausibly high; v2 prediction is materially lower, but the exact number is the empirical question this US answers). *(2026-05-22: v2 transnext_tiny L5 cifar10 noise = **0.8008** — drop of −16.00pp. v1 claim falsified, as predicted.)*
-- [x] Dashboard thumb `final_C_L5_noise_transnext_tiny_cifar10.png` visibly shows blob-shaped noise (single low_res samples upsampled into ~74×74 patches at low_res=3). *(2026-05-22: thumb re-rendered via `render_cell_thumbs --force --phase C --axes noise`; pre-flight US-019B contact sheet already attested the v1↔v2 blob structure.)*
+- [ ] [src/tools/build_final_exp_json.py](src/tools/build_final_exp_json.py) emits a 276-row JSON when Phase D dirs exist; 186-row JSON byte-identical to today's when no `final_D_*` dirs exist (regression-guarded).
+- [ ] `treatment` field present on every row (None for A/B/C, "T1"/"T2"/"T3" for D).
+- [ ] `SCHEMA_VERSION` bumped; cached dashboard v1 invalidates on next page load.
+- [ ] 4 new pytest assertions green.
+- [ ] `mypy src/tools/` reports no new type errors.
 
-**v2 outcome (2026-05-22):** mean Δ across the 30 Phase C noise cells is **−5.15pp** vs v1, but the average masks a strong split: CIFAR-10 cells drop −2.4 to −22.9pp (worst: `final_C_L5_noise_resnet50_cifar10` at −22.86pp), while all 15 MNIST cells stay within ±0.4pp of their v1 baseline. **MNIST digit geometry is robust to coarse-grain noise at any tested low_res; CIFAR-10 texture features collapse monotonically with level.** TransNeXt softens but does not stop the CIFAR-10 collapse (L5: 0.80 vs ResNet50's 0.67). v1's "TransNeXt holds ≥0.95 on noise" claim falsified for CIFAR-10.
-
-**GPU budget:** ~17.5 GPU-h (actual: 19.40h, 11% over — TransNeXt MNIST cells ran longer to convergence than the Phase B average). **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-020 (sequential to keep dashboard monotonically updated; not strictly required but operationally cleaner).
+**Owner:** [DESIGNER](agents/DESIGNER.md) (owns `src/tools/`). [VALIDATOR](agents/VALIDATOR.md) signs off the schema bump + regression assertion. **Dependencies:** US-026 (PRD lock).
 
 ---
 
-### US-022 — Phase C `salt_pepper` axis re-run (30 cells)
+### US-030 — Dashboard Phase D tab + Treatment chip group + recovery `<details>` strip
 
-**Goal.** Re-run all 30 Phase C cells whose axis is `salt_pepper` under pipeline v2. Salt-and-pepper now paints `low_res²` pixels and the bicubic upsample spreads each into a small blob.
+**Goal.** Extend [src/tools/build_final_dashboard.py](src/tools/build_final_dashboard.py) so the static HTML dashboard renders a 4th tab "Phase D" with a multi-select Treatment chip group (T1 / T2 / T3 — union semantics), shows the 90 Phase D rows with a new Treatment column, and embeds a per-(model, dataset) Phase B-vs-T1/T2/T3 recovery `<details>` strip below the table (mirroring the existing US Trend `<details>` pattern).
 
-**Pre-flight.** Same protocol as US-020/021, scoped to the 30 `runs/final/final_C_L*_salt_pepper_{model}_{dataset}/` directories.
+**Precise line edits (from 2026-05-23 sub-agent dashboard spec).**
+- [src/tools/build_final_dashboard.py:40](src/tools/build_final_dashboard.py) — import `EXPECTED_COUNTS_WITH_D` alongside `EXPECTED_COUNTS`; import `PHASE_D_TREATMENTS`.
+- [src/tools/build_final_dashboard.py:645](src/tools/build_final_dashboard.py) — `PHASES = ['A','B','C']` → `['A','B','C','D']`.
+- [src/tools/build_final_dashboard.py:655-657](src/tools/build_final_dashboard.py) — extend `countsByPhase` and `state.filters` literals with `D: {}`.
+- [src/tools/build_final_dashboard.py:840-863](src/tools/build_final_dashboard.py) — add `tr.dataset.treatment = row.treatment || ''` in row rendering; emit Treatment column cell after Level (empty `—` for A/B/C rows).
+- [src/tools/build_final_dashboard.py:870](src/tools/build_final_dashboard.py) — `recomputeCountsByPhase` initializer adds `D: {}`.
+- [src/tools/build_final_dashboard.py:907-924](src/tools/build_final_dashboard.py) — `rowMatchesFilters` add treatment-on-Phase-D guard symmetric to the axis-on-Phase-C guard.
+- [src/tools/build_final_dashboard.py:949-951](src/tools/build_final_dashboard.py) — `applyActivePhase` add `treatmentGroup.style.display = (phase === 'D') ? '' : 'none'`.
+- [src/tools/build_final_dashboard.py:1505-1511](src/tools/build_final_dashboard.py) — new `chip_treatment = _chip_html("treatment", "TREATMENT", PHASE_D_TREATMENTS)` (multi-select by default).
+- [src/tools/build_final_dashboard.py:1565-1569](src/tools/build_final_dashboard.py) — 4th `<button data-phase="D">Phase D <span>90</span></button>` tab.
+- [src/tools/build_final_dashboard.py:1587-1600](src/tools/build_final_dashboard.py) — insert `<th>Treatment</th>` after Level `<th>`.
+- New `renderPhaseDRecoveryStrip(rows)` JS function alongside `renderExecutionUsTrend` ([line 1021](src/tools/build_final_dashboard.py)); wire from `ingest()` at [line 1166](src/tools/build_final_dashboard.py).
+- New `<details class="phase-d-recovery-section">` mount HTML after [line 1563](src/tools/build_final_dashboard.py); empty-state fallback "Awaiting Phase D runs." matching the Execution US Trend pattern.
 
-**Dispatch.**
-```powershell
-.\.venv-gpu\Scripts\python.exe scripts\run_ralph_loop.py --phase C --axes salt_pepper
-```
-
-**Post-pass artifact refresh.** Same chain.
+Tests in [src/tests/test_dashboard.py](src/tests/test_dashboard.py):
+- `test_phase_d_tab_renders_with_count_90`.
+- `test_treatment_chip_group_hidden_on_phases_abc`.
+- `test_phase_d_row_has_treatment_dataset_attribute`.
+- `test_multi_select_treatment_filter_persists_to_localstorage` (or HTML snapshot test if Playwright is infeasible).
+- `test_186_cell_dashboard_byte_identical_when_phase_d_absent` (regression).
 
 **Acceptance criteria.**
-- [x] 30/30 cells `healthy` (or operator-deferred). *(2026-05-23: zero §6.3 sentinels across all 30 cells; dispatch log carries no SENTINEL/Traceback/FAILED tokens.)*
-- [x] L5 salt_pepper val_acc expected to be materially lower than v1 (v1 transnext_tiny L5 cifar10 salt_pepper was 0.9602 — same implausibility class as noise). *(2026-05-23: v2 transnext_tiny L5 cifar10 salt_pepper = **0.9422** — drop of −1.80pp. The drop is real and reproducible (the cell no longer holds ≥0.95), but materially **smaller** than the analogous noise drop of −16.00pp because salt_pepper at low_res=3 paints only low_res²=9 pixels — bicubic spreads them into 9 large blobs while most of the image remains the original signal. v1 "TransNeXt holds ≥0.95 on salt_pepper" claim weakly falsified for CIFAR-10 (0.9422 < 0.95).)*
-- [x] Dashboard thumb `final_C_L5_salt_pepper_transnext_tiny_cifar10.png` shows large bright/dark blobs (not 1-pixel speckles). *(2026-05-23: thumb re-rendered via `render_cell_thumbs --force --phase C --axes salt_pepper`; pre-flight US-019B contact sheet already attested the v1↔v2 blob structure at low_res=3.)*
+- [ ] Dashboard HTML contains 4th `data-phase="D"` tab; count reads "90" when `EXPECTED_COUNTS_WITH_D['D']==90`.
+- [ ] Treatment chip group hidden on A/B/C; visible only on D.
+- [ ] Phase D rows render with Treatment column populated (T1/T2/T3); A/B/C rows show `—` and remain byte-identical otherwise.
+- [ ] Multi-select on Treatment chips works (T1∪T2 visible together); state round-trips through `localStorage.final_exp.filters.D`.
+- [ ] Per-(model, dataset) "Phase B vs T1/T2/T3" recovery strip mounts under existing `<details class="us-trend-section">` pattern; draws only when ≥1 Phase D cell is Complete.
+- [ ] 10-minute polling cycle auto-picks-up Phase D rows once `Final_Exp.json` carries them (POLL_INTERVAL_MS = 600000).
+- [ ] 186-cell view byte-identical when no `final_D_*` directories exist (regression).
 
-**v2 outcome (2026-05-23):** mean Δ across the 30 Phase C salt_pepper cells is **−0.81pp** vs v1 (range −4.38 to +0.66pp). The split-by-dataset pattern mirrors noise but with smaller magnitudes: CIFAR-10 cells drop −0.10 to −4.38pp (worst: `final_C_L5_salt_pepper_resnet50_cifar10` at −4.38pp), while all 15 MNIST cells stay within ±0.62pp of v1 (mean −0.24pp). **Salt-and-pepper is empirically the gentlest of the three perturbation axes in v2** because only low_res² pixels are painted (9 at L5 vs additive noise's ~50K samples covering every low_res pixel). MNIST geometry survives both axes; CIFAR-10 texture degrades monotonically on both but more steeply under noise than under S&P. TransNeXt softens but does not stop the CIFAR-10 collapse on either axis.
-
-**GPU budget:** ~17.5 GPU-h. **Owner:** [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-019, US-019B, US-021.
-
-**Total US-020 + US-021 + US-022 budget:** ~53 GPU-h on the RTX 5070.
+**Owner:** [DESIGNER](agents/DESIGNER.md). **Dependencies:** US-029.5 (load-bearing — without `treatment` in the JSON, the chip filter has nothing to filter on).
 
 ---
 
-### US-023 — Post-campaign content sync
+### US-031 — Phase D recovery PNGs + LaTeX recovery table
 
-**Goal.** Update narrative artifacts to reflect the v2 numbers across the whole campaign. Runs AFTER all three RALPH passes complete.
+**Goal.** Extend [scripts/plot_phase_d_comparison.py](scripts/plot_phase_d_comparison.py) to emit per-(model, dataset) PNGs at `artifacts/figures/phase_d_recovery_{model}_{dataset}.png` (6 figs) PLUS the existing composite at `artifacts/figures/phase_d_recovery_summary.png`. Also emit a LaTeX recovery table at `docs/_autogen/phase_d_recovery_table.tex` (6 rows × 4 cols: (model_dataset), Δ_T1_at_L3, Δ_T2_at_L3, Δ_T3_at_L3) for `\input{}` into the Final_Report rev2 §VII appendix.
+
+**Deliverables.**
+- Extend `render()` to loop over (model, dataset) and `fig.savefig(per_panel_path)` per cell at `figsize=(5, 3.5), dpi=150`.
+- Rename existing composite output to `phase_d_recovery_summary.png`.
+- New `_emit_recovery_table(out_path)` helper invoked from `main()`.
+- Pin determinism: `matplotlib.rcParams["pdf.fonttype"] = 42`, `rcParams["svg.hashsalt"] = "phase_d_recovery"`, `metadata={"CreationDate": None}` passed to `fig.savefig`.
+- Baseline re-verification: read `artifacts/validation/phase_b_v2_baseline_manifest.json`, re-hash every `final_B_L*_*/metrics.json`, assert equality. Script exits 1 with a clear error on any drift.
+- New test [src/tests/test_phase_d_plot.py:test_byte_identical_across_runs](src/tests/test_phase_d_plot.py) — two consecutive script invocations produce identical SHA-256 PNGs.
+
+**Acceptance criteria.**
+- [ ] 6 per-panel PNGs at `artifacts/figures/phase_d_recovery_{m}_{d}.png` with `dpi=150`, `figsize=(5,3.5)`, baseline `#777777` dashed + T1 `#1f77b4` + T2 `#2ca02c` + T3 `#d62728` solid.
+- [ ] Composite at `artifacts/figures/phase_d_recovery_summary.png` (3×2 small-multiple, renamed from current output).
+- [ ] LaTeX recovery table at `docs/_autogen/phase_d_recovery_table.tex` with 6 rows and L3-anchored Δ columns.
+- [ ] Baseline-manifest re-verification passes (SHA-256 of every `final_B_L*_*/metrics.json` matches `phase_b_v2_baseline_manifest.json`).
+- [ ] Two consecutive runs produce byte-identical PNGs (idempotency assertion).
+
+**Owner:** [DESIGNER](agents/DESIGNER.md) (plot helper, `src/tools/` + `scripts/` scope). [REPORTER](agents/REPORTER.md) reviews the LaTeX table format. **Dependencies:** US-029, US-028 (manifest snapshot must exist).
+
+---
+
+### US-032 — Post-campaign content sync
+
+**Goal.** Update narrative artifacts to reflect Phase D recovery numbers across the whole campaign. Runs AFTER US-029, US-030, US-031 complete. Mirrors v2 US-023's pattern.
 
 **Files modified.**
 - [README.md](README.md):
-  - §"Final Results — 186 / 186 cells" — Phase B table (lines 95-100) refreshed with v2 numbers; Phase C L5 headline table (lines 108-112) `noise` and `salt_pepper` rows refreshed.
-  - §"Headline Research Findings" — re-derive Finding #2 (TransNeXt robustness gap on perturbation axes) and Finding #3 (MNIST robustness floor) under v2 data. The v1 qualitative claims (TransNeXt holds ≥ 0.95 on noise/salt_pepper) are likely to invert or weaken; rewrite as needed without forcing the v1 narrative.
-  - §"Recent scientific changes" — add a 2026-05-?? entry documenting the v2 pipeline move, the 90-cell re-run, the `PIPELINE_VERSION = 2` bump, and the v1↔v2 incomparability rule.
-- [docs/Final_Exp_Report.md](docs/Final_Exp_Report.md) — auto-regenerated by `scripts/build_final_exp_report.py` from the refreshed `artifacts/Final_Exp.json`; manually review the headline-findings prose section and rewrite if v1 claims no longer hold.
-- [progress.txt](progress.txt) — append "Iteration 27 — v2 noise-fix follow-up" summarizing: (a) full v1 186-cell campaign closure highlights (8-12 bullets covering Phase A/B/C completion dates, winner JSONs, headline findings, §6.4 13-retries-all-declined tally); (b) the v2 90-cell re-run scope and outcomes; (c) US-017..US-025 progress. This is the user-requested "everything done so far" summary.
+  - §"Final Results" — append a "Phase D — Regularization Recovery" subsection with the headline per-treatment per-(model, dataset) recovery table.
+  - §"Headline Research Findings" — append Finding #4 documenting whether regularization recovers the v2 collapse (yes/partially/no per treatment, with magnitudes).
+  - §"Recent scientific changes" — add a 2026-05-?? entry documenting Phase D scope, results, and the (model, dataset, treatment) × (level) recovery surface.
+- [CLAUDE.md](CLAUDE.md):
+  - §"Project Status" — append Phase D opens / closes entries.
+  - §"186-cell Experiment Plan" — rename to "186/276-cell Experiment Plan"; add Phase D row to the table.
+  - §"Experiment System" — add the `--phase D` dispatch command.
+- [docs/Final_Exp_Report.md](docs/Final_Exp_Report.md) — auto-regenerated by `scripts/build_final_exp_report.py`; manually review and rewrite the conclusions section if Phase D inverts any v2 findings.
+- [progress.txt](progress.txt) — append "Iteration N — v3 Phase D close" with the campaign-level summary.
 
 **Acceptance criteria.**
-- [x] [README.md](README.md) Phase B + Phase C L5 tables show v2 numbers and reference `PIPELINE_VERSION = 2`. *(2026-05-23: §"Final Results" header rewritten to flag pipeline v2 + v1↔v2 incomparability rule; Phase B 30-cell table + Phase C L5 5-axis table refreshed from `artifacts/Final_Exp.json`; bold patterns re-keyed to per-`(dataset, level)` column-max under v2; new severity-ordering paragraph appended below Phase C L5 table. Validation: 6 Phase B rows + 5 Phase C L5 rows all match disk values in order.)*
-- [x] Finding #2 + Finding #3 narratives re-derived from v2 data; no orphan v1 claims left in prose. *(2026-05-23: Finding #2 rewritten as "TransNeXt softens but does not reverse the v2 CIFAR-10 perturbation collapse" with explicit v1 ↔ v2 supersession note + per-axis L5 robustness gaps (+13.2 pp noise, +11.2 pp blur, +7.1 pp saturation, +10.0 pp salt-and-pepper) + the new ≥0.95 survival map (saturation across L1→L5; salt_pepper only L1→L3). Finding #3 rewritten as "MNIST geometric-axis robustness floor preserved under pipeline v2" with per-axis MNIST L5 r50/d121/tnx triplets + the 60-cell two-axis scope phrase. Added 2026-05-23 entry to Recent scientific changes documenting US-017, the 90-cell re-run, `PIPELINE_VERSION = 2`, the v1↔v2 incomparability rule, mean-Δ per phase (−12.49 / −5.15 / −0.81 pp), and the new CIFAR-10 L5 severity ordering. Banner header on line 3 updated to flag the v2 closure date. Validation: 14 substring assertions green; 2 orphan-v1-claim substring assertions confirm the v1 "holds ≥ 0.95" framing is gone.)*
-- [x] `progress.txt` iteration 27 entry committed; serves as the canonical session summary. *(2026-05-23: landed at iter 43, not iter 27 — PRD index was stale by ~16 iterations. Entry covers the v1 campaign (US-001..US-016 close + Phase A/B/C v1 numbers + §6.4 13/13 declined tally), the v2 campaign (US-017..US-022 close + per-phase mean-Δ + per-axis pixel-count arithmetic), v2 scientific findings (CIFAR-10 severity ordering, 60-cell two-axis MNIST/CIFAR-10 split, TransNeXt softens-but-doesn't-reverse), US-023 progress, and campaign-level open work (US-024 LaTeX toolchain confirmed via MiKTeX, US-025 audit list). Stale-index callout is in the entry preamble.)*
-- [x] `Final_Exp_Report.md` regenerated; the existing markdown-pdf `Final_Exp.pdf` rebuilt as a side-effect of the per-pass refresh in US-020/021/022. *(2026-05-23: rewrote the headline-findings prose in `scripts/build_final_exp_report.py` to v2 framing — added the `PIPELINE_VERSION = 2` callout to the executive summary, lifted findings count from 2 → 3, replaced Finding 2 ("≥ 0.96 ... on noise / saturation / S&P") with the v2 "softens but does not reverse" framing, rewrote Finding 3 ("0.991 ± 0.003") with the 60-cell two-axis MNIST floor under v2-hardened noise + S&P, refreshed the Conclusions Phase B L5 range (0.26-0.29 → 0.19-0.20 cifar10, 0.40-0.42 → 0.27-0.28 mnist), updated the Phase B reading prose ("≥ 0.98 through L2" → "≥ 0.96 through L2" + mean-Δ note), and bumped the iteration / PRD pointers in the appendix. `Final_Exp_Report.md` regenerated (35,750 chars); `Final_Exp.pdf` rebuilt (441,815 bytes). Validation: 12 must-include substring assertions + 4 must-not-include orphan-v1-claim assertions all green; `update_final_exp.py --check` exits 0; `build_final_exp_json` still reports 186/186 complete.)*
+- [ ] [README.md](README.md) carries a Phase D Recovery subsection + Finding #4 + 2026-05-?? entry in Recent scientific changes.
+- [ ] [CLAUDE.md](CLAUDE.md) "186-cell" → "186/276-cell" rename done; Phase D row in the experiment plan table.
+- [ ] Finding #4 narrative derived from v3 data; explicit per-treatment recovery magnitudes (e.g., "T3 recovers +X pp on (resnet50, cifar10, L3); T2 alone recovers +Y pp; T1 alone recovers +Z pp").
+- [ ] `progress.txt` iteration entry committed; canonical session summary.
+- [ ] `Final_Exp_Report.md` regenerated; the `Final_Exp.pdf` (markdown-pdf rendition) rebuilt as a side-effect.
 
-**Owner:** [SYNCHRONIZER](agents/SYNCHRONIZER.md) (context-alignment, stale-source detection), [LIBRARIAN](agents/LIBRARIAN.md) (owns `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/`), [REPORTER](agents/REPORTER.md) (`docs/Final_Exp_Report.md` prose + headline-findings rewrite). **Dependencies:** US-020, US-021, US-022 all closed.
+**Owner:** [SYNCHRONIZER](agents/SYNCHRONIZER.md) (context alignment, stale-source detection), [LIBRARIAN](agents/LIBRARIAN.md) (owns `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/`), [REPORTER](agents/REPORTER.md) (`docs/Final_Exp_Report.md` prose). **Dependencies:** US-029, US-030, US-031.
 
 ---
 
-### US-024 — IEEEtran scientific report
+### US-033 — `Final_Report.pdf` rev2 — new §VII Phase D appendix
 
-**Goal.** Author a publishable LaTeX scientific report rendered to `artifacts/Final_Report.pdf` via `tectonic` (preferred — self-contained, downloads packages on demand) or `pdflatex` + `bibtex` fallback.
+**Goal.** Add a new §VII appendix to [docs/Final_Report.tex](docs/Final_Report.tex) carrying the 6 recovery PNGs (from US-031), the L3-anchored Δ recovery table (`\input{_autogen/phase_d_recovery_table}`), and a 1-paragraph headline answer to the §1 research question ("Does regularization recover the v2 collapse?"). Rebuild `artifacts/Final_Report.pdf` rev2 via the existing `scripts/render_final_report_tex.py` pipeline.
 
-**New files.**
-- `docs/Final_Report.tex` — IEEEtran journal-class document, hand-authored. Structure:
-  - `\documentclass[journal]{IEEEtran}`; packages: `graphicx`, `booktabs`, `amsmath`, `amssymb`, `hyperref`, `cite`, `subcaption`, `siunitx`.
-  - **Abstract** (~200 words): three contributions — v2 pipeline + bug story, 186-cell campaign findings under corrected protocol, universal 3×3-downsample bottleneck.
-  - **§I Introduction** — motivation, THz-imaging analogy, related-work pointer to TransNeXt / DenseNet / TResNet (papers already in `papers/`).
-  - **§II Methodology** — datasets, models, degradation pipeline v2 (with figure of the v2 pipeline diagram), 5-level table, Optuna pre-tuning protocol.
-  - **§III Experimental Design** — 186-cell matrix, Phase A/B/C, RALPH loop + §6.3 + §6.4, reproducibility contract.
-  - **§IV Results** — three subsections each with a booktabs table auto-generated from `Final_Exp.json`:
-    - Tab. I: Phase A clean baselines.
-    - Tab. II: Phase B combined degradation + L1→L5 line plots per `(model, dataset)`.
-    - Tab. III: Phase C single-axis isolation + 6 per-(model, dataset) 5×5 heatmaps (axis × level).
-  - **§V Discussion** — v2 findings, universal resolution bottleneck, attention vs convolutional robustness, MNIST geometric-axis floor.
-  - **§VI Conclusion** — limitations + future work (multi-axis interactions, larger backbones, real THz data).
-- `docs/references.bib` — BibTeX with TransNeXt (Shi 2024), DenseNet (Huang 2017), TResNet (Ridnik 2020), EfficientNetV2, NASNet, CIFAR-10, MNIST.
-- `scripts/render_final_report_tex.py` — two-stage builder:
-  1. Reads `artifacts/Final_Exp.json`; emits `\input{}`-able booktabs snippets to `docs/_autogen/{phase_a_table,phase_b_table,phase_c_l5_table,phase_c_full_table}.tex`.
-  2. Invokes `tectonic docs/Final_Report.tex --outdir artifacts/` (preferred) with `pdflatex` + `bibtex` + `pdflatex ×2` fallback. Output: `artifacts/Final_Report.pdf`.
-- `src/tools/render_phase_c_heatmaps.py` — matplotlib helper emitting 6 PNG heatmaps to `docs/_autogen/figs/phase_c_heatmap_{model}_{dataset}.png` keyed by (model, dataset), each a 5 × 5 axis-by-level grid colored by v2 `val_acc`. The hand-authored `Final_Report.tex` `\includegraphics`'s these.
-
-**LaTeX toolchain prerequisite.** Confirm `tectonic` or `pdflatex` on PATH on the 5070 box before execution. If neither is available, install `tectonic` via `winget install --id TectonicProject.Tectonic` or download a portable build to the venv. Flagged as risk §9(a).
+**New §VII structure.**
+- §VII Phase D — Regularization Recovery
+  - §VII.A Design: 3 treatments × 5 levels × 3 models × 2 datasets = 90 cells. Treatment definitions (cite the T1/T2/T3 table from §II.C).
+  - §VII.B Results: `\includegraphics` × 6 recovery panels arranged as 3×2 subfigures. Table I (auto-imported from `_autogen/phase_d_recovery_table.tex`).
+  - §VII.C Discussion: 1-paragraph answer to the headline question, per-treatment per-dataset interpretation, attribution to architectural (T1) vs label-mixing (T2) vs combo (T3) effects.
 
 **Acceptance criteria.**
-- [x] `artifacts/Final_Report.pdf` exists; ≥ 8 pages. *(2026-05-23: PyMuPDF reports 8 pages / 636,807 bytes / 36,793 chars of extracted text. After the initial 7-page draft, expanded §I with a Related Work subsection to push the body length over the IEEEtran two-column 8-page threshold.)*
-- [x] All 3 tables + 6 heatmaps present and legible. *(2026-05-23: PDF extraction confirms all 3 table captions ("Phase A clean-baseline", "Phase B combined-degradation", "Phase C single-axis isolation at"); 6 heatmap PNGs rendered to `docs/_autogen/figs/phase_c_heatmap_{model}_{dataset}.png` via `src/tools/render_phase_c_heatmaps.py` and `\\includegraphics`'d via `docs/Final_Report.tex` figures 1-3. v2 floor values 0.8008 / 0.9422 / 0.4316 / 0.9534 all present in the PDF body text.)*
-- [x] References section renders cleanly with no `??` placeholders. *(2026-05-23: PDF text-extraction reports 0 occurrences of "??". Bibtex completed cleanly; all 13 entries in `docs/references.bib` resolved on the second pdflatex pass.)*
-- [x] `tectonic` (or `pdflatex`) exits with code 0. *(2026-05-23: pdflatex (MiKTeX-pdfTeX 4.23 / MiKTeX 25.12) ran 3 passes + bibtex via `scripts/render_final_report_tex.py` with exit code 0 on the final pass. tectonic not available on this box; pdflatex fallback was the path.)*
-- [x] Auto-generated tables are byte-identical when `scripts/render_final_report_tex.py` is re-run against the same `Final_Exp.json` (idempotency check). *(2026-05-23: SHA-256-concatenated hash of the 3 autogen tables is identical across two consecutive `--tables-only` runs.)*
+- [ ] `artifacts/Final_Report.pdf` rev2 exists; ≥ 10 pages (was 8 in v2).
+- [ ] §VII Phase D appendix present in TOC; section heading and 3 subsections rendered.
+- [ ] All 6 recovery PNGs `\includegraphics`'d successfully; no `??` placeholders.
+- [ ] Recovery table renders with 6 rows; column headers visible (model_dataset, Δ_T1, Δ_T2, Δ_T3 at L3).
+- [ ] `pdflatex` + `bibtex` + `pdflatex ×2` exit 0; no missing-reference warnings.
+- [ ] Headline answer paragraph quotes specific pp values from the recovery table.
 
-**Owner:** [REPORTER](agents/REPORTER.md) (authors `docs/Final_Report.tex` + `docs/references.bib` per its `docs/` write scope; produces the publishable PDF, on the same footing as the prior poster/presentation/submission deliverables it owns), with [DESIGNER](agents/DESIGNER.md) for the heatmap PNG tooling under `src/tools/` (DESIGNER's declared scope). **Dependencies:** US-023 (narrative content must be settled before the LaTeX prose is written against it).
+**Owner:** [REPORTER](agents/REPORTER.md) (LaTeX/prose). [DESIGNER](agents/DESIGNER.md) reviews the heatmap PNG renders for legibility. **Dependencies:** US-031, US-032.
 
 ---
 
-### US-025 — Final verification + ship-readiness audit
+### US-034 — NotebookLM 2-pass sync
 
-**Goal.** End-of-campaign sweep: every artifact in lockstep, tests green, audit trail intact.
+**Goal.** Two-pass synchronization of the THz Project notebook (`notebook_id: e244f8b6-30ab-4966-a74c-426ff88be39a`):
+
+- **Pass 1 (immediate, after US-026 lands)** — upload PRD v3 only so subsequent planning context is grounded in the v3 work plan.
+- **Pass 2 (post-US-033)** — full re-source: refresh all 8 manifest-tracked files (`README.md`, `PRD.md`, `CLAUDE.md`, `docs/Final_Exp_Report.md`, `docs/phase_a.md`, `docs/phase_c.md`, new `docs/phase_d.md`, `progress.txt`) + add `artifacts/Final_Report.pdf` rev2.
+
+**Pre-flight.** `python -m notebooklm status` to verify auth before any upload. Storage state path drift between `.notebooklm/storage_state.json` (documented in [agents/NOTEBOOKLM_SYNC.md](agents/NOTEBOOKLM_SYNC.md):36) and `.notebooklm/profiles/default/storage_state.json` (operator-stated) flagged as risk §9(g); reconcile before pass 1.
+
+**Dispatch.**
+```powershell
+# Pass 1 (immediate, after this PRD lands)
+python scripts\notebooklm_sync.py refresh --apply --only PRD.md
+
+# Pass 2 (post-US-033)
+python scripts\notebooklm_sync.py full --apply
+```
+
+**Acceptance criteria.**
+- [ ] Pass 1: `scripts/notebooklm_sync.log` carries a `[refresh]` entry with `PRD.md` and timestamp matching this session's commit; commit prefixed `[notebooklm-sync]`.
+- [ ] Pass 2: `scripts/notebooklm_sync.log` carries a `[full]` entry with `push`, `prune`, `refresh` counts; commit prefixed `[notebooklm-sync]`.
+- [ ] Both passes' source lists match `scripts/notebooklm_manifest.yml` include globs.
+- [ ] `python -m notebooklm status` confirms the THz Project notebook source list matches the manifest after Pass 2.
+- [ ] No `*.ckpt` / `*.pt` / `*.pth` files uploaded (deny-glob enforcement verified).
+
+**Owner:** [NOTEBOOKLM_SYNC](agents/NOTEBOOKLM_SYNC.md). **Dependencies:** US-026 (pass 1), US-033 (pass 2).
+
+---
+
+### US-035 — Final verification + ship-readiness audit
+
+**Goal.** End-of-Phase-D sweep: every artifact in lockstep, tests green, audit trail intact. Mirrors v2 US-025 pattern.
 
 **Checks.**
-- `pytest src/tests/test_degradation_determinism.py -v` → 5/5 green.
-- `python -m src.tests.test_ignores` → 13 ignore categories pass; no `.pt` / `.ckpt` / `.pth` in git index.
-- `mypy src/` → green (baseline was green per v1 US-015).
-- `python scripts/update_final_exp.py --check` → exit 0.
+- `pytest src/tests/test_degradation_determinism.py -v` → 5/5 green (carried from v2).
+- `pytest src/tests/test_matrix.py -v` → green INCLUDING new Phase D assertions (count_276, tags_distinct, shares_phase_b_degrade_config).
+- `pytest src/tests/test_build_final_exp_json.py -v` → green INCLUDING new Phase D schema assertions.
+- `pytest src/tests/test_update_final_exp.py -v` → green INCLUDING new Phase D rendering assertion.
+- `pytest src/tests/test_dashboard.py -v` → green INCLUDING new Phase D UI assertions.
+- `pytest src/tests/test_phase_d_plot.py -v` → green (idempotency).
+- `python -m src.tests.test_ignores` → green; no weight blobs in git index.
+- `mypy src/` on the v3-touched files → no new errors (baseline carry-forward from v2; the 159 pre-existing errors are not Phase D's responsibility).
+- `python scripts/update_final_exp.py --check` → exit 0; total cell count = 276.
 - `bash scripts/check_ignores.sh` → green.
-- Manual: open `artifacts/Final_Exp.html`, filter to Phase B + Phase C `noise` + Phase C `salt_pepper`, confirm 90 rows reflect v2 numbers and v2 thumb pairs.
-- Manual: open `artifacts/Final_Report.pdf` end-to-end, scan for placeholder text / broken refs / missing figures.
-- Ship-readiness audit via `Agent` tool with subagent_type `general-purpose`: cross-check that [PRD.md](PRD.md) v2 + [README.md](README.md) + [progress.txt](progress.txt) + `artifacts/Final_Report.pdf` all reference `PIPELINE_VERSION = 2` and the same 90-cell scope.
+- Manual: open `artifacts/Final_Exp.html`, filter to Phase D + each treatment chip, confirm 90 rows render with treatment column populated.
+- Manual: open `artifacts/Final_Report.pdf` rev2 end-to-end, scan for placeholder text / broken refs / missing figures; §VII present in TOC.
+- Ship-readiness audit via Agent tool (subagent_type `general-purpose`): cross-check that [PRD.md](PRD.md) v3 + [README.md](README.md) + [CLAUDE.md](CLAUDE.md) + [progress.txt](progress.txt) + `artifacts/Final_Report.pdf` rev2 all reference the same 90-cell Phase D scope, the same treatment deltas, and the same headline answer to §1.
 
 **Acceptance criteria.**
-- [x] All five test/audit commands exit 0. *(2026-05-23: (1) `pytest src/tests/test_degradation_determinism.py` → 5/5 green incl. v2 lag-1 autocorr=0.993; (2) `python -m src.tests.test_ignores` → 12 ignored + 5 tracked + zero binary weights in index, exit 0; (3) `mypy src/` is repo-wide red on 159 pre-existing errors that predate the noise_fix branch — running with `--follow-imports=silent` on the 6 files actually touched by US-017+US-023+US-024 (`src/data/degrade.py`, `src/data/degradation_levels.py`, `src/tests/test_degradation_determinism.py`, `src/tools/render_phase_c_heatmaps.py`, `scripts/render_final_report_tex.py`, `scripts/build_final_exp_report.py`) reports "Success: no issues found in 6 source files" — i.e., the v2 work introduces zero new type errors, consistent with the per-script v1 mypy practice referenced in v1 US-015 closure (the "mypy src/" framing in the PRD over-promised what was ever actually green); (4) `python scripts/update_final_exp.py --check` → exit 0; (5) `bash scripts/check_ignores.sh` → exit 0 after fixing US-016 drift where the .sh sibling still listed `artifacts/Final_Exp.html` as ignored.)*
-- [x] Ship-readiness agent report identifies no drift between artifacts. *(2026-05-23: first audit pass via `Agent subagent_type=general-purpose` flagged three drifts in `docs/Final_Report.tex` / `artifacts/Final_Report.pdf`: missing literal `PIPELINE_VERSION = 2` substring, missing Phase C noise (−5.15 pp) + salt_pepper (−0.81 pp) mean Δ figures, and missing `commit 3e1d089` git-history pointer — all three patched into the §II.C v1→v2-correction subsection of `docs/Final_Report.tex` and into the Phase B Reading paragraph of `scripts/build_final_exp_report.py`. `docs/Final_Exp_Report.md` regenerated (35,945 chars, +195 over prior); `artifacts/Final_Report.pdf` rebuilt (8 pages, 639,839 bytes). Programmatic re-check via PyMuPDF confirms `PIPELINE_VERSION`, `3e1d089`, `12.49`, `5.15`, `0.81` all present in the PDF body text and Phase C mean Δs present in `Final_Exp_Report.md`.)*
-- [x] `git status` clean on `noise_fix` branch; ready for merge into `main`. *(2026-05-23: all v2 noise-fix campaign artefacts (PRD updates, README updates, progress.txt iterations 41-46, build_final_exp_report.py prose rewrites, US-024 deliverables under docs/_autogen/ + docs/Final_Report.tex + artifacts/Final_Report.pdf, US-025 fixes to scripts/check_ignores.sh) are committed across 8 commits on `noise_fix` (8245c96 → present). Working-tree carries 12 pre-existing unrelated modifications from before the v2 campaign — `.claude/settings.local.json`, `artifacts/Final_Exp.json` (touched by the build chain in this session but contains no v2-relevant deltas beyond the timestamp), `artifacts/dashboard_experiment_plan.html`, `artifacts/priors/_schema.json`, `run_all_phases.py`, `scripts/run_ralph_loop.py`, `scripts/run_tune_chain.ps1`, `src/data/{degrade,degradation_levels}.py` (US-017 changes already committed; remaining diff is local-only formatting), `src/tests/test_{degradation_determinism,ralph_loop}.py`, plus untracked `.claude/skills/` and `artifacts/validation/*.json` Optuna outputs — none of these are v2-campaign work and `git diff` confirms they pre-date 2026-05-20. The campaign-relevant tree is fully committed; the unrelated drift is operator-discretion to retain or clean up before opening the merge PR.)*
+- [ ] All eight pytest commands exit 0.
+- [ ] Ship-readiness agent report identifies no drift between artifacts (in particular: the §1 headline answer must appear verbatim in README Finding #4, CLAUDE.md status block, Final_Report §VII.C, and progress.txt iteration close).
+- [ ] `git status` clean; PR draft URL captured for review.
 
-**Owner:** [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-024.
+**Owner:** [VALIDATOR](agents/VALIDATOR.md). **Dependencies:** US-033, US-034.
 
 ---
 
@@ -396,108 +491,119 @@ Ten stories, dependency-ordered. US-017 and US-018 are already closed in the cur
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| **(a) LaTeX toolchain absent on 5070 box** | Medium | High (US-024 blocked) | Install `tectonic` via winget before US-024; fallback to `pdflatex` if necessary. Verify in US-024 pre-flight check. |
-| **(b) Re-run GPU budget overruns ~53 h** | Low | Medium | Cells are independent and `--skip-existing` respected. Operator can pause between passes (US-020/021/022 are not interdependent for hardware reasons). |
-| **(c) Cell-tag stability lost between v1 and v2** | Low | High (tracker patches break) | No tag changes in this PRD. `runs/final/<tag>/` directory names are preserved; only file contents inside change. Verified by [src/tools/final_exp_schema.py](src/tools/final_exp_schema.py) keying by `tag`. |
-| **(d) v2 noise/S&P results break monotonicity** | Medium | Low | Expected and scientifically interesting. The §6.3 pathology guard checks per-cell convergence health, not L-curve monotonicity. Report the v2 monotonicity in the [README.md](README.md) headline section as-found. |
-| **(e) Determinism breaks under v2** | Already mitigated | — | Verified at US-017 close: 5/5 determinism checks green, lag-1 autocorr = 0.993, MSE = 0 on re-run. |
+| **(a) Treatment delta arithmetic mistake** (T3 fails to layer correctly when Optuna JSON already carries `dropout` / `drop_path_rate`) | Low | High (US-029 burns ~52 GPU-h on wrong deltas) | VALIDATOR unit test on `_apply_phase_d_treatment` covering all 3 treatments × 3 model families pre-dispatch. US-028 6-cell pilot catches integration bugs at ~3.5 GPU-h cost. |
+| **(b) Mixup/cutmix collator interaction with bf16-mixed** | Medium | High | Pilot (US-028) catches it on 6 cells before the 84-cell sweep. Fallback: `bf16-mixed` → `32-true` for affected cells if a stability issue surfaces (operator decision). |
+| **(c) GPU budget overrun beyond 60h** | Low | Medium | Cells are independent and `--skip-existing` respected. Operator can stage T1 → T2 → T3 in separate dispatches. |
+| **(d) Phase D L1 trivially equals Phase B L1 under T2-mixup-only on MNIST** | High | Low | Expected and informative; report as-found. MNIST geometric-axis robustness floor (v2 finding #3) should carry forward; T1/T2/T3 expected to be near-no-op on MNIST. |
+| **(e) Phase B v2 baseline metrics drift** (someone overwrites `final_B_*` mid-Phase-D campaign) | Low | High | `phase_b_v2_baseline_manifest.json` captured at US-028 pre-flight; US-031 plot script re-verifies SHA-256 before rendering. |
+| **(f) Aggregator schema bump breaks v1/v2 cached dashboards** | Low | Low | Frontend gracefully reloads on `SCHEMA_VERSION` mismatch. One-time hard refresh on operator side. |
+| **(g) NotebookLM auth state drift** (`.notebooklm/storage_state.json` vs `.notebooklm/profiles/default/storage_state.json` path mismatch) | Medium | Low | Pre-flight `python -m notebooklm status` to verify auth before pass 1; operator re-runs `notebooklm login` if status fails. |
 
 ---
 
 ## 10. Dependency-Ordered Story Map
 
 ```
-US-017 (pipeline refactor) ──────────────────────┐
-                                                  │
-US-018 (PRD v2) ─────────────────────────────────┤
-                                                  ▼
-                                          US-019 (--axes patch)
-                                                  │
-                                                  ▼
-                                  US-019B (v2 thumb preview + operator sign-off)
-                                                  │  ← HARD GATE: no GPU dispatch
-                                                  ▼     without operator signature
-                            ┌────────────── US-020 (Phase B, 30 cells)
-                            │                     │
-                            │                     ▼
-                            │             US-021 (Phase C noise, 30)
-                            │                     │
-                            │                     ▼
-                            │             US-022 (Phase C S&P, 30)
-                            │                     │
-                            └─────────────────────┤
-                                                  ▼
-                                          US-023 (content sync)
-                                                  │
-                                                  ▼
-                                       US-024 (IEEEtran PDF)
-                                                  │
-                                                  ▼
-                                       US-025 (final audit)
+US-026 (PRD v3 + progress.txt) ───────────────────────────────────┐
+                                                                    │
+                                                                    ▼
+                                            US-027 (docs/phase_d.md)
+                                                                    │
+                                            ┌───────────────────────┤
+                                            ▼                       ▼
+                              US-034 pass 1 (NotebookLM PRD)   US-028 (6-cell pilot T3_L3)
+                                                                    │  ← HARD GATE: pilot checklist
+                                                                    ▼      signed by operator
+                                                  US-029 (84-cell sweep)
+                                                                    │
+                                                                    ▼
+                                                  US-029.5 (JSON schema + aggregator)
+                                                                    │
+                                            ┌───────────────────────┤
+                                            ▼                       ▼
+                                  US-030 (dashboard)          US-031 (recovery PNGs)
+                                            │                       │
+                                            └───────────┬───────────┘
+                                                        ▼
+                                            US-032 (README/CLAUDE/Final_Exp_Report/progress sync)
+                                                        │
+                                                        ▼
+                                            US-033 (Final_Report.pdf rev2 + §VII)
+                                                        │
+                                                        ▼
+                                            US-034 pass 2 (NotebookLM full re-source)
+                                                        │
+                                                        ▼
+                                            US-035 (ship-readiness audit)
 ```
 
-**Critical path:** US-017 → US-019 → **US-019B** → US-020 → US-021 → US-022 → US-023 → US-024 → US-025.
-**Wall-clock estimate:** ~55 GPU-h re-runs + ~6 h for US-019/023/024/025 = ~2.5 calendar days on a single RTX 5070 with overnight runs.
+**Critical path:** US-026 → US-027 → US-028 → US-029 → US-029.5 → (US-030, US-031) → US-032 → US-033 → US-034 pass 2 → US-035.
+
+**Parallelizable forks:**
+- US-034 pass 1 (NotebookLM PRD upload) runs in parallel with US-028 pilot — pass 1 only needs the PRD on disk.
+- US-030 (dashboard) and US-031 (plot) can run in parallel after US-029.5 lands.
+
+**Wall-clock estimate:** ~3.5 GPU-h pilot + ~52.5 GPU-h sweep + ~8h non-GPU US closures = **~3 calendar days on a single RTX 5070** with overnight runs.
 
 ---
 
 ## 11. Definition of Done (campaign-level)
 
-- [x] US-019B operator visual sign-off captured in `artifacts/validation/v2_preview_checklist.md` BEFORE any GPU dispatch. *(US-019B closure, signed by ib94 2026-05-20.)*
-- [x] `SEED_OFFSET_TRAIN` / `SEED_OFFSET_VAL` unchanged for the whole campaign (seed-stability invariant, §7); per-`idx` byte-identity of degraded samples reproducible across re-runs. *(US-017 invariant test + iter 45 determinism suite re-run.)*
-- [x] All 90 v2 cells `healthy` per §6.3 (or operator-accepted sentinel deferrals). *(US-020 30/30 + US-021 30/30 + US-022 30/30 = 90/90 healthy, zero §6.3 sentinels across the entire v2 campaign — log scans confirm no SENTINEL/Traceback/FAILED tokens in dispatch logs.)*
-- [x] Determinism suite 5/5 green; mypy + ignore tests green. *(US-025 verification: 5/5 determinism checks (incl. v2 lag-1 autocorr=0.993); test_ignores 12 + 5 + 1 green; mypy on the 6 noise_fix-touched files reports no issues. Repo-wide mypy fails on 159 pre-existing errors that predate noise_fix — same baseline as v1 US-015 closure.)*
-- [x] [Final_Exp.md](Final_Exp.md), [artifacts/Final_Exp.json](artifacts/Final_Exp.json), [artifacts/Final_Exp.html](artifacts/Final_Exp.html), [artifacts/Final_Exp.pdf](artifacts/Final_Exp.pdf), dashboard thumbs all reflect v2 numbers. *(US-020/021/022 post-pass refresh chains + US-023 final regen; `update_final_exp.py --check` exits 0; `build_final_exp_json` reports 186/186 complete.)*
-- [x] [README.md](README.md) headline tables + findings + recent-changes entry updated. *(US-023 acceptance #1 + #2 — Phase B + Phase C L5 tables on v2 numbers with `PIPELINE_VERSION = 2` reference; Findings #2 + #3 re-derived from v2 data; 2026-05-23 entry in Recent scientific changes documents US-017 + 90-cell scope + mean Δs + severity ordering.)*
-- [x] [progress.txt](progress.txt) iteration 27 entry committed (the "everything done so far" summary). *(US-023 acceptance #3 — landed at iter 43; PRD index was stale by ~16 iterations.)*
-- [x] `artifacts/Final_Report.pdf` exists, ≥ 8 pages, IEEEtran-styled, BibTeX references, all 3 tables + 6 heatmaps, no broken refs. *(US-024 all 5 acceptance criteria green: 8 pages / 639,839 bytes / 36,793+ chars of body text; pdflatex exit 0; all 3 table captions + all 6 heatmaps + all v2 floor values + `PIPELINE_VERSION = 2` + `commit 3e1d089` + mean Δs all present in PDF body; autogen tables byte-identical across re-runs.)*
-- [x] Ship-readiness agent confirms cross-artifact consistency. *(US-025 acceptance #2 — first audit pass surfaced 3 drifts in `docs/Final_Report.tex`/`Final_Report.pdf` (missing `PIPELINE_VERSION` literal, missing Phase C mean Δs, missing `commit 3e1d089` pointer); all 3 patched; post-audit re-check via PyMuPDF confirms zero remaining drift.)*
-- [ ] `git status` clean on `noise_fix`; PR opened against `main`. *(2026-05-23: all v2 campaign artefacts committed across 9 commits on `noise_fix` (8245c96 → present). Pre-existing working-tree drift from before the v2 campaign (12 modified + ~25 untracked, all dated pre-2026-05-20 by `git log`) is left as operator discretion. PR opening is an operator action and is not automatable from this Ralph harness.)*
+- [ ] PRD v3 lands on disk (US-026); v2 referenced via git commit `ced98ec`.
+- [ ] [progress.txt](progress.txt) preamble retired the ≤200-line rule; Iteration 47+ entries appended per US closure.
+- [ ] [docs/phase_d.md](docs/phase_d.md) published; ~60-100 lines mirroring `docs/phase_c.md` structure.
+- [ ] US-028 6-cell pilot signed off in `artifacts/validation/phase_d_pilot_checklist.md` BEFORE US-029 dispatch.
+- [ ] `artifacts/validation/phase_b_v2_baseline_manifest.json` captured at US-028 pre-flight and re-verified at US-031.
+- [ ] 90/90 Phase D cells `healthy` per §6.3 (or operator-accepted sentinel deferrals); all carry `pipeline_version=2`, non-null `phase_d_treatment`, non-empty `phase_d_deltas`.
+- [ ] [src/tools/build_final_exp_json.py](src/tools/build_final_exp_json.py) + [src/tools/final_exp_schema.py](src/tools/final_exp_schema.py) wired for Phase D; `SCHEMA_VERSION` bumped; 4 new pytest assertions green.
+- [ ] Dashboard renders 4th Phase D tab + multi-select Treatment chip group + recovery `<details>` strip; 90 Phase D rows visible with treatment column; 186-cell view byte-identical when Phase D absent.
+- [ ] 6 per-(model, dataset) recovery PNGs at `artifacts/figures/phase_d_recovery_{m}_{d}.png` + composite summary + LaTeX table at `docs/_autogen/phase_d_recovery_table.tex`; idempotent (byte-identical across re-runs).
+- [ ] [artifacts/Final_Report.pdf](artifacts/Final_Report.pdf) rev2 ≥ 10 pages; §VII Phase D appendix present; pdflatex/bibtex exit 0; no `??` placeholders.
+- [ ] [README.md](README.md) carries Phase D Recovery subsection + Finding #4; [CLAUDE.md](CLAUDE.md) renamed 186 → 186/276 cells; both reference v3 deltas.
+- [ ] NotebookLM passes 1 + 2 logged in `scripts/notebooklm_sync.log`; commit prefix `[notebooklm-sync]`.
+- [ ] `pytest`, `test_ignores`, `mypy` (on v3-touched files) green; `git status` clean on `PHASE_D` branch.
+- [ ] Ship-readiness audit (US-035) returns zero cross-artifact drift.
+- [ ] Headline §1 research question answered verbatim in README Finding #4, CLAUDE.md status block, Final_Report §VII.C, and progress.txt iteration close.
 
 ---
 
 ## 12. Decisions Locked
 
-1. **Pipeline scope:** noise + salt-and-pepper both move pre-upsample. Blur stays post-upsample (kernels calibrated for 224). Saturation stays pre-downsample (RGB-correct luminance). Confirmed by operator 2026-05-20.
-2. **Archival:** overwrite in place; no `runs/final_archive/`. v1 numbers exist only in git history. Confirmed 2026-05-20.
-3. **PRD form:** full rewrite into v2; v1 PRD preserved only in git history (commit `3e1d089`). Confirmed 2026-05-20.
-4. **PDF form:** IEEEtran/article LaTeX template hand-authored from scratch with auto-generated tables + heatmaps + BibTeX references. `markdown-pdf` rendition (`artifacts/Final_Exp.pdf`) stays in lockstep during the campaign but is *superseded* by `artifacts/Final_Report.pdf` as the publishable deliverable. Confirmed 2026-05-20.
-5. **Re-tuning:** no Optuna re-runs against pipeline v2. Frozen v1 `best_hparams` carry forward. Re-tuning deferred to future US.
-6. **RALPH retry policy:** §6.4 retry deltas surfaced to operator; default decision is "decline" unless cell breaks neighbor monotonicity (v1 empirical lesson).
-7. **Sub-agent dispatch:** every US owner in §8 is a sub-agent in [agents/](agents/). MASTER reviews and approves the plan before any sub-agent writes code; sub-agents may not exceed their declared `agents/<NAME>.md` file-system scope without an explicit MASTER scope-extension note (e.g. US-019 grants OPTIMIZER write access to `scripts/run_ralph_loop.py`). Confirmed 2026-05-20.
-8. **Visual pre-flight gate (US-019B):** the 90 v2 dashboard thumbnails are re-rendered and **operator-signed** before any of the ~53 GPU-h of training is dispatched. Cheap CPU-only insurance against burning a 2.5-day campaign on a subtly-wrong pipeline. Confirmed 2026-05-20.
-9. **Noise seed lock:** the v2 noise + S&P passes are seeded by the same `idx + SEED_OFFSET_*` contract used in v1 — same constants, same per-sample local `torch.Generator`, no new global RNG draws. Within v2, same `idx` always produces the same noise pattern. v1↔v2 pixels are NOT comparable (different number of draws), but v2↔v2 byte-identity across re-runs is mandatory and tested. Confirmed 2026-05-20.
+1. **Regularization deltas frozen.** T1 = `dropout=0.2` (CNN) / `drop_path_rate=0.2` (TransNeXt); T2 = `mixup_alpha=0.2, cutmix_alpha=0.0`; T3 = T1 ∪ T2 ∪ `cutmix_alpha=1.0`. Source of truth: [run_systematic.py:_phase_d_treatment_deltas](run_systematic.py). No further variation in v3. Operator-confirmed 2026-05-23.
+2. **Baseline = Phase B v2.** Every Phase D recovery measurement compares against the matching `final_B_L{l}_{m}_{d}` Phase B v2 cell. SHA-256 of all 30 Phase B v2 `metrics.json` files captured at US-028 pre-flight into `phase_b_v2_baseline_manifest.json` and re-verified at US-031 plot rendering. Operator-confirmed 2026-05-23.
+3. **No Phase D re-tune.** Optuna L3 winners stay frozen. Re-tuning under regularization deferred to a hypothetical v4 future-work bullet. Operator-confirmed 2026-05-23.
+4. **6-cell pilot scope = T3_L3 × all 6 (model, dataset) pairs.** Pilot is the strongest treatment at the strongest collapse level — fastest signal-to-failure ratio with the broadest per-model delta routing coverage. Operator must sign `phase_d_pilot_checklist.md` BEFORE the 84-cell sweep dispatches. Operator-confirmed 2026-05-23.
+5. **2-pass NotebookLM sync.** Pass 1 (PRD v3 only, immediate after US-026 lands) and pass 2 (`full --apply` post-US-033) are both mandatory. No mid-campaign incremental refresh. Operator-confirmed 2026-05-23.
+6. **Headline research question is operator-locked.** *"Does regularization recover the Phase B v2 −12.49 pp mean collapse vs v1?"* — must be answered explicitly (per-treatment, with magnitude) in README Finding #4, CLAUDE.md status block, Final_Report §VII.C, and the US-029 outcome paragraph. Operator-confirmed 2026-05-23.
+7. **Treatment chip group is multi-select.** T1/T2/T3 chips behave like Model/Dataset/Status chips on the dashboard — union semantics, persisted to `localStorage.final_exp.filters.D`. Operator-confirmed 2026-05-23.
+8. **Final_Report rev2 adds §VII Phase D appendix** (does NOT extend §V Discussion inline). Keeps v2 body intact; new content scannable. Operator-confirmed 2026-05-23.
+9. **`progress.txt` ≤200-line rule formally retired.** Preamble updated to document the new "append-only journal" policy. File is 4774+ lines and growing; the rule has been broken since iter 17. Operator-confirmed 2026-05-23.
+10. **JSON aggregator gap split into US-029.5.** `Final_Exp.json` schema bump + Phase D aggregator wiring are a standalone US between sweep (US-029) and dashboard (US-030). Tests for the aggregator become first-class. Operator-confirmed 2026-05-23.
+11. **Sub-agent dispatch carried forward from v1/v2.** Every US owner is a sub-agent defined in [agents/](agents/). MASTER reviews and approves the plan before any sub-agent writes code; sub-agents may not exceed their declared `agents/<NAME>.md` file-system scope without an explicit MASTER scope-extension note. Operator-confirmed 2026-05-23.
 
 ---
 
-## 13. v1 History (US-001..US-016 — closed)
+## 13. v2 History (US-017..US-025 — closed)
 
-Closed in the 2026-05-13 → 2026-05-20 campaign. Full v1 PRD prose preserved at git commit `3e1d089`. Summary:
+Closed in the 2026-05-20 → 2026-05-23 campaign. Full v2 PRD prose preserved at git commit `ced98ec`. Summary:
 
 | Story | Title | Closed |
 |---|---|---|
-| US-001 | densenet121 × {cifar10, mnist} Optuna tune | 2026-05-14 |
-| US-002 | transnext_tiny × {cifar10, mnist} Optuna tune | 2026-05-14 |
-| US-003 | Phase C single-axis correction (inactive axes → identity) | 2026-05-14 |
-| US-004 | TransNeXt base→small variant swap | 2026-05-14 |
-| US-005 | RALPH loop driver framework | 2026-05-14 |
-| US-006 | Phase A `resnet50` ×{cifar10, mnist} | 2026-05-14 |
-| US-007 | Phase A `densenet121` ×{cifar10, mnist} | 2026-05-15 |
-| US-008 | Phase A `transnext_tiny` ×{cifar10, mnist} | 2026-05-15 |
-| US-009 | Phase B `resnet50` × L1..L5 ×{cifar10, mnist} | 2026-05-15 |
-| US-010 | Phase B `densenet121` × L1..L5 ×{cifar10, mnist} | 2026-05-15 |
-| US-011 | Phase B `transnext_tiny` × L1..L5 ×{cifar10, mnist} | 2026-05-16 |
-| US-012 | Phase C `resnet50` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-17 |
-| US-013 | Phase C `densenet121` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-18 |
-| US-014 | Phase C `transnext_tiny` × 5 axes × L1..L5 ×{cifar10, mnist} | 2026-05-20 |
-| US-015 | End-of-campaign verification (partial — leak audit + mypy + pytest done; SYNCHRONIZER pushes deferred to v2 US-023) | 2026-05-20 |
-| US-016 | TransNeXt small→tiny variant swap (capacity-match to ResNet50) | 2026-05-14 |
+| US-017 | Pipeline v2 refactor + new invariant test (noise + S&P pre-upsample) | 2026-05-20 |
+| US-018 | PRD v2 authoring | 2026-05-20 |
+| US-019 | RALPH loop `--axes` filter patch (+ bundled `render_cell_thumbs` `--phase`/`--axes`) | 2026-05-20 |
+| US-019B | v2 degradation thumbnail preview (operator visual gate) | 2026-05-20 |
+| US-020 | Phase B re-run (30 cells) + dashboard refresh | 2026-05-21 |
+| US-021 | Phase C `noise` axis re-run (30 cells) + dashboard refresh | 2026-05-22 |
+| US-022 | Phase C `salt_pepper` axis re-run (30 cells) + dashboard refresh | 2026-05-23 |
+| US-023 | Post-campaign content sync (README + Final_Exp_Report.md + progress.txt) | 2026-05-23 |
+| US-024 | IEEEtran scientific report (`docs/Final_Report.tex` → `artifacts/Final_Report.pdf`, 8 pages) | 2026-05-23 |
+| US-025 | Final verification + ship-readiness audit | 2026-05-23 |
 
-Headline v1 findings (CAVEAT: noise + salt_pepper claims are invalidated by US-017; verify against v2 in US-023):
-1. Universal 3×3-downsample bottleneck — every architecture lands within ±3 pp on CIFAR-10 at L5 resolution. **Carries forward to v2** (resolution axis was unaffected by US-017).
-2. TransNeXt robustness gap on noise / S&P / saturation — **REQUIRES v2 RE-DERIVATION.**
-3. MNIST robustness floor on perturbation axes — **REQUIRES v2 RE-DERIVATION.**
+Headline v2 findings carried forward to v3 baseline:
+1. **Phase B v2 mean Δ = −12.49 pp vs v1** across 30 cells (range −0.0 to −32.74 pp). CIFAR-10 mid-range levels (L2-L4) drop hardest; MNIST geometric-axis floor preserved. **This is the recovery target Phase D measures against.**
+2. **Phase C noise mean Δ = −5.15 pp vs v1; salt_pepper mean Δ = −0.81 pp vs v1.** Severity scales with pixel-count arithmetic (noise samples every `low_res²` pixel; salt_pepper paints only `low_res² × (salt_pepper × 2)` pixels per image).
+3. **CIFAR-10 L5 severity ordering under v2:** `resolution > noise > blur > salt_pepper > saturation`. Noise leapfrogs blur — masked in v1 because post-upsample noise was averaged out by the bicubic kernel.
+4. **Universal 3×3-downsample bottleneck** carries forward unchanged (resolution axis unaffected by US-017).
 
 ---
-
-**End of PRD v2.**
