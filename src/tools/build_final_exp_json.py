@@ -30,7 +30,13 @@ from pathlib import Path
 from typing import Optional
 
 from src.data.degradation_levels import level_params
-from src.experiments.cells import EXPECTED_TOTAL, CellMeta, iter_cells
+from src.experiments.cells import (
+    EXPECTED_TOTAL,
+    EXPECTED_TOTAL_WITH_D,
+    CellMeta,
+    iter_cells,
+    phase_d_present_on_disk,
+)
 from src.experiments.run_status import (
     QUARANTINE_REASON,
     demote_v2_pending,
@@ -214,6 +220,9 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         "dataset": meta.dataset,
         "level": meta.level,
         "axis": meta.axis,
+        # US-029.5: Phase D regularization treatment ("T1"/"T2"/"T3"), or
+        # None for Phase A/B/C rows. CellMeta.treatment defaults to None.
+        "treatment": meta.treatment,
         "params": _params_for(meta),
         "status": status,  # type: ignore[typeddict-item]
         "val_acc": val_acc,
@@ -239,10 +248,19 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
 
 
 def build_doc(runs_root: Path = _RUNS_ROOT) -> FinalExpDoc:
-    """Build the FinalExpDoc by enumerating the 186 cells and hydrating completed runs."""
-    rows: list[FinalExpRow] = [_row_for(meta, runs_root) for meta in iter_cells()]
+    """Build the FinalExpDoc by enumerating the 186 (or 276) cells and hydrating completed runs.
+
+    US-029.5: Phase D rows append when at least one `runs/final/final_D_*`
+    directory exists on disk. With no Phase D dirs present, output is
+    byte-identical to the pre-US-029.5 186-row contract.
+    """
+    include_phase_d = phase_d_present_on_disk(runs_root)
+    expected = EXPECTED_TOTAL_WITH_D if include_phase_d else EXPECTED_TOTAL
+    rows: list[FinalExpRow] = [
+        _row_for(meta, runs_root) for meta in iter_cells(include_phase_d=include_phase_d)
+    ]
     rows.sort(key=lambda r: r["tag"])
-    assert len(rows) == EXPECTED_TOTAL, f"expected {EXPECTED_TOTAL} rows, got {len(rows)}"
+    assert len(rows) == expected, f"expected {expected} rows, got {len(rows)}"
     counts: CountsDict = {
         "total": len(rows),
         "pending": sum(1 for r in rows if r["status"] == "Pending"),
@@ -298,22 +316,30 @@ def update_cell(
 ) -> dict:
     """Patch a single row's hydration into an existing `Final_Exp.json` (US-019).
 
-    Avoids re-scanning all 186 cells when only one row changed. Loads the
-    on-disk JSON, replaces the matching row's metric/status fields, and
-    re-derives `counts` + `generated_at` before writing atomically.
+    Avoids re-scanning all 186 (or 276) cells when only one row changed.
+    Loads the on-disk JSON, replaces the matching row's metric/status
+    fields, and re-derives `counts` + `generated_at` before writing
+    atomically.
 
     Falls back to a full `build_final_exp_json` rebuild when the on-disk
     file is missing, schema-mismatched, or doesn't contain `tag`.
     """
-    from src.experiments.cells import iter_cells
+    # US-029.5: Phase D tags ("final_D_*") must be findable too — gate
+    # the enumeration on disk presence so single-cell patching mirrors the
+    # full-build view of the matrix.
+    include_phase_d = phase_d_present_on_disk(runs_root)
 
     # Validate the tag up front so a typo cannot silently trigger a full
     # rebuild (which would obscure the real wiring bug).
-    meta = next((m for m in iter_cells() if m.tag == tag), None)
+    meta = next(
+        (m for m in iter_cells(include_phase_d=include_phase_d) if m.tag == tag),
+        None,
+    )
     if meta is None:
         raise ValueError(
             f"unknown cell tag: {tag!r}. "
-            "Expected one of the 186 tags from src.experiments.cells.iter_cells()."
+            "Expected one of the canonical tags from "
+            "src.experiments.cells.iter_cells()."
         )
 
     if not out_path.exists():

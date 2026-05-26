@@ -8,23 +8,32 @@ Field shapes match what is already on disk:
 - `level` is `int | None` (1..5; None for Phase A clean), not a stringified
   ``"L1"``/``"clean"`` enum — the renderer formats for display.
 - `axis` is `str | None` (one of `AXIS_KEYS`; None for Phase A and Phase B).
+- `treatment` is `str | None` (one of ``"T1"``/``"T2"``/``"T3"``;
+  None for Phase A/B/C; set on Phase D regularization-sweep rows only).
 - `status` matches `src.experiments.run_status.detect_status` exactly:
   ``"Pending" | "Running" | "Complete" | "Failed"`` (note: ``"Complete"``,
   not ``"Done"``).
 
 Privacy: this schema deliberately excludes checkpoint paths, weight URIs,
 and host paths. Only metric scalars and config keys are carried.
+
+Schema history
+--------------
+- v1 (US-001): initial contract.
+- v2 (US-029.5, 2026-05-23): add `treatment: str | None` for Phase D
+  regularization-sweep rows. Phase A/B/C carry `treatment=None` so the
+  field is uniformly present on every row.
 """
 from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-SCHEMA_VERSION: Literal[1] = 1
+SCHEMA_VERSION: Literal[2] = 2
 
-Phase = Literal["A", "B", "C"]
+Phase = Literal["A", "B", "C", "D"]
 Status = Literal["Pending", "Running", "Complete", "Failed", "Deferred"]
 
-PHASES: tuple[Phase, ...] = ("A", "B", "C")
+PHASES: tuple[Phase, ...] = ("A", "B", "C", "D")
 # `"Deferred"` (US-014) is for cells whose model is quarantined pending
 # hardware (e.g. TransNeXt). Deferred cells stay in the matrix so the 186
 # denominator is preserved, but they are excluded from execution-driving
@@ -50,6 +59,10 @@ class FinalExpRow(TypedDict):
     dataset: str
     level: int | None
     axis: str | None
+    # US-029.5 (schema v2): Phase D regularization treatment.
+    # One of ``"T1"``/``"T2"``/``"T3"`` on Phase D rows; None on
+    # Phase A/B/C rows so the field is uniformly present.
+    treatment: str | None
     params: ParamsDict
     status: Status
     val_acc: float | None
@@ -105,7 +118,7 @@ class CountsDict(TypedDict):
 
 
 class FinalExpDoc(TypedDict):
-    schema_version: Literal[1]
+    schema_version: Literal[2]
     generated_at: str
     rows: list[FinalExpRow]
     counts: CountsDict

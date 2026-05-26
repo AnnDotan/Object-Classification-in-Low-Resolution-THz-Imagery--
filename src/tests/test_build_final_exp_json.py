@@ -8,7 +8,8 @@ Asserts the FinalExpDoc contract emitted by build_final_exp_json:
   - Weight Privacy: aggregator never opens *.ckpt / *.pt / *.pth or any path
     under artifacts/weights/ (verified via builtins.open patch).
   - Atomic write: no .tmp sibling left behind after success; out_path written.
-  - Document-level fields: schema_version == 1, generated_at parses as ISO8601.
+  - Document-level fields: schema_version matches `final_exp_schema.SCHEMA_VERSION`,
+    generated_at parses as ISO8601.
 
 Run: ``python -m src.tests.test_build_final_exp_json``
 """
@@ -186,12 +187,12 @@ def _check_doc_level_fields() -> None:
         runs_root = Path(td) / "runs" / "final"
         runs_root.mkdir(parents=True)
         doc = build_doc(runs_root=runs_root)
-    assert doc["schema_version"] == SCHEMA_VERSION == 1
+    assert doc["schema_version"] == SCHEMA_VERSION
     # generated_at must parse as ISO8601 with timezone (Python's fromisoformat
     # accepts the ±HH:MM offset emitted by datetime.isoformat(timespec='seconds')).
     parsed = datetime.fromisoformat(doc["generated_at"])
     assert parsed.tzinfo is not None, f"generated_at lacks tz: {doc['generated_at']}"
-    print(f"OK [doc-fields] -- schema_version=1, generated_at parses ({doc['generated_at']}).")
+    print(f"OK [doc-fields] -- schema_version={SCHEMA_VERSION}, generated_at parses ({doc['generated_at']}).")
 
 
 def _check_rows_sorted_by_tag() -> None:
@@ -501,7 +502,7 @@ def _check_update_cell_falls_back_to_full_rebuild() -> None:
         out.write_text(json.dumps({"schema_version": 99, "rows": []}), encoding="utf-8")
         update_cell(tag=target_tag, out_path=out, runs_root=runs_root)
         doc = json.loads(out.read_text(encoding="utf-8"))
-        assert doc["schema_version"] == 1
+        assert doc["schema_version"] == SCHEMA_VERSION
         assert doc["counts"]["total"] == 186
     print("OK [update_cell-fallback] -- missing/corrupt/old-schema JSON triggers full rebuild.")
 
@@ -523,6 +524,135 @@ def _check_update_cell_unknown_tag_raises() -> None:
         raise AssertionError("update_cell did not raise for unknown tag")
 
 
+# -----------------------------------------------------------------------------
+# US-029.5: Phase D inclusion + schema v2 (treatment field, version bump).
+# These tests are written as pytest-discoverable `test_*` functions so the
+# user-facing harness `pytest src/tests/test_build_final_exp_json.py -v`
+# enumerates them individually. The legacy `_check_*` helpers above run via
+# `python -m src.tests.test_build_final_exp_json`.
+# -----------------------------------------------------------------------------
+
+
+# Snapshot of SCHEMA_VERSION's value PRIOR to US-029.5. The strict-inequality
+# test below pins this constant so a future revert (or accidental rollback)
+# of the v2 bump trips immediately. Updating this constant is intentional —
+# do it the same time you bump SCHEMA_VERSION further.
+_PREVIOUS_SCHEMA_VERSION: int = 1
+
+
+def _stage_phase_d_metrics(runs_root: Path, tag: str) -> None:
+    """Plant a minimal Phase D `metrics.json` for `tag` under `runs_root`.
+
+    Just enough on-disk presence for `phase_d_present_on_disk` to flip on
+    and `build_doc` to hydrate the row to Complete; no checkpoints written
+    (the aggregator never reads `*.ckpt` — Weight Privacy invariant).
+    """
+    cell_dir = runs_root / tag
+    cell_dir.mkdir(parents=True, exist_ok=True)
+    (cell_dir / "metrics.json").write_text(
+        json.dumps({
+            "best_val_acc": 0.50,
+            "last_val_loss": 0.80,
+            "epochs_run": 5,
+            "runtime_s": 60.0,
+        }),
+        encoding="utf-8",
+    )
+
+
+def test_phase_d_absent_returns_186_rows() -> None:
+    """No `final_D_*` dirs → default 186-row view is preserved byte-identical
+    in row count + phase split. Every row carries `treatment=None`."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        # Plant a sentinel Phase A complete cell to exercise the row
+        # hydration path; no Phase D directories.
+        cell_dir = runs_root / "final_clean_resnet50_cifar10"
+        cell_dir.mkdir(parents=True)
+        (cell_dir / "metrics.json").write_text(
+            json.dumps({"best_val_acc": 0.6, "epochs_run": 4}),
+            encoding="utf-8",
+        )
+        doc = build_doc(runs_root=runs_root)
+
+    assert doc["counts"]["total"] == 186, doc["counts"]
+    assert len(doc["rows"]) == 186, len(doc["rows"])
+    phase_d_rows = [r for r in doc["rows"] if r["phase"] == "D"]
+    assert phase_d_rows == [], f"unexpected Phase D rows: {phase_d_rows[:3]}"
+    # Every row's treatment field is None (Phase A/B/C carry treatment=None).
+    bad = [r["tag"] for r in doc["rows"] if r["treatment"] is not None]
+    assert not bad, f"non-None treatment on A/B/C rows: {bad[:3]}"
+
+
+def test_phase_d_present_returns_276_rows() -> None:
+    """At least one `final_D_*` dir on disk → 276-row view, with 90 Phase D
+    rows whose `treatment` ∈ {T1, T2, T3} and 3-way 30/30/30 split."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        # One Phase D metrics.json is enough to flip the gate; the other
+        # 89 Phase D rows enumerate as Pending. We plant a couple to be
+        # explicit about treatment values being preserved.
+        _stage_phase_d_metrics(runs_root, "final_D_T1_L3_resnet50_cifar10")
+        _stage_phase_d_metrics(runs_root, "final_D_T2_L1_densenet121_mnist")
+        doc = build_doc(runs_root=runs_root)
+
+    assert doc["counts"]["total"] == 276, doc["counts"]
+    assert len(doc["rows"]) == 276, len(doc["rows"])
+    phase_d_rows = [r for r in doc["rows"] if r["phase"] == "D"]
+    assert len(phase_d_rows) == 90, len(phase_d_rows)
+    treatments = {r["treatment"] for r in phase_d_rows}
+    assert treatments == {"T1", "T2", "T3"}, treatments
+    # 30 rows per treatment (5 levels × 3 models × 2 datasets).
+    by_treatment: dict[str, int] = {"T1": 0, "T2": 0, "T3": 0}
+    for r in phase_d_rows:
+        by_treatment[r["treatment"]] += 1
+    assert by_treatment == {"T1": 30, "T2": 30, "T3": 30}, by_treatment
+    # Phase A/B/C still carry treatment=None.
+    abc_treatment_bad = [
+        r["tag"] for r in doc["rows"]
+        if r["phase"] in ("A", "B", "C") and r["treatment"] is not None
+    ]
+    assert not abc_treatment_bad, abc_treatment_bad[:3]
+
+
+def test_schema_treatment_field_present() -> None:
+    """Every row in build_doc's output carries a 'treatment' key whose
+    value is None for A/B/C and a non-empty str for D rows."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        # Flip Phase D on so we see both None-bearing and str-bearing rows.
+        _stage_phase_d_metrics(runs_root, "final_D_T3_L5_resnet50_mnist")
+        doc = build_doc(runs_root=runs_root)
+
+    # The key must be present on every row — not "missing => None".
+    missing = [r["tag"] for r in doc["rows"] if "treatment" not in r]
+    assert not missing, f"'treatment' key missing on rows: {missing[:3]}"
+    for r in doc["rows"]:
+        if r["phase"] == "D":
+            assert isinstance(r["treatment"], str) and r["treatment"], (
+                f"Phase D row {r['tag']!r} has non-str treatment "
+                f"{r['treatment']!r}"
+            )
+        else:
+            assert r["treatment"] is None, (
+                f"Non-D row {r['tag']!r} has treatment {r['treatment']!r}"
+            )
+
+
+def test_schema_version_bumped() -> None:
+    """US-029.5: SCHEMA_VERSION must be strictly greater than the v1
+    snapshot. A revert would silently break dashboard cache invalidation,
+    so this regression guard is loud."""
+    assert SCHEMA_VERSION > _PREVIOUS_SCHEMA_VERSION, (
+        f"SCHEMA_VERSION={SCHEMA_VERSION} did not advance past "
+        f"v{_PREVIOUS_SCHEMA_VERSION}; US-029.5 requires a bump."
+    )
+    assert SCHEMA_VERSION >= 2, SCHEMA_VERSION
+
+
 def main() -> int:
     _check_row_counts_and_phase_split()
     _check_phase_c_l1_collapse()
@@ -540,6 +670,11 @@ def main() -> int:
     _check_update_cell_patches_only_target_row()
     _check_update_cell_falls_back_to_full_rebuild()
     _check_update_cell_unknown_tag_raises()
+    # US-029.5 additions — also discoverable by pytest.
+    test_phase_d_absent_returns_186_rows()
+    test_phase_d_present_returns_276_rows()
+    test_schema_treatment_field_present()
+    test_schema_version_bumped()
     print("\nAll build_final_exp_json checks passed.")
     return 0
 
