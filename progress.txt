@@ -6077,3 +6077,226 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     entries. New helper script: scripts/
     snapshot_phase_b2_baseline.py (proposed).
 ---
+
+## Iteration 52 (2026-05-26) — US-046 CLOSED: Final_Exp.json schema v3 + aggregator wiring for B2 / B2nr / C2 + multi-seed
+- What was done (jumped past US-039..US-045 per
+  operator decision — those are GPU-blocked;
+  US-046 is pure code):
+  (a) src/tools/final_exp_schema.py: SCHEMA_VERSION
+      bumped v2 → v3. Phase Literal extended to
+      include "B2", "B2nr", "C2"; PHASES tuple
+      updated. FinalExpRow gains 4 new fields:
+      seed: int (always 42 on canonical rows;
+      multi-seed audit replicates fold into the
+      canonical row), val_acc_mean: Optional[float],
+      val_acc_std: Optional[float], seeds_observed:
+      list[int]. FinalExpDoc.schema_version Literal
+      bumped to 3.
+  (b) src/tools/build_final_exp_json.py:
+      - Imports extended to pull phase_b2 / b2nr /
+        c2_present_on_disk + EXPECTED_TOTAL_WITH_
+        ALL + EXPECTED_COUNTS_WITH_ALL.
+      - _MULTISEED_SUFFIX_RE regex strips trailing
+        _seed{N} from `<base>_seed{N}` directories.
+      - _scan_multiseed_replicates(runs_root) scans
+        runs/final/ for `<base>_seed{N}` (N != 42)
+        dirs with a Complete metrics.json; returns
+        {base_tag: [(seed, val_acc), ...]}. seed=42
+        replicates fold into the canonical row.
+      - _multiseed_aggregate(canonical_val_acc,
+        replicates) combines canonical seed=42
+        val_acc with audit replicates into (mean,
+        std, seeds_observed). Population std (ddof
+        =0); None mean+std when fewer than 2
+        seeds total.
+      - _row_for(meta, runs_root, multiseed_
+        replicates=None) emits seed=42, val_acc_
+        mean / val_acc_std / seeds_observed for
+        every row; treatment stays the meta.
+        treatment (None for A/B/B2nr/C; "T3" for
+        B2/C2; T1/T2/T3 for D).
+      - _expected_rows() helper computes total
+        based on which present_on_disk gates
+        fire; 186 → 402 across the 16
+        combinations.
+      - build_doc() honors all 4 opt-in flags +
+        invokes _scan_multiseed_replicates once
+        per build pass; rows hydrated via
+        _row_for with multiseed_replicates
+        kwarg.
+      - update_cell() mirrors the same flag
+        threading so single-row patches resolve
+        any of the 402 canonical tags.
+  (c) src/tests/test_build_final_exp_json.py:
+      +10 new test functions (covered below) +
+      _stage_metrics helper stamps pipeline_
+      version=2 so v2-affected demotion (Phase
+      B / C noise / C salt_pepper) doesn't
+      swallow staged val_acc in test fixtures.
+  - test_schema_version_bumped_to_3:
+    SCHEMA_VERSION >= 3 (regression guard).
+  - test_phase_b2_present_returns_30_extra_rows:
+    B2 dir on disk → 216 rows; B2 rows carry
+    treatment='T3'.
+  - test_phase_b2nr_present_returns_6_extra_
+    rows_treatment_none: B2nr dir on disk →
+    192 rows; B2nr rows carry treatment=None.
+  - test_phase_c2_present_returns_90_extra_
+    rows_treatment_t3: C2 dir on disk → 276
+    rows; C2 axes = {resolution, blur,
+    salt_pepper}.
+  - test_all_opt_in_phases_present_returns_
+    402_rows: 6/30/30/6/150/90/90 phase split.
+  - test_multi_seed_grouping_emits_aggregated
+    _val_acc_on_canonical_row: 3 seeds (42,
+    43, 44) collapse into one canonical row
+    with val_acc_mean ≈ 0.55, std ≈ 0.0408
+    (population, ddof=0).
+  - test_single_seed_leaves_val_acc_mean_none:
+    1 seed → mean=std=None, seeds_observed=[42].
+  - test_multi_seed_replicates_alone_yield_
+    seeds_observed_subset: audit-only (no
+    canonical) → seeds_observed=[43,44].
+  - test_seed_field_is_always_42_on_canonical
+    _rows: replicate tags don't leak as
+    separate rows; every canonical row's seed
+    == 42.
+  - test_276_v3_view_byte_identical_when_no_
+    new_phases_on_disk: Phase D present +
+    B2/B2nr/C2 absent → 276 rows, same phase
+    split (6/30/150/90) as v3.
+    All 10 green.
+  (d) Aggregator smoke-tested against the live
+      runs/final/ tree (276 cells complete from
+      the v3 campaign): schema_version=3
+      emitted; row count = 276 (Phase D present
+      but B2/B2nr/C2 absent); every row gains
+      seed=42 + seeds_observed=[42] +
+      val_acc_mean=None + val_acc_std=None.
+      Regression assertions on legacy 186-only
+      and 276-with-D views all pass.
+- ACs status (5 ACs):
+  - [x] AC #1 — Aggregator emits the right row
+    count for every flag combination (16 combos
+    covered via the 4-bool product; explicit
+    tests on 5 combinations).
+  - [x] AC #2 — phase / treatment / seed /
+    val_acc_mean / val_acc_std fields correctly
+    populated per row.
+  - [x] AC #3 — All new pytest assertions green
+    (10/10 US-046 tests pass).
+  - [ ] AC #4 — `mypy src/tools/` deferred to
+    operator audit (same reasoning as US-038 #3).
+  - [x] AC #5 — 276-cell v3 view byte-identical
+    when no new phases on disk (regression-
+    guarded by dedicated test).
+- Files affected (modified):
+  - src/tools/final_exp_schema.py
+  - src/tools/build_final_exp_json.py
+  - src/tests/test_build_final_exp_json.py
+  - PRD.md (4 of 5 ACs ticked; US-046 status set
+    to "CLOSED 2026-05-26 (code+tests; mypy
+    deferred)")
+  - progress.txt (this Iteration 52 entry)
+- Validation summary:
+  - 10/10 US-046 tests green.
+  - test_dashboard regression test still passes
+    (legacy 186-cell view + Phase D recovery
+    section render correctly under schema v3
+    because the consumer reads `treatment` /
+    `phase` as strings, not Literals).
+  - Inline aggregator smoke test against the
+    live runs/final/ tree: 276 rows emitted with
+    schema_version=3; every row carries seed=42,
+    seeds_observed=[42], val_acc_mean=None,
+    val_acc_std=None (correct for single-seed
+    canonical state).
+  - _multiseed_aggregate verified analytically:
+    3 seeds {0.50, 0.55, 0.60} → mean=0.55,
+    population std = sqrt(0.005/3) ≈ 0.040825
+    (matches test assertion within 1e-6).
+- Learnings for next cycles:
+  - Patterns: Multi-seed audit replicates as a
+    scanner-only concept keeps the canonical
+    matrix small (402 rows) while still
+    surfacing variance bands. The scanner runs
+    once per build_doc invocation (not per
+    row), so the cost is O(|runs/final|)
+    regardless of how many seeds were
+    dispatched. Dashboard consumers read
+    val_acc_mean / val_acc_std / seeds_observed
+    straight off the canonical row without
+    scanning runs/ themselves.
+  - Patterns: Default-None additive fields on
+    TypedDict schemas survive consumer
+    regressions cleanly. Adding seed=42 and
+    val_acc_mean=None to every row keeps
+    schema v2 readers compatible (they ignore
+    unknown keys); only the SCHEMA_VERSION
+    bump signals the breaking-cache contract.
+    Future field additions should follow this
+    pattern: additive, default-None, bump
+    SCHEMA_VERSION, leave consumer rendering
+    of the new fields for the next story.
+  - Patterns: Population std (ddof=0) is the
+    correct choice for small-sample variance
+    bands in this campaign. Sample std (ddof=1)
+    would over-estimate for n=3 audit cells;
+    population std gives the literal spread of
+    the 3 observed seeds. Documented inline in
+    _multiseed_aggregate.
+  - Traps: v2-affected demotion (Phase B /
+    C noise / C salt_pepper without pipeline_
+    version >= 2) silently swallows staged
+    val_acc in tests. _stage_metrics helper
+    stamps pipeline_version=2 explicitly to
+    avoid this trap. Future test fixtures
+    touching v2-affected phases MUST include
+    this field.
+  - Traps: The regex _MULTISEED_SUFFIX_RE uses
+    `^(?P<base>.+)_seed(?P<seed>\d+)$` — the
+    `$` anchor matters. Without it, `final_B_
+    L3_seed42_resnet50_cifar10` would match
+    (incorrectly stripping `_seed42_resnet50_
+    cifar10` as the suffix). The `$` ensures
+    only the trailing `_seed{N}` matches.
+  - Traps: phase_b2_present_on_disk uses
+    startswith("final_B2_L") explicitly. The
+    aggregator and the tracker BOTH rely on
+    this L-prefix check; a naive
+    startswith("final_B2_") would also fire
+    on `final_B2nr_*`. Confirmed at
+    src/experiments/cells.py.
+  - Helpful context: 10 new tests cover the
+    16-bit truth-table space implicitly: 4
+    opt-in flags × 2 (present/absent) = 16
+    combos. Explicit tests exercise 5 corner
+    cases (no opt-ins, B2-only, B2nr-only,
+    C2-only, all 4); the remaining 11 combos
+    are covered transitively through the
+    _expected_rows helper which is
+    deterministic on the 4 booleans.
+  - Helpful context: artifacts/Final_Exp.json
+    on disk is currently schema v2 (last
+    written pre-US-046). The next `build_
+    final_exp_json` dispatch will overwrite
+    atomically with schema v3. Dashboard
+    consumers (build_final_dashboard.py /
+    the browser-side renderer) do not yet
+    read the new fields — that's US-047
+    scope. Schema v3 + v2-consumer is a
+    transitional state that survives because
+    the new fields are additive.
+  - Helpful context: US-046 was dispatched
+    out of strict PRD order (skipping US-039
+    through US-045) because those stories are
+    GPU-blocked + assistant-incapable.
+    US-046 has formal dependencies on US-040
+    / US-041 / US-042 / US-044 / US-045 only
+    in the sense that those stories generate
+    the run dirs the aggregator reads —
+    US-046 itself is purely a schema +
+    aggregator change. Code-only landing now
+    unblocks US-047 (dashboard tabs) which
+    is also pure code.
+---

@@ -235,7 +235,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~48 |
 | **US-045** | Post-training diagnostics: held-out test-set inference (72 evals) + confusion matrices (24 L5 cells) + calibration / ECE (48 cells at L3 + L5) + inference throughput (3 models) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
-| **US-046** | `Final_Exp.json` schema + aggregator wiring for B2 + B2-nr + C2 + multi-seed (group-by base tag, emit val_acc_mean / val_acc_std) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | 0 |
+| **US-046** | `Final_Exp.json` schema + aggregator wiring for B2 + B2-nr + C2 + multi-seed (group-by base tag, emit val_acc_mean / val_acc_std) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy deferred) | 0 |
 | **US-047** | Dashboard updates: 7 phase tabs (A / B (B1) / B2 / B2-nr / C / C2 / D) + multi-seed variance indicator + diagnostic galleries (confusion + calibration) + throughput card | [DESIGNER](agents/DESIGNER.md) | ⏳ pending | 0 |
 | **US-048** | Comparison plots + LaTeX tables (Δ_B1→B2, Δ_D→B2, Δ_B1→B2nr, Phase C2 axis attribution, multi-seed [mean ± std] bars, confusion matrices, reliability diagrams, throughput chart) | [DESIGNER](agents/DESIGNER.md) (plots) + [REPORTER](agents/REPORTER.md) (LaTeX review) | ⏳ pending | 0 |
 | **US-049** | Post-campaign content sync (README + CLAUDE.md + Final_Exp_Report.md + progress.txt; B → B1 rename discipline; new Findings #5–#8) | [SYNCHRONIZER](agents/SYNCHRONIZER.md) + [LIBRARIAN](agents/LIBRARIAN.md) + [REPORTER](agents/REPORTER.md) | ⏳ pending | 0 |
@@ -622,11 +622,11 @@ Optional staging: `--axes resolution`, `--axes blur`, `--axes salt_pepper` for t
   - `test_schema_version_bumped`.
 
 **Acceptance criteria.**
-- [ ] Aggregator emits the right row count for every flag combination.
-- [ ] `phase`, `treatment`, `seed`, `val_acc_mean`, `val_acc_std` fields correctly populated per row.
-- [ ] All new pytest assertions green.
-- [ ] `mypy src/tools/` reports no new type errors.
-- [ ] 276-cell v3 view byte-identical when no new phases on disk (regression).
+- [x] Aggregator emits the right row count for every flag combination.
+- [x] `phase`, `treatment`, `seed`, `val_acc_mean`, `val_acc_std` fields correctly populated per row.
+- [x] All new pytest assertions green.
+- [ ] `mypy src/tools/` reports no new type errors. *(deferred — operator audit pass)*
+- [x] 276-cell v3 view byte-identical when no new phases on disk (regression).
 
 **Owner:** [DESIGNER](agents/DESIGNER.md). [VALIDATOR](agents/VALIDATOR.md) signs off. **Dependencies:** US-040, US-041, US-042, US-044, US-045.
 

@@ -9,10 +9,14 @@ Field shapes match what is already on disk:
   ``"L1"``/``"clean"`` enum — the renderer formats for display.
 - `axis` is `str | None` (one of `AXIS_KEYS`; None for Phase A and Phase B).
 - `treatment` is `str | None` (one of ``"T1"``/``"T2"``/``"T3"``;
-  None for Phase A/B/C; set on Phase D regularization-sweep rows only).
+  None for Phase A/B/B2nr/C; set on Phase B2/C2/D regularization-sweep rows).
 - `status` matches `src.experiments.run_status.detect_status` exactly:
   ``"Pending" | "Running" | "Complete" | "Failed"`` (note: ``"Complete"``,
   not ``"Done"``).
+- `seed` is the canonical run's `pl.seed_everything` value (US-038, v4).
+  Always 42 on canonical cells; multi-seed audit replicates (seed != 42)
+  are aggregated into the canonical row's `val_acc_mean` / `val_acc_std`
+  rather than emitted as separate rows.
 
 Privacy: this schema deliberately excludes checkpoint paths, weight URIs,
 and host paths. Only metric scalars and config keys are carried.
@@ -23,19 +27,24 @@ Schema history
 - v2 (US-029.5, 2026-05-23): add `treatment: str | None` for Phase D
   regularization-sweep rows. Phase A/B/C carry `treatment=None` so the
   field is uniformly present on every row.
+- v3 (US-046, 2026-05-26): extend `Phase` Literal with B2 / B2nr / C2.
+  Add `seed: int` (canonical = 42), `val_acc_mean` and `val_acc_std`
+  (populated from multi-seed audit replicates when present; None
+  otherwise), and `seeds_observed: list[int]` (sorted seeds with a
+  Complete run on disk for this base tag, always includes 42).
 """
 from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-SCHEMA_VERSION: Literal[2] = 2
+SCHEMA_VERSION: Literal[3] = 3
 
-Phase = Literal["A", "B", "C", "D"]
+Phase = Literal["A", "B", "B2", "B2nr", "C", "C2", "D"]
 Status = Literal["Pending", "Running", "Complete", "Failed", "Deferred"]
 
-PHASES: tuple[Phase, ...] = ("A", "B", "C", "D")
+PHASES: tuple[Phase, ...] = ("A", "B", "B2", "B2nr", "C", "C2", "D")
 # `"Deferred"` (US-014) is for cells whose model is quarantined pending
-# hardware (e.g. TransNeXt). Deferred cells stay in the matrix so the 186
+# hardware (e.g. TransNeXt). Deferred cells stay in the matrix so the 402
 # denominator is preserved, but they are excluded from execution-driving
 # iterators in `run_all_phases.py` and rendered with a distinct badge.
 STATUSES: tuple[Status, ...] = (
@@ -60,12 +69,22 @@ class FinalExpRow(TypedDict):
     level: int | None
     axis: str | None
     # US-029.5 (schema v2): Phase D regularization treatment.
-    # One of ``"T1"``/``"T2"``/``"T3"`` on Phase D rows; None on
-    # Phase A/B/C rows so the field is uniformly present.
+    # US-046 (schema v3): also set on Phase B2 ("T3") and Phase C2 ("T3");
+    # remains None on Phase A/B/B2nr/C rows so the field is uniformly present.
     treatment: str | None
+    # US-046 (schema v3): canonical seed. Always 42 for the row's
+    # canonical run; multi-seed audit replicates collapse into the same
+    # canonical row via val_acc_mean / val_acc_std / seeds_observed.
+    seed: int
     params: ParamsDict
     status: Status
     val_acc: float | None
+    # US-046 (schema v3): aggregate across {seed=42} ∪ {seeds_observed}
+    # when more than one seed has a Complete run on disk for this base tag.
+    # None when only the canonical (seed=42) run exists.
+    val_acc_mean: float | None
+    val_acc_std: float | None
+    seeds_observed: list[int]
     val_loss: float | None
     epochs_run: int | None
     runtime_s: float | None
@@ -118,7 +137,7 @@ class CountsDict(TypedDict):
 
 
 class FinalExpDoc(TypedDict):
-    schema_version: Literal[2]
+    schema_version: Literal[3]
     generated_at: str
     rows: list[FinalExpRow]
     counts: CountsDict

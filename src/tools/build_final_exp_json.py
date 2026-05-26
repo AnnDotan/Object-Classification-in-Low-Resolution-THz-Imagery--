@@ -31,10 +31,15 @@ from typing import Optional
 
 from src.data.degradation_levels import level_params
 from src.experiments.cells import (
+    EXPECTED_COUNTS_WITH_ALL,
     EXPECTED_TOTAL,
+    EXPECTED_TOTAL_WITH_ALL,
     EXPECTED_TOTAL_WITH_D,
     CellMeta,
     iter_cells,
+    phase_b2_present_on_disk,
+    phase_b2nr_present_on_disk,
+    phase_c2_present_on_disk,
     phase_d_present_on_disk,
 )
 from src.experiments.run_status import (
@@ -144,7 +149,74 @@ def _visual_core_for(tag: str, visual_dir: Optional[Path] = None) -> Optional[st
     return None
 
 
-def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
+_MULTISEED_SUFFIX_RE = __import__("re").compile(r"^(?P<base>.+)_seed(?P<seed>\d+)$")
+
+
+def _scan_multiseed_replicates(
+    runs_root: Path,
+) -> dict[str, list[tuple[int, float]]]:
+    """US-046 (v4) — scan runs_root for `<base_tag>_seed{N}` directories with
+    a complete metrics.json, return {base_tag: [(seed, val_acc), ...]}.
+
+    Only seeds != 42 are picked up here; the canonical (seed=42) val_acc
+    flows through `_row_for` via the base_tag. The aggregator combines the
+    canonical val_acc with these audit replicates into val_acc_mean / std.
+    """
+    out: dict[str, list[tuple[int, float]]] = {}
+    if not runs_root.exists():
+        return out
+    for child in runs_root.iterdir():
+        if not child.is_dir():
+            continue
+        m = _MULTISEED_SUFFIX_RE.match(child.name)
+        if not m:
+            continue
+        base = m.group("base")
+        seed = int(m.group("seed"))
+        if seed == 42:
+            # `_seed42` is allowed on disk but folds into the canonical row;
+            # treat as identical to the unsuffixed canonical entry.
+            continue
+        metrics = read_metrics(child.name, runs_root)
+        if metrics is None:
+            continue
+        for key in ("best_val_acc", "final_val_acc", "last_val_acc"):
+            v = metrics.get(key)
+            if isinstance(v, (int, float)) and v >= 0.0:
+                out.setdefault(base, []).append((seed, float(v)))
+                break
+    return out
+
+
+def _multiseed_aggregate(
+    canonical_val_acc: Optional[float],
+    replicates: list[tuple[int, float]],
+) -> tuple[Optional[float], Optional[float], list[int]]:
+    """Combine the canonical seed=42 val_acc with audit-seed replicates into
+    (mean, std, seeds_observed). Returns (None, None, [42]) when only the
+    canonical run exists and the canonical val_acc is set; (None, None, [])
+    when nothing is on disk yet.
+    """
+    seeds: list[int] = []
+    values: list[float] = []
+    if canonical_val_acc is not None:
+        seeds.append(42)
+        values.append(float(canonical_val_acc))
+    for s, v in replicates:
+        seeds.append(s)
+        values.append(float(v))
+    if len(values) <= 1:
+        return None, None, sorted(seeds)
+    n = len(values)
+    mean = sum(values) / n
+    # Population std (ddof=0) — small-sample variance band, not an estimator.
+    var = sum((v - mean) ** 2 for v in values) / n
+    return float(mean), float(var ** 0.5), sorted(seeds)
+
+
+def _row_for(meta: CellMeta, runs_root: Path,
+              multiseed_replicates: Optional[dict[str, list[tuple[int, float]]]] = None,
+              ) -> FinalExpRow:
     metrics = read_metrics(meta.tag, runs_root)
     status = detect_status(meta.tag, runs_root, metrics)
     # US-019B: v2-affected cells with v1-vintage metrics demote to Pending in
@@ -213,6 +285,14 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         v = iq.get("ssim_std")
         ssim_std = float(v) if isinstance(v, (int, float)) else None
 
+    # US-046: aggregate seed=42 canonical val_acc with any audit replicates
+    # (seed != 42) found on disk. When fewer than 2 seeds are observed, mean
+    # and std are left None — the dashboard renders the seed=42 cell as-is.
+    replicates = (multiseed_replicates or {}).get(meta.tag, [])
+    val_acc_mean, val_acc_std, seeds_observed = _multiseed_aggregate(
+        val_acc, replicates
+    )
+
     return {
         "tag": meta.tag,
         "phase": meta.phase,  # type: ignore[typeddict-item]
@@ -221,11 +301,20 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
         "level": meta.level,
         "axis": meta.axis,
         # US-029.5: Phase D regularization treatment ("T1"/"T2"/"T3"), or
-        # None for Phase A/B/C rows. CellMeta.treatment defaults to None.
+        # None for Phase A/B/B2nr/C rows.
+        # US-046 (v3): Phase B2 / C2 carry "T3"; CellMeta.treatment is set
+        # by iter_cells.
         "treatment": meta.treatment,
+        # US-046 (v3): canonical seed is always 42. Multi-seed audit
+        # replicates collapse into the canonical row via val_acc_mean /
+        # val_acc_std / seeds_observed rather than emitted as separate rows.
+        "seed": 42,
         "params": _params_for(meta),
         "status": status,  # type: ignore[typeddict-item]
         "val_acc": val_acc,
+        "val_acc_mean": val_acc_mean,
+        "val_acc_std": val_acc_std,
+        "seeds_observed": seeds_observed,
         "val_loss": val_loss,
         "epochs_run": epochs_run,
         "runtime_s": runtime_s,
@@ -247,17 +336,53 @@ def _row_for(meta: CellMeta, runs_root: Path) -> FinalExpRow:
     }
 
 
+def _expected_rows(
+    include_phase_d: bool,
+    include_phase_b2: bool,
+    include_phase_b2nr: bool,
+    include_phase_c2: bool,
+) -> int:
+    n = EXPECTED_TOTAL
+    if include_phase_b2:
+        n += EXPECTED_COUNTS_WITH_ALL["B2"]
+    if include_phase_b2nr:
+        n += EXPECTED_COUNTS_WITH_ALL["B2nr"]
+    if include_phase_c2:
+        n += EXPECTED_COUNTS_WITH_ALL["C2"]
+    if include_phase_d:
+        n += EXPECTED_COUNTS_WITH_ALL["D"]
+    return n
+
+
 def build_doc(runs_root: Path = _RUNS_ROOT) -> FinalExpDoc:
-    """Build the FinalExpDoc by enumerating the 186 (or 276) cells and hydrating completed runs.
+    """Build the FinalExpDoc by enumerating canonical cells + hydrating completed runs.
 
     US-029.5: Phase D rows append when at least one `runs/final/final_D_*`
     directory exists on disk. With no Phase D dirs present, output is
     byte-identical to the pre-US-029.5 186-row contract.
+
+    US-046 (v4): same gating extended to Phase B2 / B2nr / C2 via the
+    matching present_on_disk helpers. Multi-seed audit replicates
+    (`<base>_seed{N}` directories with N != 42) are scanned once and
+    folded into each base tag's row as val_acc_mean / val_acc_std /
+    seeds_observed.
     """
-    include_phase_d = phase_d_present_on_disk(runs_root)
-    expected = EXPECTED_TOTAL_WITH_D if include_phase_d else EXPECTED_TOTAL
+    include_phase_d   = phase_d_present_on_disk(runs_root)
+    include_phase_b2  = phase_b2_present_on_disk(runs_root)
+    include_phase_b2nr = phase_b2nr_present_on_disk(runs_root)
+    include_phase_c2  = phase_c2_present_on_disk(runs_root)
+    expected = _expected_rows(
+        include_phase_d, include_phase_b2, include_phase_b2nr, include_phase_c2
+    )
+    multiseed = _scan_multiseed_replicates(runs_root)
     rows: list[FinalExpRow] = [
-        _row_for(meta, runs_root) for meta in iter_cells(include_phase_d=include_phase_d)
+        _row_for(meta, runs_root, multiseed_replicates=multiseed)
+        for meta in iter_cells(
+            include_phase_d=include_phase_d,
+            include_phase_b2=include_phase_b2,
+            include_phase_b2nr=include_phase_b2nr,
+            include_phase_c2=include_phase_c2,
+        )
     ]
     rows.sort(key=lambda r: r["tag"])
     assert len(rows) == expected, f"expected {expected} rows, got {len(rows)}"
@@ -324,15 +449,22 @@ def update_cell(
     Falls back to a full `build_final_exp_json` rebuild when the on-disk
     file is missing, schema-mismatched, or doesn't contain `tag`.
     """
-    # US-029.5: Phase D tags ("final_D_*") must be findable too — gate
-    # the enumeration on disk presence so single-cell patching mirrors the
-    # full-build view of the matrix.
-    include_phase_d = phase_d_present_on_disk(runs_root)
+    # US-029.5 / US-046: gate iter_cells flags on disk presence so single-cell
+    # patching mirrors the full-build view of the matrix.
+    include_phase_d   = phase_d_present_on_disk(runs_root)
+    include_phase_b2  = phase_b2_present_on_disk(runs_root)
+    include_phase_b2nr = phase_b2nr_present_on_disk(runs_root)
+    include_phase_c2  = phase_c2_present_on_disk(runs_root)
 
     # Validate the tag up front so a typo cannot silently trigger a full
     # rebuild (which would obscure the real wiring bug).
     meta = next(
-        (m for m in iter_cells(include_phase_d=include_phase_d) if m.tag == tag),
+        (m for m in iter_cells(
+            include_phase_d=include_phase_d,
+            include_phase_b2=include_phase_b2,
+            include_phase_b2nr=include_phase_b2nr,
+            include_phase_c2=include_phase_c2,
+        ) if m.tag == tag),
         None,
     )
     if meta is None:
@@ -353,7 +485,8 @@ def update_cell(
     if doc.get("schema_version") != SCHEMA_VERSION or "rows" not in doc:
         return build_final_exp_json(out_path=out_path, runs_root=runs_root)
 
-    new_row = _row_for(meta, runs_root)
+    multiseed = _scan_multiseed_replicates(runs_root)
+    new_row = _row_for(meta, runs_root, multiseed_replicates=multiseed)
     rows = doc["rows"]
     replaced = False
     for i, r in enumerate(rows):

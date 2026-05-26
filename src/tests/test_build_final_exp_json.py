@@ -653,6 +653,200 @@ def test_schema_version_bumped() -> None:
     assert SCHEMA_VERSION >= 2, SCHEMA_VERSION
 
 
+# -----------------------------------------------------------------------------
+# US-046 — Phase B2 / B2nr / C2 inclusion + multi-seed aggregation + schema v3.
+# -----------------------------------------------------------------------------
+
+
+def _stage_metrics(runs_root: Path, tag: str, val_acc: float) -> None:
+    """Plant a v2-pipeline metrics.json so v2-affected demotion does not
+    swallow the staged val_acc in test fixtures."""
+    cell_dir = runs_root / tag
+    cell_dir.mkdir(parents=True, exist_ok=True)
+    (cell_dir / "metrics.json").write_text(
+        json.dumps({
+            "best_val_acc": float(val_acc),
+            "last_val_loss": 0.5,
+            "epochs_run": 5,
+            "runtime_s": 60.0,
+            "pipeline_version": 2,
+        }),
+        encoding="utf-8",
+    )
+
+
+def test_schema_version_bumped_to_3() -> None:
+    """US-046 (v3): bump SCHEMA_VERSION from v2 → v3."""
+    assert SCHEMA_VERSION >= 3, (
+        f"US-046 requires SCHEMA_VERSION >= 3 (got {SCHEMA_VERSION})"
+    )
+
+
+def test_phase_b2_present_returns_30_extra_rows() -> None:
+    """US-046: at least one `final_B2_L*` dir on disk → 216-row view
+    (186 + 30 Phase B2). Each B2 row carries treatment='T3'."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_metrics(runs_root, "final_B2_L3_resnet50_cifar10", 0.55)
+        doc = build_doc(runs_root=runs_root)
+    assert doc["counts"]["total"] == 186 + 30, doc["counts"]
+    b2_rows = [r for r in doc["rows"] if r["phase"] == "B2"]
+    assert len(b2_rows) == 30, len(b2_rows)
+    treatments = {r["treatment"] for r in b2_rows}
+    assert treatments == {"T3"}, f"Phase B2 must carry treatment='T3'; got {treatments}"
+    # Phase A/B/C rows still carry treatment=None.
+    bad = [r["tag"] for r in doc["rows"]
+           if r["phase"] in ("A", "B", "C") and r["treatment"] is not None]
+    assert not bad, f"non-None treatment on A/B/C rows: {bad[:3]}"
+
+
+def test_phase_b2nr_present_returns_6_extra_rows_treatment_none() -> None:
+    """US-046: at least one `final_B2nr_*` dir on disk → 192-row view
+    (186 + 6). Phase B2nr rows carry treatment=None (no T3 deltas)."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_metrics(runs_root, "final_B2nr_L3_resnet50_cifar10", 0.60)
+        doc = build_doc(runs_root=runs_root)
+    assert doc["counts"]["total"] == 186 + 6, doc["counts"]
+    b2nr_rows = [r for r in doc["rows"] if r["phase"] == "B2nr"]
+    assert len(b2nr_rows) == 6, len(b2nr_rows)
+    treatments = {r["treatment"] for r in b2nr_rows}
+    assert treatments == {None}, f"Phase B2nr must carry treatment=None; got {treatments}"
+
+
+def test_phase_c2_present_returns_90_extra_rows_treatment_t3() -> None:
+    """US-046: at least one `final_C2_*` dir on disk → 276-row view
+    (186 + 90). Phase C2 rows carry treatment='T3' and axis ∈
+    {resolution, blur, salt_pepper}."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_metrics(runs_root, "final_C2_L3_resolution_resnet50_cifar10", 0.65)
+        doc = build_doc(runs_root=runs_root)
+    assert doc["counts"]["total"] == 186 + 90, doc["counts"]
+    c2_rows = [r for r in doc["rows"] if r["phase"] == "C2"]
+    assert len(c2_rows) == 90, len(c2_rows)
+    treatments = {r["treatment"] for r in c2_rows}
+    assert treatments == {"T3"}, treatments
+    axes = {r["axis"] for r in c2_rows}
+    assert axes == {"resolution", "blur", "salt_pepper"}, axes
+
+
+def test_all_opt_in_phases_present_returns_402_rows() -> None:
+    """US-046: with all four opt-in phases on disk → 402 rows total."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_metrics(runs_root, "final_B2_L3_resnet50_cifar10", 0.55)
+        _stage_metrics(runs_root, "final_B2nr_L3_resnet50_cifar10", 0.60)
+        _stage_metrics(runs_root, "final_C2_L3_resolution_resnet50_cifar10", 0.65)
+        _stage_phase_d_metrics(runs_root, "final_D_T3_L3_resnet50_cifar10")
+        doc = build_doc(runs_root=runs_root)
+    assert doc["counts"]["total"] == 402, doc["counts"]
+    by_phase: dict[str, int] = {}
+    for r in doc["rows"]:
+        by_phase[r["phase"]] = by_phase.get(r["phase"], 0) + 1
+    assert by_phase == {
+        "A": 6, "B": 30, "B2": 30, "B2nr": 6,
+        "C": 150, "C2": 90, "D": 90,
+    }, by_phase
+
+
+def test_multi_seed_grouping_emits_aggregated_val_acc_on_canonical_row() -> None:
+    """US-046: when `<base>_seed{N}` directories (N != 42) exist on disk
+    alongside the canonical run, their val_acc values fold into the
+    canonical row's val_acc_mean / val_acc_std / seeds_observed."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        base = "final_B_L3_resnet50_cifar10"
+        _stage_metrics(runs_root, base, 0.50)
+        _stage_metrics(runs_root, f"{base}_seed43", 0.55)
+        _stage_metrics(runs_root, f"{base}_seed44", 0.60)
+        doc = build_doc(runs_root=runs_root)
+    row = next(r for r in doc["rows"] if r["tag"] == base)
+    assert row["val_acc"] == 0.50, row["val_acc"]
+    assert row["seeds_observed"] == [42, 43, 44], row["seeds_observed"]
+    assert row["val_acc_mean"] is not None and abs(row["val_acc_mean"] - 0.55) < 1e-9, (
+        f"val_acc_mean = {row['val_acc_mean']} (expected ≈ 0.55)"
+    )
+    # Population std for {0.50, 0.55, 0.60} = sqrt(((0.05)² + 0² + (0.05)²) / 3)
+    #                                       = sqrt(0.005 / 3) ≈ 0.040825
+    assert row["val_acc_std"] is not None and abs(row["val_acc_std"] - 0.040824829046386304) < 1e-6
+
+
+def test_single_seed_leaves_val_acc_mean_none() -> None:
+    """When only the canonical (seed=42) run is on disk, val_acc_mean /
+    val_acc_std stay None and seeds_observed = [42]."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        base = "final_B_L3_densenet121_mnist"
+        _stage_metrics(runs_root, base, 0.92)
+        doc = build_doc(runs_root=runs_root)
+    row = next(r for r in doc["rows"] if r["tag"] == base)
+    assert row["val_acc_mean"] is None, row["val_acc_mean"]
+    assert row["val_acc_std"] is None, row["val_acc_std"]
+    assert row["seeds_observed"] == [42], row["seeds_observed"]
+
+
+def test_multi_seed_replicates_alone_yield_seeds_observed_subset() -> None:
+    """If only audit replicates exist (no canonical run), seeds_observed
+    lists only the audit seeds and val_acc stays None."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        base = "final_B_L3_densenet121_cifar10"
+        # No canonical run; only seed=43 + seed=44 replicates.
+        _stage_metrics(runs_root, f"{base}_seed43", 0.55)
+        _stage_metrics(runs_root, f"{base}_seed44", 0.57)
+        doc = build_doc(runs_root=runs_root)
+    row = next(r for r in doc["rows"] if r["tag"] == base)
+    assert row["val_acc"] is None, row["val_acc"]
+    assert row["seeds_observed"] == [43, 44], row["seeds_observed"]
+    assert row["val_acc_mean"] is not None
+    assert abs(row["val_acc_mean"] - 0.56) < 1e-9
+
+
+def test_seed_field_is_always_42_on_canonical_rows() -> None:
+    """Every canonical row carries seed=42; multi-seed replicates don't
+    promote to separate rows."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_metrics(runs_root, "final_B_L3_resnet50_cifar10_seed43", 0.55)
+        _stage_metrics(runs_root, "final_B_L3_resnet50_cifar10_seed44", 0.57)
+        doc = build_doc(runs_root=runs_root)
+    # No replicate row in the canonical matrix.
+    bad = [r for r in doc["rows"] if r["tag"].endswith("_seed43")
+           or r["tag"].endswith("_seed44")]
+    assert not bad, f"replicate rows leaked into canonical matrix: {[r['tag'] for r in bad[:3]]}"
+    # Every canonical row has seed=42.
+    seeds = {r["seed"] for r in doc["rows"]}
+    assert seeds == {42}, f"non-canonical seeds present: {seeds}"
+
+
+def test_276_v3_view_byte_identical_when_no_new_phases_on_disk() -> None:
+    """US-046 regression: with Phase D present but B2/B2nr/C2 absent on
+    disk, the doc should match the v3 276-cell view (same row count, same
+    treatment values, same phase split)."""
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        _stage_phase_d_metrics(runs_root, "final_D_T3_L3_resnet50_cifar10")
+        doc = build_doc(runs_root=runs_root)
+    assert doc["counts"]["total"] == 276, doc["counts"]
+    by_phase: dict[str, int] = {}
+    for r in doc["rows"]:
+        by_phase[r["phase"]] = by_phase.get(r["phase"], 0) + 1
+    assert by_phase == {"A": 6, "B": 30, "C": 150, "D": 90}, by_phase
+    # No B2/B2nr/C2 rows leak into the view.
+    leaked = [r["phase"] for r in doc["rows"] if r["phase"] in ("B2", "B2nr", "C2")]
+    assert not leaked, f"opt-in phases leaked: {leaked}"
+
+
 def main() -> int:
     _check_row_counts_and_phase_split()
     _check_phase_c_l1_collapse()
@@ -675,6 +869,17 @@ def main() -> int:
     test_phase_d_present_returns_276_rows()
     test_schema_treatment_field_present()
     test_schema_version_bumped()
+    # US-046 additions.
+    test_schema_version_bumped_to_3()
+    test_phase_b2_present_returns_30_extra_rows()
+    test_phase_b2nr_present_returns_6_extra_rows_treatment_none()
+    test_phase_c2_present_returns_90_extra_rows_treatment_t3()
+    test_all_opt_in_phases_present_returns_402_rows()
+    test_multi_seed_grouping_emits_aggregated_val_acc_on_canonical_row()
+    test_single_seed_leaves_val_acc_mean_none()
+    test_multi_seed_replicates_alone_yield_seeds_observed_subset()
+    test_seed_field_is_always_42_on_canonical_rows()
+    test_276_v3_view_byte_identical_when_no_new_phases_on_disk()
     print("\nAll build_final_exp_json checks passed.")
     return 0
 
