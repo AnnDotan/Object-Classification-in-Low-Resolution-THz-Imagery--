@@ -89,7 +89,11 @@ much lower than the pre-fix numbers suggested: \texttt{val\_acc} drops
 to $0.80$ on noise (was $0.96$ under the bug) and $0.94$ on
 salt-and-pepper (was $0.96$). The advantage disappears at $L=5$
 resolution. Attention softens but does not reverse the CIFAR-10
-texture-statistic collapse.
+texture-statistic collapse. An appendix (\S\ref{sec:phase-d}) reports
+Phase D, a 90-cell regularization sweep that quantifies the residual
+recoverable accuracy: T3 (dropout $+$ mixup $+$ cutmix) yields a mean
+$+0.77$ pp recovery, confirming the information-bottleneck
+interpretation of the v2 collapse.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -823,6 +827,96 @@ pre-flight gate (US-019B) that prevented a $\sim$53 GPU-hour
 mis-dispatch, and the contributors of the open-source PyTorch
 Lightning~\cite{falcon2019lightning} and
 Optuna~\cite{akiba2019optuna} libraries that underpin this work.
+
+% =============================================================
+\appendix
+\section{Phase D --- Regularization Recovery}
+\label{sec:phase-d}
+
+\subsection{Design}
+\label{ssec:phase-d-design}
+
+Phase D layers three regularization treatments on top of each frozen
+Optuna L3 winner --- without re-tuning --- to ask whether the v2
+combined-axis collapse can be recovered by stronger training-time
+priors rather than by architectural change. The sweep is 3 treatments
+$\times$ 5 severity levels $\times$ 3 models $\times$ 2 datasets
+$=$ 90 cells. Treatment \emph{T1} is architectural dropout: CNNs use
+\texttt{dropout\,=\,0.2} via the timm \texttt{drop\_rate} head, and
+TransNeXt-tiny uses \texttt{drop\_path\_rate\,=\,0.2} stochastic
+depth. Treatment \emph{T2} is label-mixing (mixup $\alpha=0.2$, cutmix
+off). Treatment \emph{T3} is the combo (T1 $\cup$ T2 $\cup$ cutmix
+$\alpha=1.0$). Each Phase D cell
+\texttt{final\_D\_T\{x\}\_L\{l\}\_\{m\}\_\{d\}} compares against the
+Phase B v2 cell \texttt{final\_B\_L\{l\}\_\{m\}\_\{d\}} at the same
+(model, dataset, level); no other degradation axes are activated by
+the treatment. All Phase D cells run under
+\texttt{PIPELINE\_VERSION\,=\,2} with the same
+\texttt{degradation\_levels\_hash} as Phase B. The campaign yielded
+90/90 healthy cells, 0 sentinels, and consumed 56.5 GPU-h; the total
+cell count of the project is therefore 276.
+
+\subsection{Results}
+\label{ssec:phase-d-results}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{phase_d_recovery_summary.png}
+  \caption{Phase D recovery vs Phase B v2 baseline (best \texttt{val\_acc} on the y-axis
+    versus degradation level L1--L5 on the x-axis). Six panels arranged as
+    (rows: models, columns: datasets). Baseline (Phase B v2) is the grey dashed line;
+    T1 / T2 / T3 are coloured solid lines.}
+  \label{fig:phase-d-recovery}
+\end{figure*}
+
+\begin{table}[t]
+  \centering
+  \caption{Phase D recovery: $\Delta$ best \texttt{val\_acc} (in percentage points)
+    versus the Phase B v2 baseline at L3 Moderate, per (model, dataset) pair and
+    treatment. Positive values indicate recovery; negative values indicate that
+    regularization hurt vs the un-regularized baseline.}
+  \label{tab:phase-d-l3-delta}
+  \input{_autogen/phase_d_recovery_table.tex}
+\end{table}
+
+\subsection{Discussion}
+\label{ssec:phase-d-discussion}
+
+The headline answer to the §\ref{sec:intro} research question is that
+the three treatments rank monotonically in regularization scope
+(T3 $>$ T2 $>$ T1) but their absolute magnitudes are small compared
+to the v2 collapse. The per-treatment mean $\Delta$ across the 90
+cells is T1 $+0.17$ pp, T2 $+0.31$ pp, and T3 $+0.77$ pp.
+Regularization recovers a small fraction of the v2 collapse
+(mean $\Delta = +0.77$ pp under T3 vs the $-12.49$ pp v2 drop
+reported in Section~\ref{sec:results_phase_b}). The collapse is
+largely a fundamental information bottleneck, not an overfit signal.
+
+The per-architecture pattern in
+Table~\ref{tab:phase-d-l3-delta} reinforces the
+``softens-but-does-not-reverse'' interpretation from
+Section~\ref{sec:finding_2}. The TransNeXt-tiny CIFAR-10 segment shows
+the largest recovery ($+2.20$ pp mean under T3, peaking at $+3.36$ pp
+under T1 at L3). Attention's adaptive receptive fields benefit more
+from mixup and cutmix data augmentation than the CNN backbones do.
+DenseNet121 shows the weakest CIFAR-10 recovery
+($+0.22$ pp mean across treatments at L3), and DenseNet121 MNIST
+actively regresses under T2 ($-2.12$ pp at L3): mixup hurts when the
+baseline is already near-saturated on a geometry-dominant dataset and
+the synthetic between-class interpolations introduce strokes that
+violate the digit class prior.
+
+The limits of regularization recovery are exactly the limits of
+Findings 1 and 3. The L5 resolution axis remains a hard ceiling
+(T3 mean $\Delta$ at L5 CIFAR-10 is only $+0.27$ pp): the universal
+$3{\times}3$-downsample bottleneck of Finding~\ref{sec:finding_1}
+confirms that regularization cannot recover information the bicubic
+kernel has already destroyed. MNIST shows essentially no recovery
+under any treatment (T3 $+0.40$ pp mean across all levels) because
+the geometric-axis floor of Finding~\ref{sec:finding_3} leaves no room
+to improve. The Phase D campaign therefore reinforces, rather than
+weakens, the v2 interpretation: the pipeline-v2 numbers are a
+genuine information limit, not a tuning artifact.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
