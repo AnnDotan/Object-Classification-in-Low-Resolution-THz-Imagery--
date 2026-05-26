@@ -6473,3 +6473,244 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     headline number — keeps every published
     value traceable to a deterministic run."
 ---
+
+## Iteration 54 (2026-05-26) — US-039 CLOSED: Phase B2 6-cell pilot dispatched + 66-entry baseline manifest + operator sign-off
+- What was done:
+  (a) Pre-flight (per PRD US-039 §1): PIPELINE_
+      VERSION=2 confirmed at src/data/degradation
+      _levels.py:48; runs/final/final_B2_L3_*/
+      empty before dispatch; matrix + determinism
+      gates green from Iteration 51.
+  (b) Baseline manifest extended pre-flight to 66
+      entries at artifacts/validation/phase_b2_
+      baseline_manifest.json:
+        - 30 Phase B v2 entries (carried forward
+          from phase_b_v2_baseline_manifest.json
+          captured at US-028).
+        - 30 Phase D T3 entries (sha256 of
+          runs/final/final_D_T3_L{1..5}_{m}_{d}/
+          metrics.json × 6 (m,d) pairs).
+        - 6 Phase A clean entries (sha256 of
+          runs/final/final_clean_{m}_{d}/
+          metrics.json × 6 (m,d) pairs).
+      All 36 new references located on disk; no
+      missing entries. Re-verified at US-048 plot
+      rendering (deferred).
+  (c) Dispatch — 6 cells sequentially via
+      .venv-gpu\Scripts\python.exe run_systematic
+      .py --cell-tag final_B2_L3_<m>_<d>
+      --mode pilot. All 6 cells exit=0; total
+      wall-clock 601.4 s = 10.0 min (CNN
+      52.7-69.6 s, TransNeXt 175.6-184.8 s).
+      Matches US-028 cadence (~9.5 min for the
+      equivalent 6-cell Phase D pilot).
+  (d) Per-cell metrics.json integrity verified
+      post-pilot:
+        - pipeline_version == 2 (6/6 cells).
+        - phase == "B2", treatment == "T3",
+          seed == 42 (6/6 cells).
+        - phase_b2_treatment == "T3" and
+          phase_b2_deltas non-empty per-model:
+            CNN cells (4 cells): {"dropout":
+            0.2, "mixup_alpha": 0.2,
+            "cutmix_alpha": 1.0}.
+            TransNeXt cells (2 cells):
+            {"drop_path_rate": 0.2,
+            "mixup_alpha": 0.2,
+            "cutmix_alpha": 1.0}.
+        - degrade_config carries the B2
+          override values byte-for-byte:
+          saturation = 0.0, gaussian_noise_std
+          = 0.0, salt_pepper_amount = 0.10
+          (S&P preserved at L3 per operator
+          mid-dispatch verification request +
+          PRD §4.1 + docs/phase_b2.md), low_res
+          = 8, blur_kernel = 41, blur_sigma =
+          8.0.
+        - epochs_run == 5 (pilot mode max).
+        - Zero §6.3 sentinels (no FAILED_
+          CONVERGENCE / OVERFITTING /
+          QUARANTINED_AFTER_RETRY sentinels).
+  (e) Render artifacts/dashboard_thumbs/ via
+      .venv-gpu\Scripts\python.exe -m src.tools.
+      render_cell_thumbs --phase B2 --force →
+      30 B2 thumbs written (all 5 levels × 6
+      (m,d) pairs); 6 L3 thumbs flagged for
+      operator visual sign-off.
+  (f) Operator visual sign-off — confirmed
+      thumbs are visibly monochrome / grayscale
+      (saturation = 0.0 lerp active), free of
+      fine-grain additive Gaussian noise grain
+      (gaussian_noise_std = 0.0), shows salt-
+      and-pepper speckle (S&P preserved at L3
+      ~10% pixel density), shows strong blur
+      (L3 kernel = 41, σ = 8.0 at 224×224),
+      shows heavy resolution loss (32 → 8 →
+      224 bicubic upsample). Operator approved
+      via `approved by ib94 2026-05-26`
+      appended to phase_b2_pilot_checklist.md.
+      HARD GATE released for US-040.
+  (g) Pilot cleanup — 6 pilot dirs at
+      runs/final/final_B2_L3_*/ removed (per
+      PRD US-039 §"Pilot cleanup"). 30 B2
+      thumbs retained in artifacts/dashboard_
+      thumbs/ (DegradeConfig-driven; do not
+      depend on the deleted pilot dirs).
+  (h) Operator mid-dispatch verification —
+      after cell 3/6, operator requested
+      protocol-semantics confirmation:
+      "in stage B2 and the rest — no colored
+      Gaussian noise — but there is still
+      S&P noise?" Confirmed verbatim against
+      the source helpers + the just-produced
+      metrics.json:
+        - B2 / B2nr: saturation = 0.0 +
+          gaussian_noise_std = 0.0 (zeroed);
+          salt_pepper_amount, low_res,
+          blur_kernel, blur_sigma all flow
+          through DEGRADATION_LEVELS[level]
+          unchanged. S&P STILL FIRES at the
+          level's amount (0.10 at L3).
+        - C2: same sat=0 + noise=0 invariants;
+          named axis active at level L; other
+          non-{sat, noise} axes at identity.
+- Headline observations (pilot, 5 epochs):
+  | cell | pilot B2 | B1 v2 L3 | D-T3 L3 |
+  | resnet50_cifar10 | 0.3310 | 0.3586 | 0.3670 |
+  | resnet50_mnist | 0.7380 | 0.7886 | 0.7980 |
+  | densenet121_cifar10 | 0.3130 | 0.3960 | 0.3924 |
+  | densenet121_mnist | 0.7960 | 0.8196 | 0.8172 |
+  | transnext_tiny_cifar10 | 0.3080 | 0.3900 | 0.4198 |
+  | transnext_tiny_mnist | 0.7060 | 0.7994 | 0.8136 |
+  All 6 cells underperform B1 v2 L3 + D-T3 L3 in
+  pilot mode. EXPECTED — same dynamic as US-028
+  (Phase D pilot): aggressive T3 regularization
+  (mixup α=0.2 + cutmix α=1.0 + dropout 0.2 /
+  drop_path 0.2) needs 30+ epochs to start
+  producing benefit; pilot mode (5 epochs, small
+  subsets) appears as underfit. Pilot value is
+  infrastructure validation, not scientific
+  signal. Full US-040 60-epoch sweep is what
+  reveals Δ_B1→B2 and Δ_D→B2 sign + magnitude.
+- ACs status (5 ACs):
+  - [x] AC #1 — Extended baseline manifest
+    committed with 66/66 SHA-256 entries.
+  - [x] AC #2 — 6/6 pilot metrics.json written
+    with expected fields.
+  - [x] AC #3 — Zero §6.3 sentinels.
+  - [x] AC #4 — Operator signs phase_b2_pilot_
+    checklist.md. HARD GATE released for
+    US-040.
+  - [x] AC #5 — Pilot dirs cleaned.
+- Files affected (modified):
+  - artifacts/validation/phase_b2_baseline_
+    manifest.json: NEW — 66 sha256 entries.
+  - artifacts/validation/phase_b2_pilot_
+    checklist.md: NEW — 5 acceptance sections +
+    operator approval line.
+  - artifacts/dashboard_thumbs/final_B2_L*.png:
+    30 NEW thumbs (5 levels × 6 (m,d)).
+  - PRD.md: 5 of 5 US-039 ACs ticked; US-039
+    status set to "CLOSED 2026-05-26 (0.17
+    GPU-h actual)".
+  - progress.txt: this Iteration 54 entry.
+- Files DELETED (per PRD cleanup):
+  - runs/final/final_B2_L3_resnet50_cifar10/
+  - runs/final/final_B2_L3_resnet50_mnist/
+  - runs/final/final_B2_L3_densenet121_cifar10/
+  - runs/final/final_B2_L3_densenet121_mnist/
+  - runs/final/final_B2_L3_transnext_tiny_
+    cifar10/
+  - runs/final/final_B2_L3_transnext_tiny_
+    mnist/
+- Validation summary:
+  - 6/6 pilot cells exit=0, no tracebacks, no
+    sentinels.
+  - 66/66 manifest entries verified on disk.
+  - Operator visual sign-off: grayscale + S&P
+    + blur + resolution loss confirmed; no
+    color, no fine-grain Gaussian.
+  - GPU budget burn: 0.17 GPU-h actual
+    (10.0 min wall-clock) vs ~2.5 GPU-h
+    budgeted — well under (pilot mode is 5
+    epochs vs 60 epochs in the budgeted full
+    FT). Note: the ~2.5 GPU-h PRD figure was
+    pessimistic; v3 US-028's pilot was 0.16
+    GPU-h. US-040 full-FT is the actual ~15
+    GPU-h commitment.
+- Learnings for next cycles:
+  - Patterns: Mid-dispatch operator semantic
+    questions are best answered against the
+    actual just-produced metrics.json
+    payloads, not just the source helpers.
+    The mid-pilot verification of "sat=0 +
+    noise=0 + S&P preserved" was answered by
+    inspecting cell 1's metrics.json
+    degrade_config alongside the helper
+    definitions in src/data/degrade.py:237-272.
+    This avoids "the code says X but who knows
+    what actually ran" doubt.
+  - Patterns: 5-epoch pilot mode is
+    infrastructure validation, NOT scientific
+    signal. Under aggressive T3 regularization
+    (mixup + cutmix + arch dropout), pilot
+    val_acc is monotonically WORSE than the
+    unregularized baseline because mixup needs
+    30+ epochs to start contributing. Operators
+    should expect ALL 6 pilot cells to
+    underperform B1 v2 L3 + D-T3 L3 in pilot
+    mode; if they outperform, that's anomalous
+    and worth investigation. Same dynamic
+    documented at Iteration 47 for the v3
+    Phase D pilot.
+  - Patterns: 66-entry baseline manifest at
+    US-039 pre-flight extends the 30-entry v3
+    manifest in place (artifacts/validation/
+    phase_b_v2_baseline_manifest.json copied
+    to artifacts/validation/phase_b2_baseline_
+    manifest.json, then 36 new entries added).
+    Both files retained: the v3 manifest is
+    referenced by older Phase D plots (US-031)
+    + the v4 manifest is referenced by Phase
+    B2 + C2 plot scripts (US-048).
+  - Traps: Don't delete artifacts/dashboard_
+    thumbs/final_B2_L3_*.png during pilot
+    cleanup — the thumbs are rendered from
+    DegradeConfig + a sample CIFAR/MNIST
+    image, NOT from the run dirs. They survive
+    the pilot dir deletion and are valid for
+    operator visual sign-off + dashboard
+    embedding.
+  - Traps: Pilot mode metric.json fields
+    look different from full FT: epochs_run=5
+    (not 60), best_epoch can be 0-4, no
+    early-stopping trigger, runtime_s 50-185s
+    per cell. Don't confuse these with full
+    FT metrics in any downstream aggregator
+    or report — the pilot dirs are explicitly
+    deleted to prevent leakage into US-040 +
+    US-046 aggregator.
+  - Helpful context: US-040 full FT (24 new
+    cells + 6 pilot cells re-trained at full
+    FT = 30 total) is the next dispatch.
+    Budget ~15 GPU-h on the RTX 5070. With
+    the measured pilot cadence (~10 min for
+    6 × 5-epoch cells), full FT at 60 epochs
+    × patience 10 = up to 12× pilot duration
+    per cell → ~2 hrs per cell × 30 cells ≈
+    60 GPU-h pessimistic, but with patience
+    10 + Optuna L3 winners + bf16-mixed +
+    mixup soft-labels, actual closer to ~15
+    GPU-h matching the PRD budget. Dispatch
+    via `.venv-gpu\Scripts\python.exe scripts\
+    run_ralph_loop.py --phase B2`.
+  - Helpful context: Pilot total wall-clock
+    is 1/15 of the PRD budget (0.17 GPU-h
+    vs 2.5 GPU-h budgeted). This pattern
+    repeats: PRD GPU-budgets are pessimistic
+    by ~10-15× for pilot dispatches because
+    the budget assumes worst-case bf16-mixed
+    + full epoch budgets. Operators should
+    expect pilots to land in ~10 min on
+    Blackwell hardware.
+---

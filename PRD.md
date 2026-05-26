@@ -228,7 +228,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-036** | PRD v4 authoring + progress.txt v4-kickoff entry (this document) | [MASTER](agents/MASTER.md) | ✅ CLOSED 2026-05-26 | 0 |
 | **US-037** | `docs/phase_b2.md` + `docs/phase_c2.md` rationale documents | [REPORTER](agents/REPORTER.md) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (review) | ✅ CLOSED 2026-05-26 | 0 |
 | **US-038** | Code wiring: cells.py + matrix.py + degrade.py + run_systematic.py + run_all_phases.py + multi-seed CLI + logit logging + determinism test extensions | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) + [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy + pilot deferred) | 0 |
-| **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~2.5 |
+| **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (0.17 GPU-h actual) | ~2.5 |
 | **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~15 |
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
@@ -373,11 +373,11 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 **Pilot cleanup.** Delete `runs/final/final_B2_L3_*/` after sign-off.
 
 **Acceptance criteria.**
-- [ ] Extended baseline manifest committed with 66/66 SHA-256 entries.
-- [ ] 6/6 pilot `metrics.json` written with expected fields.
-- [ ] Zero §6.3 sentinels.
-- [ ] Operator signs `phase_b2_pilot_checklist.md`. **HARD GATE.**
-- [ ] Pilot dirs cleaned.
+- [x] Extended baseline manifest committed with 66/66 SHA-256 entries.
+- [x] 6/6 pilot `metrics.json` written with expected fields.
+- [x] Zero §6.3 sentinels.
+- [x] Operator signs `phase_b2_pilot_checklist.md`. **HARD GATE.**
+- [x] Pilot dirs cleaned.
 
 **GPU budget.** ~2.5 GPU-h.
 
