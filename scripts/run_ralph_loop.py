@@ -27,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.data.degradation_levels import AXES  # noqa: E402
 from src.experiments.cells import CellMeta, iter_cells  # noqa: E402
 
 RUNS_DIR = REPO_ROOT / "runs" / "final"
@@ -57,7 +58,9 @@ def filter_cells(
     phase: Optional[str] = None,
     model: Optional[str] = None,
     dataset: Optional[str] = None,
+    axes: Optional[Sequence[str]] = None,
 ) -> list[CellMeta]:
+    axes_set = set(axes) if axes else None
     out: list[CellMeta] = []
     for c in cells:
         if phase is not None and c.phase != phase:
@@ -66,8 +69,29 @@ def filter_cells(
             continue
         if dataset is not None and c.dataset != dataset:
             continue
+        if axes_set is not None and c.axis not in axes_set:
+            continue
         out.append(c)
     return out
+
+
+def _parse_axes_arg(value: str) -> tuple[str, ...]:
+    """argparse type= callable: comma-separated axis names validated against AXES.
+
+    Empty entries (e.g. trailing comma) are tolerated; unknown names raise
+    ArgumentTypeError so argparse routes the failure through parser.error.
+    """
+    parts = tuple(p.strip() for p in value.split(",") if p.strip())
+    if not parts:
+        raise argparse.ArgumentTypeError(
+            f"--axes requires at least one axis; expected subset of {list(AXES)}"
+        )
+    invalid = [a for a in parts if a not in AXES]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"unknown axis/axes {invalid!r}; expected subset of {list(AXES)}"
+        )
+    return parts
 
 
 # ---------------------------------------------------------------------------
@@ -364,9 +388,26 @@ def run_dispatch(
     return exit_code
 
 
-def _post_train_verdict(tag: str, *, base: Path = RUNS_DIR) -> str:
-    """Read history.json from the run dir and run evaluate_pathology."""
-    p = cell_run_dir(tag, base) / "history.json"
+def _post_train_verdict(
+    tag: str, *, base: Path = RUNS_DIR, run_dir: Optional[Path] = None
+) -> str:
+    """Read history.json from the run dir and run evaluate_pathology.
+
+    When ``run_dir`` is provided, read that dir's history.json directly —
+    used by the retry path so the verdict is computed on the retry's
+    history, not on the first-pass base dir (Iteration 12, 2026-05-15 —
+    Lightning's _make_unique_run_dir routes the retry into ``__v2`` while
+    sentinels live in base; without this hook the verdict was computed
+    on stale first-pass data).
+
+    Falls back to ``cell_run_dir(tag, base) / "history.json"`` when
+    ``run_dir`` is None or missing — preserves the first-pass dispatch
+    behavior unchanged.
+    """
+    if run_dir is not None:
+        p = Path(run_dir) / "history.json"
+    else:
+        p = cell_run_dir(tag, base) / "history.json"
     if not p.exists():
         return "failed_convergence"
     try:
@@ -410,7 +451,11 @@ def run_remediate(
         write_retry_config(c.tag, retry_cfg, base=base)
 
         try:
-            run_cell_fn(c.tag, mode=mode, engine=engine)
+            # Capture the actual run dir (Lightning's _make_unique_run_dir
+            # may route the retry into <tag>__v2 since base has first-pass
+            # artifacts). The pathology verdict reads from this dir so it
+            # evaluates the retry's history, not the stale first-pass one.
+            retry_run_dir = run_cell_fn(c.tag, mode=mode, engine=engine)
         except Exception as e:  # noqa: BLE001 — retry failed → quarantine
             print(f"[ralph][remediate] retry failed for {c.tag}: {e}",
                   file=sys.stderr)
@@ -418,7 +463,7 @@ def run_remediate(
             exit_code = 1
             continue
 
-        post = _post_train_verdict(c.tag, base=base)
+        post = _post_train_verdict(c.tag, base=base, run_dir=retry_run_dir)
         if post != "healthy":
             write_sentinel(c.tag, QUARANTINED_AFTER_RETRY,
                            body=f"second_failure:{post}", base=base)
@@ -452,6 +497,9 @@ def _build_argparser() -> argparse.ArgumentParser:
                    help="Filter cells by model (e.g. resnet50).")
     p.add_argument("--dataset", default=None, choices=["cifar10", "mnist"],
                    help="Filter cells by dataset.")
+    p.add_argument("--axes", default=None, type=_parse_axes_arg,
+                   help="Comma-separated Phase C axes to dispatch (subset of "
+                        f"{list(AXES)}). Only valid with --phase C.")
     p.add_argument("--mode", default="full", choices=["full", "pilot"],
                    help="Training mode. --plan final rejects --mode pilot.")
     p.add_argument("--engine", default="lightning", choices=["lightning", "legacy"])
@@ -467,7 +515,8 @@ def _build_argparser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = _build_argparser().parse_args(argv)
+    parser = _build_argparser()
+    args = parser.parse_args(argv)
 
     # CLAUDE.md convergence-first invariant.
     assert not (args.plan == "final" and args.mode == "pilot"), (
@@ -475,9 +524,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "convergence-first invariant (60 epochs / patience 10)."
     )
 
+    # US-019: --axes is a Phase C concept (single-axis isolation). Reject the
+    # combination with Phase A (no axes) or Phase B (all axes combined).
+    if args.axes is not None and args.phase != "C":
+        phase_label = args.phase if args.phase is not None else "all"
+        parser.error(
+            f"--axes is only valid with --phase C; got --phase {phase_label} "
+            "(axes are a Phase C single-axis-isolation concept)"
+        )
+
     cells = filter_cells(
         iter_cells(),
         phase=args.phase, model=args.model, dataset=args.dataset,
+        axes=args.axes,
     )
 
     if args.dry_run:

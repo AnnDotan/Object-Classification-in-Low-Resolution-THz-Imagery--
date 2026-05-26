@@ -231,6 +231,57 @@ V3_TRANSNEXT_FT_PRIORS: dict[str, float | int] = {
 }
 
 
+# Phase D — Regularization Sweep treatment deltas (US-026, 2026-05-23).
+#
+# Each treatment is a *delta* on top of the L3-Optuna-tuned baseline hparams
+# loaded from artifacts/best_hparams/. Phase D does NOT re-tune; treatments
+# inject regularization on top of frozen baselines so deltas are attributable.
+#
+# CNN dropout flows through timm's `drop_rate` (classifier-head); TransNeXt
+# does not honor it, so we route to `drop_path_rate` (stochastic depth) for
+# architectural regularization on TransNeXt. Mixup/cutmix are model-agnostic.
+def _phase_d_treatment_deltas(treatment: str, model_name: str) -> dict[str, float]:
+    """Return the regularization-delta dict to merge into best_params for a
+    Phase D (treatment, model) pair.
+
+    T1 — architectural dropout (dropout=0.2 for CNN, drop_path_rate=0.2 for TransNeXt)
+    T2 — label-mixing (mixup_alpha=0.2, cutmix off)
+    T3 — combo (T1 + T2 + cutmix_alpha=1.0)
+    """
+    is_transnext = model_name.startswith("transnext_")
+    if treatment == "T1":
+        return {"drop_path_rate": 0.2} if is_transnext else {"dropout": 0.2}
+    if treatment == "T2":
+        return {"mixup_alpha": 0.2, "cutmix_alpha": 0.0}
+    if treatment == "T3":
+        arch = {"drop_path_rate": 0.2} if is_transnext else {"dropout": 0.2}
+        return {**arch, "mixup_alpha": 0.2, "cutmix_alpha": 1.0}
+    raise ValueError(
+        f"unknown Phase D treatment: {treatment!r}; "
+        f"expected one of T1, T2, T3"
+    )
+
+
+def _apply_phase_d_treatment(spec, hparams: dict) -> dict:
+    """Return a new hparams blob with Phase D treatment deltas layered on top
+    of best_params. For non-Phase-D cells the input is returned unchanged.
+
+    The blob is shallow-copied so the caller's reference (and any cached
+    Optuna JSON) is not mutated.
+    """
+    treatment = getattr(spec, "treatment", None)
+    if spec.phase != "D" or not treatment:
+        return hparams
+    deltas = _phase_d_treatment_deltas(treatment, spec.model)
+    bp = dict(hparams.get("best_params", {}))
+    bp.update(deltas)
+    out = dict(hparams)
+    out["best_params"] = bp
+    out["phase_d_treatment"] = treatment
+    out["phase_d_deltas"] = deltas
+    return out
+
+
 def _load_hparams_for_cell(spec) -> dict:
     """Load best_hparams for a CellSpec, with Phase A / V3 TransNeXt fallback.
 
@@ -306,6 +357,10 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
         "warmup_epochs": int(round(float(bp["warmup_epochs"]))),
         "drop_path_rate": float(bp.get("drop_path_rate", 0.0)),
         "dropout": float(bp.get("dropout", 0.0)),
+        # Phase D (US-026): mixup / cutmix flow through bp when a treatment
+        # injects them. Default 0.0 preserves Phase A/B/C behavior exactly.
+        "mixup_alpha": float(bp.get("mixup_alpha", 0.0)),
+        "cutmix_alpha": float(bp.get("cutmix_alpha", 0.0)),
 
         # Blackwell + TransNeXt knobs (CellSpec is SoT; all 224x224 now)
         "img_size": spec.img_size,
@@ -361,6 +416,13 @@ def _merge_metadata_into_metrics_json(
     metrics["axis"] = spec.axis
     metrics["model"] = spec.model
     metrics["dataset"] = spec.dataset
+    # Phase D (US-026/US-028): persist treatment + deltas as top-level keys
+    # so PRD US-028 acceptance criteria are literally satisfied (the merged
+    # delta values already flow through metrics["hparams"], but the explicit
+    # treatment label is what the post-hoc attribution scripts read).
+    if hparams.get("phase_d_treatment") is not None:
+        metrics["phase_d_treatment"] = hparams["phase_d_treatment"]
+        metrics["phase_d_deltas"] = hparams.get("phase_d_deltas", {})
     metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
 
@@ -430,6 +492,9 @@ def run_cell(
     retry_path = Path("runs/final") / cell_tag / "retry_config.json"
     if retry_path.exists():
         hparams = json.loads(retry_path.read_text(encoding="utf-8"))
+    # Phase D (US-026): layer treatment-specific regularization deltas onto
+    # the loaded best_params. No-op for Phase A/B/C cells.
+    hparams = _apply_phase_d_treatment(spec, hparams)
     config = _cell_config(spec, hparams, mode)
 
     run_experiment = run_experiment_fn or _resolve_run_experiment(engine)

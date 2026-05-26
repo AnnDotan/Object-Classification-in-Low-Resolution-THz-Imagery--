@@ -254,9 +254,14 @@ def run_single(exp: dict, exp_num: int, total: int, engine: str = "lightning"):
 # 186-CELL FINAL PLAN orchestration (US-009)
 # ============================================================
 
-# Phases that exist in the 186-cell matrix (build_final_matrix). Distinct
+# Phases that exist in the Final-campaign matrix (build_final_matrix). Distinct
 # from the legacy A/B/C/D phases in this file (which mean different things).
-FINAL_PHASES = ("A", "B", "C")
+#
+# US-026 (2026-05-23): Phase D — Regularization Sweep — is opt-in. It is a
+# 90-cell *duplicate* of Phase B with treatment-specific dropout / drop-path /
+# mixup / cutmix layered on top of the L3-Optuna baselines. Phase D tags use
+# `final_D_*` so they cannot collide with Phase B's `final_B_*` directories.
+FINAL_PHASES = ("A", "B", "C", "D")
 
 
 def _has_completed_metrics(metrics_path: Path) -> bool:
@@ -362,11 +367,27 @@ def run_final_plan(
         phase_boundary_fn = _sync.commit_and_push_phase_boundary
     from src.experiments.matrix import build_final_matrix
 
-    matrix = build_final_matrix()
+    # US-026: include Phase D iff explicitly requested. `--phase all` keeps
+    # the historical 186-cell behavior so existing callers don't sweep the
+    # 90 extra cells by accident. `--phase D` opts into the Phase D rows only.
+    include_phase_d = (phase == "D")
+    matrix = build_final_matrix(include_phase_d=include_phase_d)
     if phase != "all":
         if phase not in FINAL_PHASES:
             raise ValueError(f"unknown phase {phase!r}; expected one of {FINAL_PHASES} or 'all'")
         matrix = [c for c in matrix if c.phase == phase]
+
+    # US-026 invariant: Phase D dispatch must never touch a Phase B directory.
+    # Every Phase D cell uses a `final_D_*` tag (build_final_matrix guarantees
+    # this) so the run_dir below is `runs/final/final_D_*`. This guard is a
+    # defense-in-depth check; if any cell's tag drifts from the scheme we abort
+    # before the runner can write to disk.
+    if phase == "D":
+        bad = [c.tag for c in matrix if not c.tag.startswith("final_D_")]
+        assert not bad, (
+            f"Phase D dispatch contained non-D tags: {bad[:3]} "
+            f"(would have overwritten Phase B). Aborting."
+        )
 
     # PRD US-042: optional model/dataset filters. Used by `--dry-run` smoke
     # tests and by ad-hoc single-cell dispatches. The filters are AND-ed.
@@ -424,9 +445,9 @@ def run_final_plan(
 
     # Phase boundary tracker: count attempted (run + skipped) cells per phase so
     # we can fire commit_and_push_phase_boundary once each phase reaches its
-    # full expected count.
-    phase_attempted: dict[str, int] = {"A": 0, "B": 0, "C": 0}
-    phase_total: dict[str, int] = {"A": 0, "B": 0, "C": 0}
+    # full expected count. US-026: Phase D added (90 cells).
+    phase_attempted: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
+    phase_total: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
     for c in matrix:
         phase_total[c.phase] += 1
 
@@ -584,7 +605,7 @@ def main():
     parser.add_argument("--engine", default="lightning", choices=["lightning", "legacy"],
                         help="Training engine: lightning (default) or legacy hand-rolled trainer")
     parser.add_argument("--model", default=None,
-                        help="final plan: filter matrix to one model (e.g. transnext_base). "
+                        help="final plan: filter matrix to one model (e.g. transnext_small). "
                              "Used by --dry-run smoke tests; ignored by legacy plan.")
     parser.add_argument("--dataset", default=None,
                         help="final plan: filter matrix to one dataset (cifar10 | mnist). "
