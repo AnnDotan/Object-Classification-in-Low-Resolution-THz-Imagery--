@@ -39,6 +39,7 @@ from typing import Optional
 
 from src.experiments.cells import (
     EXPECTED_COUNTS,
+    EXPECTED_COUNTS_WITH_ALL,
     EXPECTED_COUNTS_WITH_D,
     EXPECTED_TOTAL,
     PHASE_D_TREATMENTS,
@@ -647,7 +648,14 @@ _JS = r"""
     const JSON_PATH = './Final_Exp.json';
     const LS_ACTIVE_PHASE = 'final_exp.active_phase';
     const LS_FILTERS_PREFIX = 'final_exp.filters.';
-    const PHASES = ['A', 'B', 'C', 'D'];
+    // US-047 (v4): 7 phases A → B → B2 → B2nr → C → C2 → D. Phase B is
+    // labeled "Phase B (B1)" in the tab text but data-phase stays "B".
+    const PHASES = ['A', 'B', 'B2', 'B2nr', 'C', 'C2', 'D'];
+    // Treatment chip is visible only on regularized phases (B2, C2, D).
+    const TREATMENT_PHASES = ['B2', 'C2', 'D'];
+    // Axis chip is meaningful on Phase C (legacy isolation) and Phase C2
+    // (THz-protocol isolation; restricted axes).
+    const AXIS_PHASES = ['C', 'C2'];
     // US-019: 10-minute polling cadence. The aggregator pushes per-cell
     // updates after every Trainer.fit (incremental --cell mode), so the
     // dashboard does NOT need a tight polling loop — once every 10 min is
@@ -673,6 +681,20 @@ _JS = r"""
     function fmtAcc(v) {
         if (v === null || v === undefined) return '—';
         return (v * 100).toFixed(2) + '%';
+    }
+
+    // US-047 (v4): multi-seed variance indicator. When val_acc_mean and
+    // val_acc_std are populated (≥ 2 audit seeds), render as "mean ± std%"
+    // with a tooltip listing seeds_observed. Falls back to fmtAcc(v).
+    function fmtAccMaybeVariance(row) {
+        var m = row.val_acc_mean, s = row.val_acc_std;
+        if (m === null || m === undefined || s === null || s === undefined) {
+            return fmtAcc(row.val_acc);
+        }
+        var seeds = (row.seeds_observed || []).join(', ');
+        var html = (m * 100).toFixed(2) + '% ± ' + (s * 100).toFixed(2) + '%';
+        return '<span class="multiseed-indicator" title="seeds: ' +
+            seeds + '">' + html + '</span>';
     }
 
     function accClass(v) {
@@ -861,7 +883,7 @@ _JS = r"""
                 '<td>' + visualCoreHtml(row) + '</td>' +
                 '<td>' + statusPillHtml(row.status, row) + '</td>' +
                 '<td class="num-cell acc-cell ' + accClass(row.val_acc) + '">' +
-                    fmtAcc(row.val_acc) + '</td>' +
+                    fmtAccMaybeVariance(row) + '</td>' +
                 '<td class="num-cell">' +
                     (row.epochs_run !== null && row.epochs_run !== undefined ? row.epochs_run : '—') +
                 '</td>' +
@@ -958,12 +980,12 @@ _JS = r"""
         document.querySelectorAll('.tab-btn').forEach(function (b) {
             b.classList.toggle('active', b.dataset.phase === phase);
         });
-        // Axis chip group is only meaningful on Phase C — hide on A/B/D.
+        // Axis chip group is meaningful on Phase C and Phase C2 — hide elsewhere.
         const axisGroup = document.querySelector('[data-chip-group="axis"]');
-        if (axisGroup) axisGroup.style.display = (phase === 'C') ? '' : 'none';
-        // Treatment chip group is only meaningful on Phase D — hide on A/B/C (US-030).
+        if (axisGroup) axisGroup.style.display = (AXIS_PHASES.indexOf(phase) !== -1) ? '' : 'none';
+        // Treatment chip group is meaningful on regularized phases (B2/C2/D).
         const treatmentGroup = document.querySelector('[data-chip-group="treatment"]');
-        if (treatmentGroup) treatmentGroup.style.display = (phase === 'D') ? '' : 'none';
+        if (treatmentGroup) treatmentGroup.style.display = (TREATMENT_PHASES.indexOf(phase) !== -1) ? '' : 'none';
 
         // Restore this phase's chip selections in the UI.
         renderChipSelections();
@@ -1612,10 +1634,59 @@ def _html_template(initial_doc_json: str) -> str:
   </div>
 </details>
 
+<!-- US-047 (v4) — Phase B2 comparison strip. Renders B1 vs D-T3 vs B2 vs B2nr
+     once Phase B2 lands (US-040). Body shows a pending placeholder otherwise. -->
+<details class="us-trend-section phase-b2-comparison-section" id="phase-b2-comparison-section">
+  <summary>Phase B2 Comparison (B1 vs D-T3 vs B2 vs B2-nr)</summary>
+  <div class="us-trend-body">
+    <span class="ut-pending">Awaiting Phase B2 runs (US-040 / US-041).</span>
+  </div>
+</details>
+
+<!-- US-047 (v4) — Phase C2 axis-attribution strip. Renders per-axis recovery
+     surfaces once Phase C2 lands (US-044). -->
+<details class="us-trend-section phase-c2-comparison-section" id="phase-c2-comparison-section">
+  <summary>Phase C2 Axis Attribution (resolution / blur / salt_pepper)</summary>
+  <div class="us-trend-body">
+    <span class="ut-pending">Awaiting Phase C2 runs (US-044).</span>
+  </div>
+</details>
+
+<!-- US-047 (v4) — Inference throughput card. Reads
+     artifacts/figures/inference_throughput.csv once US-045 lands.
+     Empty-state placeholder until then. -->
+<details class="us-trend-section throughput-card-section" id="throughput-card-section">
+  <summary>Inference Throughput (bf16-mixed, batch=1, 224×224)</summary>
+  <div class="us-trend-body" id="throughput-body">
+    <span class="ut-pending">Awaiting US-045 diagnostics (3 models × 100 warmup + 1000 measurement batches).</span>
+  </div>
+</details>
+
+<!-- US-047 (v4) — Confusion-matrix gallery. Lazy-loads 24 L5 PNGs from
+     artifacts/figures/confusion/ when the user expands the section. -->
+<details class="us-trend-section confusion-gallery-section" id="confusion-gallery-section">
+  <summary>Confusion Matrices — L5 cells (24)</summary>
+  <div class="us-trend-body" id="confusion-gallery-body">
+    <span class="ut-pending">Awaiting US-045 confusion-matrix dump (24 L5 cells × seed=42).</span>
+  </div>
+</details>
+
+<!-- US-047 (v4) — Calibration / ECE gallery. Lazy-loads 48 reliability
+     diagrams (24 L3 + 24 L5) when the user expands the section. -->
+<details class="us-trend-section calibration-gallery-section" id="calibration-gallery-section">
+  <summary>Calibration Diagrams + ECE — L3 + L5 cells (48)</summary>
+  <div class="us-trend-body" id="calibration-gallery-body">
+    <span class="ut-pending">Awaiting US-045 calibration / ECE diagnostics (48 cells).</span>
+  </div>
+</details>
+
 <div class="tab-bar" role="tablist">
   <button type="button" class="tab-btn" data-phase="A" role="tab">Phase A<span class="tab-count" id="tab-count-A">{EXPECTED_COUNTS['A']}</span></button>
-  <button type="button" class="tab-btn" data-phase="B" role="tab">Phase B<span class="tab-count" id="tab-count-B">{EXPECTED_COUNTS['B']}</span></button>
+  <button type="button" class="tab-btn" data-phase="B" role="tab">Phase B (B1)<span class="tab-count" id="tab-count-B">{EXPECTED_COUNTS['B']}</span></button>
+  <button type="button" class="tab-btn" data-phase="B2" role="tab">Phase B2<span class="tab-count" id="tab-count-B2">{EXPECTED_COUNTS_WITH_ALL['B2']}</span></button>
+  <button type="button" class="tab-btn" data-phase="B2nr" role="tab">Phase B2-nr<span class="tab-count" id="tab-count-B2nr">{EXPECTED_COUNTS_WITH_ALL['B2nr']}</span></button>
   <button type="button" class="tab-btn" data-phase="C" role="tab">Phase C<span class="tab-count" id="tab-count-C">{EXPECTED_COUNTS['C']}</span></button>
+  <button type="button" class="tab-btn" data-phase="C2" role="tab">Phase C2<span class="tab-count" id="tab-count-C2">{EXPECTED_COUNTS_WITH_ALL['C2']}</span></button>
   <button type="button" class="tab-btn" data-phase="D" role="tab">Phase D<span class="tab-count" id="tab-count-D">{EXPECTED_COUNTS_WITH_D['D']}</span></button>
 </div>
 

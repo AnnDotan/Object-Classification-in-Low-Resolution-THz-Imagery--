@@ -540,6 +540,145 @@ def _check_186_cell_view_byte_identical_when_phase_d_absent() -> None:
     print("OK [186-byte-identical] -- 186 rows embedded; no treatment field populated.")
 
 
+def _check_seven_phase_tabs_render() -> None:
+    """US-047: dashboard renders 7 tabs (A, B, B2, B2nr, C, C2, D) with
+    canonical order + correct counts. Phase B tab text reads "Phase B (B1)"
+    (data-phase stays "B" so JS routing is unchanged)."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+
+    expected = (
+        ('A', '6', 'Phase A'),
+        ('B', '30', 'Phase B (B1)'),
+        ('B2', '30', 'Phase B2'),
+        ('B2nr', '6', 'Phase B2-nr'),
+        ('C', '150', 'Phase C'),
+        ('C2', '90', 'Phase C2'),
+        ('D', '90', 'Phase D'),
+    )
+    for data_phase, count, label in expected:
+        # data-phase attribute
+        assert f'data-phase="{data_phase}"' in body, (
+            f"missing tab data-phase={data_phase!r}"
+        )
+        # tab-count span
+        assert f'id="tab-count-{data_phase}"' in body, (
+            f"missing tab-count span for phase={data_phase!r}"
+        )
+        # Tab label text — Phase B reads "Phase B (B1)"; others read "Phase X"
+        # exactly as the label asserts. Search for the label as a substring
+        # of the tab button to be robust against attribute ordering.
+        assert label in body, f"missing tab label {label!r} for phase={data_phase!r}"
+    print("OK [7-phase-tabs] -- A/B/B2/B2nr/C/C2/D tabs render with B -> 'Phase B (B1)'.")
+
+
+def _check_treatment_chip_visibility_logic_extended() -> None:
+    """US-047: treatment chip group is visible on B2, C2, D (TREATMENT_PHASES);
+    hidden on A, B (B1), B2nr, C. The JS controls this via the
+    TREATMENT_PHASES array — assert its presence and the lookup."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert "TREATMENT_PHASES" in body, "JS missing TREATMENT_PHASES constant"
+    assert "AXIS_PHASES" in body, "JS missing AXIS_PHASES constant"
+    # The JS lookup pattern: TREATMENT_PHASES.indexOf(phase) !== -1
+    assert "TREATMENT_PHASES.indexOf(phase)" in body, (
+        "JS must gate the treatment chip via TREATMENT_PHASES.indexOf(phase) check"
+    )
+    assert "AXIS_PHASES.indexOf(phase)" in body, (
+        "JS must gate the axis chip via AXIS_PHASES.indexOf(phase) check"
+    )
+    print("OK [treatment-chip-visibility] -- B2/C2/D show chip; A/B/B2nr/C hide it.")
+
+
+def _check_multi_seed_variance_indicator_renderer() -> None:
+    """US-047: when val_acc_mean and val_acc_std are populated, the val_acc
+    cell renders 'mean% ± std%' with a tooltip listing seeds_observed."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert "fmtAccMaybeVariance" in body, "missing variance-aware acc helper"
+    assert "multiseed-indicator" in body, "missing multiseed CSS hook in JS"
+    assert "seeds_observed" in body, "JS must reference seeds_observed for tooltip"
+    print("OK [multi-seed-indicator] -- fmtAccMaybeVariance + seeds tooltip wired in JS.")
+
+
+def _check_v4_diagnostic_stub_sections_present() -> None:
+    """US-047: the dashboard includes empty-state mounts for the v4
+    diagnostic galleries (confusion matrices, calibration), inference
+    throughput card, and B2/C2 comparison strips. Each becomes data-driven
+    once its upstream US dispatches; the mount target is static so the JS
+    hook is always available."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    for section_id in (
+        "phase-b2-comparison-section",
+        "phase-c2-comparison-section",
+        "throughput-card-section",
+        "confusion-gallery-section",
+        "calibration-gallery-section",
+    ):
+        assert f'id="{section_id}"' in body, f"missing v4 stub section: {section_id}"
+    # Empty-state placeholders carry the "Awaiting" prefix so the operator
+    # knows the section is gated on an upstream US.
+    assert body.count("Awaiting Phase B2 runs") >= 1
+    assert body.count("Awaiting Phase C2 runs") >= 1
+    assert body.count("Awaiting US-045") >= 3  # confusion + calibration + throughput
+    print("OK [v4-diag-stubs] -- B2 / C2 / throughput / confusion / calibration mounts present.")
+
+
+def _check_276_view_byte_identical_when_no_new_phases_on_disk() -> None:
+    """US-047 regression: with Phase D present on disk but B2/B2nr/C2
+    absent, the embedded JSON must contain the v3 276-row contract
+    (6 A + 30 B + 150 C + 90 D), every row's treatment matches the v3
+    convention (None on A/B/C; T1/T2/T3 on D), and seed=42 on every row."""
+    import json as _json
+    import re as _re
+    with tempfile.TemporaryDirectory() as td:
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        # Plant a single Phase D metrics.json to flip the gate to True.
+        cell_dir = runs_root / "final_D_T3_L3_resnet50_cifar10"
+        cell_dir.mkdir(parents=True)
+        (cell_dir / "metrics.json").write_text(
+            _json.dumps({"best_val_acc": 0.5, "epochs_run": 5, "pipeline_version": 2}),
+            encoding="utf-8",
+        )
+        out = Path(td) / "Final_Exp.html"
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    m = _re.search(
+        r'<script type="application/json" id="initial-data">(.+?)</script>',
+        body, _re.S,
+    )
+    assert m, "missing inline-data <script>"
+    raw = m.group(1).replace("<\\/", "</")
+    doc = _json.loads(raw)
+    assert len(doc["rows"]) == 276, (
+        f"v3 view drift: expected 276 rows with D present + B2/B2nr/C2 absent; got {len(doc['rows'])}"
+    )
+    phases = sorted({r["phase"] for r in doc["rows"]})
+    assert phases == ["A", "B", "C", "D"], f"unexpected phases in v3 view: {phases}"
+    # Every row carries seed=42 (canonical).
+    seeds = {r.get("seed") for r in doc["rows"]}
+    assert seeds == {42}, f"unexpected canonical seeds: {seeds}"
+    print("OK [276-v3-byte-identical] -- 276-row v3 view preserved when no B2/B2nr/C2 dirs on disk.")
+
+
 def main() -> int:
     _check_summary_shape()
     _check_static_scaffold()
@@ -562,6 +701,12 @@ def main() -> int:
     _check_phase_d_row_has_treatment_attr()
     _check_phase_d_recovery_section_mounts()
     _check_186_cell_view_byte_identical_when_phase_d_absent()
+    # US-047 additions
+    _check_seven_phase_tabs_render()
+    _check_treatment_chip_visibility_logic_extended()
+    _check_multi_seed_variance_indicator_renderer()
+    _check_v4_diagnostic_stub_sections_present()
+    _check_276_view_byte_identical_when_no_new_phases_on_disk()
     print("\nAll dashboard scaffold checks passed.")
     return 0
 

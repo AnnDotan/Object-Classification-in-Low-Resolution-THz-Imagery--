@@ -6300,3 +6300,176 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     unblocks US-047 (dashboard tabs) which
     is also pure code.
 ---
+
+## Iteration 53 (2026-05-26) — US-047 CLOSED: dashboard 7-tab scaffold + multi-seed variance indicator + diagnostic gallery stubs
+- What was done:
+  (a) src/tools/build_final_dashboard.py:
+      - Imports: added EXPECTED_COUNTS_WITH_ALL.
+      - PHASES JS constant extended to
+        ['A','B','B2','B2nr','C','C2','D'] in
+        canonical order. New TREATMENT_PHASES =
+        ['B2','C2','D'] and AXIS_PHASES =
+        ['C','C2'] arrays drive chip-group
+        visibility.
+      - Tab bar HTML: added Phase B2 / B2nr /
+        C2 buttons; Phase B button text relabeled
+        "Phase B" → "Phase B (B1)" while
+        data-phase="B" stays unchanged (JS
+        routing is unaffected). Tab counts wired
+        via EXPECTED_COUNTS_WITH_ALL.
+      - Chip-visibility JS: switched from hard-
+        coded `(phase === 'C')` /
+        `(phase === 'D')` to indexOf lookups
+        against the new arrays.
+      - Multi-seed variance indicator: new JS
+        helper `fmtAccMaybeVariance(row)`
+        renders "mean% ± std%" with seeds
+        tooltip when val_acc_mean and
+        val_acc_std are non-null; falls back to
+        fmtAcc(row.val_acc) on single-seed
+        cells.
+      - Diagnostic gallery + throughput card +
+        Phase B2 / C2 comparison strip mount
+        targets: 5 new <details> sections
+        (phase-b2-comparison-section, phase-c2-
+        comparison-section, throughput-card-
+        section, confusion-gallery-section,
+        calibration-gallery-section) added
+        between the Phase D Recovery strip and
+        the tab bar. Each carries an "Awaiting
+        ..." pending placeholder body. JS
+        renderers for each section will land in
+        US-048 / US-045 (the consumers); the
+        scaffold is data-ready now.
+  (b) src/tests/test_dashboard.py: +5 US-047
+      assertions:
+      - _check_seven_phase_tabs_render verifies
+        all 7 data-phase attributes + tab-count
+        spans + the "Phase B (B1)" relabel.
+      - _check_treatment_chip_visibility_logic_
+        extended asserts TREATMENT_PHASES +
+        AXIS_PHASES JS constants and the
+        indexOf lookup pattern.
+      - _check_multi_seed_variance_indicator_
+        renderer asserts fmtAccMaybeVariance +
+        multiseed-indicator + seeds_observed
+        references in the JS bundle.
+      - _check_v4_diagnostic_stub_sections_
+        present asserts the 5 mount-target IDs
+        + the "Awaiting Phase B2 runs" /
+        "Awaiting Phase C2 runs" /
+        "Awaiting US-045" empty-state strings.
+      - _check_276_view_byte_identical_when_no_
+        new_phases_on_disk regression: plants a
+        Phase D metrics.json (with pipeline_
+        version=2 to dodge the v2-affected
+        demotion), asserts 276 rows + phases
+        {A,B,C,D} + seed=42 on every row. No
+        B2/B2nr/C2 rows leak.
+      All 5 new + 21 pre-existing = 26/26 green.
+- ACs status (6 ACs):
+  - [x] AC #1 — All 7 data-phase tabs render
+    with correct counts.
+  - [x] AC #2 — Phase B tab display reads
+    "Phase B (B1)".
+  - [x] AC #3 — Treatment chip visibility per
+    spec (B2/C2/D show; A/B/B2nr/C hide).
+  - [x] AC #4 — Multi-seed indicator +
+    diagnostic galleries + throughput card all
+    mount; empty-state placeholders until
+    upstream artifacts land.
+  - [ ] AC #5 — Comparison strips draw when ≥
+    1 cell is Complete: DEFERRED. Mount
+    targets present but JS renderers + PNG
+    paths land in US-048 (which generates the
+    PNGs) alongside renderPhase{B2,C2}
+    Comparison JS functions.
+  - [x] AC #6 — 276-cell v3 view byte-
+    identical when no new phases on disk
+    (regression-guarded by dedicated test).
+- Files affected (modified):
+  - src/tools/build_final_dashboard.py
+  - src/tests/test_dashboard.py
+  - PRD.md (5 of 6 US-047 ACs ticked;
+    US-047 status set to "CLOSED 2026-05-26
+    (scaffold + stubs; comparison strips
+    deferred until B2/C2 runs land)")
+  - progress.txt (this Iteration 53 entry)
+- Validation summary:
+  - python -m src.tests.test_dashboard →
+    26/26 assertions green (rc=0).
+  - All 5 US-047 assertions pass on the same
+    dashboard pass that the 21 legacy
+    assertions verify; no regression in any
+    of the v1/v2/v3 dashboard contracts.
+- Learnings for next cycles:
+  - Patterns: Empty-state placeholders
+    ("Awaiting US-XYZ runs") on mount-target
+    <details> sections give consumers a stable
+    hook BEFORE the data lands. Pattern
+    introduced by US-030 (Phase D Recovery
+    strip with default pending placeholder) is
+    reused for all 5 new sections in this
+    story. Future data-driven dashboard
+    sections should follow this convention:
+    static mount target + default pending
+    body; JS renderer hydrates when its data
+    appears in the inline-data JSON.
+  - Patterns: PHASES / TREATMENT_PHASES /
+    AXIS_PHASES JS arrays let chip-visibility
+    logic scale to N phases without a chain
+    of `phase === 'X'` literals. Adding a new
+    phase (e.g. a hypothetical Phase E) only
+    requires extending the arrays.
+  - Patterns: The "Phase B (B1)" label
+    relabeling preserves the data-phase="B"
+    attribute, which is load-bearing for
+    filter-state localStorage, JS routing,
+    test substring assertions, and the
+    persistence of operator-selected chip
+    filters. PRD §12 decision #13 mandates
+    this docs-only rename discipline.
+  - Traps: Windows cp1255 console can't
+    encode the → arrow (U+2192). Same family
+    of traps as the ∈ / ∪ Unicode issues in
+    Iterations 51-52. Mitigation: use ASCII
+    arrows ("->") in test print lines.
+  - Traps: test_dashboard.py imports `json
+    as _json` locally; new test fixtures that
+    write `metrics.json` must use the `_json`
+    alias. Caught by NameError on first run.
+  - Traps: The 276-cell v3-view regression
+    test stamps `pipeline_version=2` on the
+    staged metrics.json to dodge the v2-
+    affected demotion (Phase B / C noise /
+    salt_pepper). Same trap as US-046's
+    _stage_metrics helper.
+  - Helpful context: AC #5 (comparison strips
+    drawing) DEFERS to US-048 which both
+    generates the comparison PNGs AND
+    provides the JS renderers. Current US-047
+    landing provides the mount targets +
+    pending placeholders; US-048 will land
+    the renderer JS in the same dashboard.py
+    pass. Splitting US-047 (mount targets)
+    from US-048 (PNG generation + renderer
+    JS) keeps each commit reviewable.
+  - Helpful context: 26 dashboard scaffold
+    assertions cover the entire UI contract.
+    Any future dashboard change that touches
+    static HTML, JS constants, or chip groups
+    should run this test first; it catches
+    contract drift faster than a browser-side
+    visual verification.
+  - Helpful context: fmtAccMaybeVariance
+    renders "mean ± std" as raw HTML (with a
+    <span title="seeds: ..."> wrapper). The
+    existing val_acc cell's `accClass(row.
+    val_acc)` (color band based on val_acc,
+    NOT mean) is preserved — color band
+    reflects the canonical seed=42 cell, not
+    the multi-seed aggregate. Matches PRD §12
+    decision #18: "Mean-of-3-seeds is NOT the
+    headline number — keeps every published
+    value traceable to a deterministic run."
+---
