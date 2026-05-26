@@ -5127,3 +5127,376 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     sweeps can be larger (more α values, more dropout
     rates) without expecting sentinel pollution.
 ---
+
+## Iteration 49 (2026-05-26) — US-036 CLOSED: PRD v4 authoring + scope locking (Phase B2 + B2-nr + C2 + multi-seed + diagnostics)
+- What was done:
+  (a) PRD.md fully rewritten v3 → v4 (~1039 lines).
+      v3 prose preserved at git commit 898d007. v4
+      first-draft (single-phase B2 scope, ~17.5 GPU-h)
+      preserved at the pre-amendment commit referenced
+      in the PRD header. Story numbering continues from
+      v3's tail (US-036 onwards).
+  (b) Active story set locked at EIGHTEEN stories
+      (US-036..US-053) in §8 + the dependency-ordered
+      map in §10. Total budget ~100 GPU-h on the RTX
+      5070. US-036 (this PRD) is in-progress this
+      session; US-037..US-053 are unstarted and execute
+      in follow-up RALPH sessions.
+  (c) Headline research questions locked verbatim by
+      operator (§1):
+      1. "Does removing saturation and additive noise
+         (THz-protocol simplification) close the v2 −12.49
+         pp collapse?" — answered by Phase B2 / B2-nr.
+      2. "Under the THz protocol, which spatial-domain
+         axis (resolution / blur / salt_pepper) dominates
+         the remaining drop?" — answered by Phase C2.
+      3. "How tight are the headline pp numbers under
+         seed variance?" — answered by multi-seed (24 L3
+         headline cells × seeds {43, 44} = 48 audit runs).
+      4. "Does val_acc generalize to held-out test pixels
+         under degradation?" — answered by 72 test-set
+         evals (US-045).
+      Must appear verbatim in README Findings #5–#8,
+      CLAUDE.md status block, Final_Report §VIII–§XIII,
+      and the matching iteration closes (US-040 / US-041
+      / US-042 / US-044 / US-045 outcomes).
+  (d) Operator §12 decision locks #12–#23 frozen
+      (verbatim in PRD §12). Load-bearing entries:
+      - #12: Phase B2 = sat=0 + noise=0 + T3, frozen
+        Optuna L3 winners. 30 cells. Source of truth:
+        degrade_config_for_b2(level) + _phase_d_treatment
+        _deltas("T3", model).
+      - #13: Doc-only Phase B → Phase B1 rename. runs/
+        final/final_B_* dirs UNCHANGED; phase=="B" enum
+        UNCHANGED; final_B_* tag strings UNCHANGED.
+        SYNCHRONIZER enforces in US-049.
+      - #14: PRD v4 is the closing scientific PRD.
+        Any v5 reserved for hypothetical post-submission.
+      - #15: §XIII Final Conclusions is non-optional
+        and is a US-053 gate.
+      - #16: Phase B2 attribution decomposition.
+        Δ_D→B2 = pure-protocol at fixed T3; Δ_B1→B2nr =
+        pure-protocol at no regularization; Δ_B1→B2 =
+        combined read.
+      - #17: Phase C2 = sat=0 + noise=0 + T3, single-
+        axis isolation across {resolution, blur,
+        salt_pepper}. 90 cells.
+      - #18: Multi-seed scope = 24 L3 headline cells ×
+        seeds {43, 44}. Canonical reported pp is seed=42;
+        variance band [mean ± std] across {42,43,44}.
+        Mean-of-3 is NOT the headline.
+      - #19: test_split_indices.json frozen at US-045
+        pre-flight (seed=99 stratified 1000-per-class
+        on official CIFAR-10/MNIST test partitions).
+      - #20: Test-set inference covers 72 evals; 24 L5
+        confusion matrices; 48 calibration/ECE (24 L3 +
+        24 L5) at seed=42 only.
+      - #21: Throughput report at bf16-mixed, batch=1,
+        100 warmup + 1000 measurement batches per model.
+      - #22: Final_Report.pdf rev3 ≥ 16 pages
+        (rev2 ≥ 10; +6 for §VIII–§XIII).
+      - #23: No deferrals to v5 within v4 active set.
+        Future-work bullets only for genuinely out-of-
+        scope ideas (true THz data, multi-treatment
+        B2/C2, continuous severity).
+  (e) Canonical campaign total locked at 402 cells (§4.6
+      tag-scheme table): 6 (A) + 30 (B1) + 30 (B2) +
+      6 (B2-nr) + 150 (C) + 90 (C2) + 90 (D). Plus 48
+      multi-seed audit runs (not new cells). v3's 276
+      stays in place untouched; v4 adds 126 net new
+      cells + 48 audit runs.
+  (f) Tag scheme locked + collision-safety contract:
+      legacy Phase B check MUST use startswith(
+      "final_B_L") (the L-prefix is what distinguishes
+      it from final_B2_* and final_B2nr_*). PRD §7
+      enforces; US-038 wires the assertion into
+      run_all_phases.py.
+  (g) DegradeConfig overrides locked verbatim (§4.1 +
+      §4.3):
+      - B2 / B2-nr: saturation = 0.0 + noise_std = 0.0;
+        all other axes flow through DEGRADATION_LEVELS
+        [level] unchanged.
+      - C2: saturation = 0.0 + noise_std = 0.0 + named
+        axis ∈ {resolution, blur, salt_pepper} at level
+        L; all other non-{saturation, noise_std} axes
+        at IDENTITY_VALUES.
+      Source of truth = src/data/degrade.py (US-038
+      lands degrade_config_for_b2 + degrade_config_for_c2
+      with the operator-locked semantics).
+  (h) T3 reuse contract locked (§4.4): B2 AND C2 inherit
+      T3 regularization identically to Phase D. CNN:
+      dropout=0.2 + mixup_alpha=0.2 + cutmix_alpha=1.0.
+      TransNeXt: drop_path_rate=0.2 + mixup_alpha=0.2 +
+      cutmix_alpha=1.0. Routed through the existing
+      _phase_d_treatment_deltas("T3", spec.model) — no
+      duplicate code path. Phase B2-nr skips this routing
+      (bare Optuna L3 winners only).
+  (i) Multi-seed CLI contract locked (§4.5): new --seed N
+      arg on run_systematic.py (default 42). Tag suffix
+      _seed{N} appended when N != 42. pl.seed_everything
+      (N, workers=True) honors the override. metrics.json
+      gains seed:int as first-class field. Per-sample
+      degradation seed offsets (SEED_OFFSET_TRAIN/VAL)
+      are independent of pl.seed_everything — val pixels
+      stay byte-identical across {42, 43, 44}.
+  (j) Three HARD GATE checkpoints locked: US-039 pilot
+      (6-cell Phase B2_L3) gates US-040 (24-cell sweep);
+      US-043 pilot (6-cell Phase C2_L3_resolution) gates
+      US-044 (84-cell sweep); §XIII Final Conclusions
+      gates US-053 close. No silent dispatches.
+  (k) Baseline manifest extended to 66 entries (§4.8):
+      30 Phase B1 + 30 Phase D T3 + 6 Phase A. Captured
+      at US-039 pre-flight, re-verified at US-048 plot
+      rendering. The 6 Phase A clean rows are NEW vs
+      v3's manifest — required as the Phase C2 baseline
+      for Δ_A→C2 axis-attribution reads.
+  (l) Diagnostics scope locked (US-045): 72 test-set
+      evals on stratified held-out split (seed=99) + 24
+      L5 confusion matrices + 48 reliability diagrams
+      (L3 + L5) + 3-model inference throughput. Logit
+      logging hook on THzClassifier.predict_step (US-038)
+      writes per-batch logits to runs/final/<tag>/
+      logits/test_batch_{idx:04d}.pt when log_logits
+      flag is set, so US-045 reuses saved logits where
+      available + does targeted re-inference on the
+      24 L5 v2/v3 cells (~0.5 GPU-h total).
+  (m) Final_Report.pdf rev3 scope locked (US-050 + US-
+      051): six new appendices §VIII Phase B2 + §IX
+      Phase C2 + §X Multi-Seed Variance + §XI Test-Set
+      Confirmation + §XII Diagnostics (confusion +
+      calibration + throughput) + §XIII Final
+      Conclusions. Target ≥ 16 pages. pdflatex/bibtex
+      exit 0, zero ?? placeholders.
+  (n) NotebookLM 2-pass discipline carries forward (§G10
+      + US-052): pass 1 (PRD v4 upload) immediate; pass
+      2 (full re-source incl. new docs/phase_b2.md,
+      docs/phase_c2.md, Final_Report.pdf rev3) post-
+      US-051. Storage-state path risk (.notebooklm/
+      profiles/default/storage_state.json vs
+      .notebooklm/storage_state.json) carried forward
+      from v3 §9(g).
+  (o) v3 history (US-026..US-035) referenced as
+      "closed; see git history" in §13 of PRD with a
+      full per-story table + 5 headline findings carried
+      forward to v4 baselines (Phase B v2 −12.49 pp
+      collapse; T3 +0.77 pp mean recovery; T1/T2
+      negligible; MNIST geometric floor preserved;
+      CIFAR-10 protocol sensitivity dominant).
+  (p) §14 "Open Scientific Questions — All Folded Into
+      Active Set" table audits the v4 first-draft §14
+      mapping: §14.1 → US-041; §14.2 → US-042; §14.3 →
+      US-045(a); §14.4 → US-043+US-044; §14.5 →
+      US-045(b); §14.6 → US-045(c); §14.7 → US-045(d).
+      No items deferred to v5 from the first-draft §14
+      list (operator decision §12 #23).
+- Files affected (modified):
+  - PRD.md: full rewrite v3 → v4 (~1039 lines). v3
+    prose at commit 898d007; v4 first-draft preserved
+    at the pre-amendment commit referenced in PRD
+    header.
+  - progress.txt: append Iteration 49 (this entry).
+- Files NOT yet affected (US-037..US-053 deliverables):
+  - docs/phase_b2.md + docs/phase_c2.md (US-037)
+  - src/data/degrade.py:degrade_config_for_b2 +
+    degrade_config_for_c2 (US-038)
+  - src/experiments/cells.py + matrix.py phase enum
+    extensions + EXPECTED_TOTAL_WITH_ALL = 402 (US-038)
+  - run_systematic.py:--seed CLI + tag suffix +
+    _apply_b2_or_c2_treatment helper (US-038)
+  - run_all_phases.py:FINAL_PHASES = ("A","B","B2",
+    "B2nr","C","C2","D") + 7-prefix collision asserts
+    (US-038)
+  - scripts/run_ralph_loop.py:--phase {B2,B2nr,C2,
+    multiseed} + --seeds + --cells (US-038)
+  - scripts/update_final_exp.py:402-canonical --check
+    + Multi-Seed Audits section (US-038)
+  - src/tools/render_cell_thumbs.py:--phase {B2,B2nr,C2}
+    (US-038)
+  - src/lightning/module.py:logit-logging predict hook
+    (US-038)
+  - src/tests/test_degradation_determinism.py:5 new
+    groups incl. multi_seed_val_byte_identical_42_43_44
+    (US-038)
+  - src/tests/test_matrix.py:≥10 new matrix/tag/
+    DegradeConfig assertions (US-038)
+  - artifacts/validation/phase_b2_baseline_manifest.json
+    (US-039 pre-flight; 66 SHA-256 entries)
+  - artifacts/validation/phase_b2_pilot_checklist.md
+    (US-039) + phase_c2_pilot_checklist.md (US-043)
+  - artifacts/validation/test_split_indices.json
+    (US-045 pre-flight; seed=99 stratified 1000/class)
+  - runs/final/final_B2_L3_*/ (US-039 pilot then
+    US-040 full) + final_B2_L1..5_*/ × 30 (US-040)
+  - runs/final/final_B2nr_L3_*/ × 6 (US-041)
+  - runs/final/final_C2_L*_{resolution,blur,salt_pepper}
+    _*/ × 90 (US-043 pilot + US-044 full)
+  - runs/final/*_seed{43,44}/ × 48 (US-042)
+  - runs/final/<tag>/logits/test_batch_*.pt (US-038
+    hook + US-045 reuse)
+  - artifacts/figures/confusion/{tag}_L5.png × 24
+    (US-045 b)
+  - artifacts/figures/calibration/{tag}_{L3,L5}.png × 48
+    (US-045 c) + docs/_autogen/calibration_table.tex
+  - artifacts/figures/inference_throughput.{csv,png}
+    (US-045 d)
+  - src/tools/build_final_exp_json.py + final_exp_
+    schema.py:val_acc_mean/std + B2/B2nr/C2 group-by
+    (US-046)
+  - src/tools/build_final_dashboard.py:7 phase tabs +
+    multi-seed variance + diagnostic galleries +
+    throughput card (US-047)
+  - artifacts/figures/phase_b2_comparison_{m}_{d}.png
+    × 6 + composite + LaTeX table (US-048)
+  - artifacts/figures/phase_c2_axis_*.png + LaTeX
+    table (US-048)
+  - README.md / CLAUDE.md / docs/Final_Exp_Report.md
+    (US-049) — B → B1 rename + Findings #5–#8
+  - docs/Final_Report.tex + Final_Report.pdf rev3
+    (US-050 + US-051) — §VIII–§XIII (≥ 16 pages)
+  - scripts/notebooklm_sync.log + manifest (US-052
+    passes 1 + 2)
+  - ship-readiness audit artifacts (US-053)
+- Validation:
+  - PRD.md structural audit: §1 + §2 (12 goals) + §3
+    (non-goals) + §4 (B2/B2nr/C2/multi-seed spec) +
+    §5 (env) + §6 (RALPH §6.7–§6.10) + §7
+    (constraints) + §8 (18-story table + per-US
+    spec) + §9 (risk) + §10 (dependency-ordered map)
+    + §11 (DoD) + §12 (decisions 1–23 incl. v4
+    locks 12–23) + §13 (v2 + v3 history table) +
+    §14 (§14-fold-in audit table) — all present
+    and grep-verified.
+  - 18 v4 stories US-036..US-053 enumerated in §8
+    table with owner + status + GPU-h budget +
+    full sub-sections. grep '^### US-0[3-5][0-9]'
+    returns exactly 18 matches.
+  - §13 references US-026..US-035 as "closed; see
+    git history" with per-story closed-on dates
+    (table). Headline findings (5 items) carried
+    forward to v4 baselines verbatim.
+  - §12 decisions 12–23 locked verbatim from the
+    2026-05-26 operator decision pass; entries 1–11
+    summarized as "carry-forward from v3" with the
+    decision domains enumerated.
+  - PRD §1 + Iteration 49 (this entry) cross-cite
+    each other; the four headline research questions
+    appear verbatim in §1 of the PRD and §1(c) of
+    this iteration close.
+  - progress.txt now ends at line ~5300 (well past
+    the formally-retired ≤200-line cap; v3 §12
+    decision #9 carries to v4).
+  - Three US-036 acceptance criteria all met:
+    (i) PRD.md rewritten end-to-end with 18 stories;
+    (ii) PRD enumerates §2 + §3 + §4 + §7 + §10 +
+    §12 decisions locked; (iii) progress.txt
+    Iteration 49 appended summarizing the PRD v4
+    authoring session and decisions §12 #12–#18
+    (extended to #12–#23 per the final PRD).
+- Learnings for next cycles:
+  - Patterns: The v3 → v4 PRD rewrite mirrored the
+    v1 → v2 and v2 → v3 patterns exactly. Full file
+    replacement; prior PRD prose preserved only at a
+    named git commit; story numbering continues from
+    the previous tail (US-036 onwards). The
+    Decisions-Locked §12 block keeps operator intent
+    verbatim across sessions and is the single most
+    audit-load-bearing region of the PRD — any future
+    PRD vN+1 MUST carry-forward + new-locks pattern.
+  - Patterns: Audit-table for "§14 first-draft
+    items" → "active-set user stories" mapping is a
+    durable PRD convention (introduced this iteration).
+    Future PRD vN+1 should preserve the mapping
+    table even after the v4 §14 items close — it
+    documents the scope-expansion rationale for the
+    submission committee.
+  - Patterns: The headline-research-question verbatim
+    string (this time FOUR questions, not one) must
+    propagate to README Findings #5–#8, CLAUDE.md
+    status block, Final_Report §VIII–§XIII openings,
+    and matching iteration closes (US-040 / US-041 /
+    US-042 / US-044 / US-045). US-053 ship-readiness
+    audit will substring-grep all four across the 5
+    artifact families.
+  - Traps: Tag-prefix collision is the single
+    highest-risk wiring concern. final_B_* vs
+    final_B2_* vs final_B2nr_* differ only by suffix
+    after the underscore; a naive startswith("final_B")
+    matches all three. The PRD §7 + US-038
+    requirement to use startswith("final_B_L") (with
+    the L-prefix) for legacy Phase B is load-bearing.
+    US-038 must add a pytest assertion that all 7
+    phase prefixes are mutually exclusive under the
+    actual startswith check used in run_all_phases.py.
+  - Traps: Phase B2 / Phase C2 DegradeConfig
+    overrides set saturation = 0.0 BEFORE noise_std =
+    0.0 in the helper docs — but the actual pipeline
+    order is "saturation lerp → downsample → upsample
+    → blur → noise → S&P". The override flags are
+    config-time, not pipeline-time. US-038 must NOT
+    re-order pipeline steps to "match the override
+    order" — the override is a parameter setting, not
+    a step-order change. PIPELINE_VERSION stays at 2.
+  - Traps: Multi-seed audits ADD runs at seeds
+    {43, 44} but do NOT re-run seed=42. The 24 L3
+    headline cells at seed=42 are FROZEN (operator
+    §12 decision #18 + §3 non-goal). Future runs
+    that touch `runs/final/final_*_L3_*/` (without
+    a _seed{N} suffix) without explicit operator
+    sign-off should be blocked — this is the canonical
+    seed=42 cell, not a multi-seed candidate.
+  - Traps: The "382 cells if no C2 + 372 if no
+    B2-nr" arithmetic in §4.6 + the 402-canonical
+    total only holds when ALL four include_phase_*
+    kwargs are True. US-038 + US-046 must thread the
+    four flags through every aggregator + dashboard
+    code path, and the --check arithmetic in
+    update_final_exp.py must report the actual
+    on-disk count, not the canonical 402.
+  - Traps: NotebookLM storage-state path drift
+    (.notebooklm/profiles/default/storage_state.json
+    vs .notebooklm/storage_state.json) carried over
+    from v3 §9(g). Reconcile BEFORE US-052 pass 1
+    upload — likely a single rename or a symlink.
+    Do NOT block US-053 ship-readiness audit on a
+    NotebookLM env failure.
+  - Helpful context: ~100 GPU-h v4 budget on the
+    RTX 5070 ≈ 4 calendar days of monitored
+    dispatches. v3 closed at 165 GPU-h cumulative
+    (108.5 v2 + 56.5 Phase D); v4 brings the
+    project total to ~265 GPU-h. 2026-07-26
+    submission deadline = 61 calendar days from
+    today (2026-05-26), so even a conservative
+    1.5× GPU-h ceiling (~150 GPU-h) fits the
+    schedule with ~5 weeks of slack for narrative
+    work (US-049..US-053).
+  - Helpful context: US-038 is the single
+    largest wiring story in v4 (degrade.py +
+    cells.py + matrix.py + run_systematic.py +
+    run_all_phases.py + run_ralph_loop.py +
+    update_final_exp.py + render_cell_thumbs.py
+    + lightning/module.py + ≥ 15 new pytest
+    assertions). Operator should expect ≥ 1 full
+    RALPH session of focused implementation; do
+    NOT attempt to bundle US-038 with US-037
+    (docs-only) or US-039 (pilot dispatch).
+  - Helpful context: Phase B2-nr is a 6-cell
+    sliver but is the load-bearing pure-protocol
+    Δ measurement (Δ_B1→B2nr at L3 = the THz-
+    protocol simplification effect without any
+    regularization confound). Operator decision
+    §12 #16 names it as the single most
+    interpretation-load-bearing arm of v4.
+    US-041 is small in GPU-h (~3.5) but high in
+    scientific load — give it dedicated narrative
+    weight in §VIII of Final_Report.pdf rev3.
+  - Helpful context: The four v4 headline research
+    questions naturally cluster as 2 + 2: questions
+    1–2 are protocol/axis attribution (answered by
+    B2 / B2-nr / C2 sweeps), questions 3–4 are
+    statistical-confidence (answered by multi-seed +
+    test-set). §VIII–§IX of the report cover the
+    first pair; §X–§XI cover the second pair; §XII
+    covers diagnostics; §XIII closes everything.
+    This 2 + 2 + 1 + 1 chapter cadence keeps the
+    report narratively coherent without padding.
+---
