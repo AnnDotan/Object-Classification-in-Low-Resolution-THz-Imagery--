@@ -31,6 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.tools.build_final_dashboard import build_dashboard  # noqa: E402
+from src.tools.final_exp_schema import SCHEMA_VERSION  # noqa: E402
 
 
 def _check_summary_shape() -> None:
@@ -60,14 +61,15 @@ def _check_static_scaffold() -> None:
     assert 'class="stats-bar"' in body
     assert 'class="tab-bar"' in body
     assert 'class="exp-table"' in body
-    # Tabs for all three phases
-    for p in ("A", "B", "C"):
+    # Tabs for all four phases (US-030 added Phase D)
+    for p in ("A", "B", "C", "D"):
         assert f'data-phase="{p}"' in body, f"missing tab data-phase={p}"
         assert f'id="tab-count-{p}"' in body, f"missing tab-count-{p}"
-    # Stats bar IDs
+    # Stats bar IDs. NOTE: the legacy `stat-best` slot was renamed to
+    # `stat-deferred` by US-014 (the test was stale until US-030 caught it).
     for sid in (
         "stat-total", "stat-pending", "stat-running",
-        "stat-complete", "stat-failed", "stat-best", "stat-all",
+        "stat-complete", "stat-failed", "stat-deferred", "stat-all",
     ):
         assert f'id="{sid}"' in body, f"missing stat id {sid}"
     # tbody is JS-populated (empty in static HTML)
@@ -84,7 +86,7 @@ def _check_column_headers_in_order() -> None:
         runs_root.mkdir(parents=True)
         build_dashboard(out_path=out, runs_root=runs_root)
         body = out.read_text(encoding="utf-8")
-    expected = ["Tag", "Model", "Dataset", "Phase", "Level", "Visual", "Status", "val_acc", "Epochs", "Runtime", "Curves"]
+    expected = ["Tag", "Model", "Dataset", "Phase", "Level", "Treatment", "Visual", "Status", "val_acc", "Epochs", "Runtime", "Curves"]
     positions = [body.index(f"<th>{h}</th>") for h in expected]
     assert positions == sorted(positions), f"column headers out of order: {expected} -> {positions}"
     print(f"OK [headers] -- {len(expected)} columns in order: {' | '.join(expected)}.")
@@ -131,7 +133,7 @@ def _check_inline_initial_data_embedded() -> None:
     # Reverse the </ -> <\/ defensive escape before parsing.
     raw = m.group(1).replace("<\\/", "</")
     doc = _json.loads(raw)
-    assert doc["schema_version"] == 1
+    assert doc["schema_version"] == SCHEMA_VERSION
     assert doc["counts"]["total"] == 186
     assert len(doc["rows"]) == 186
     print(f"OK [inline-data] -- 186 rows embedded inline ({len(raw):,} bytes JSON).")
@@ -397,6 +399,147 @@ def _check_history_fetch_uses_parent_relative_path() -> None:
     print("OK [history-url] -- learning-curve fetch uses ../runs/final/<tag>/.")
 
 
+def _check_phase_d_tab_renders() -> None:
+    """US-030: Phase D tab must be present in the static scaffold even when
+    no `runs/final/final_D_*` directories exist. The count badge shows 90
+    (the expected Phase D cell count) regardless of on-disk state — the tab
+    is always present so the JS can route data to it; the embedded JSON's
+    row count is what gates the 186-vs-276 contract."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert 'data-phase="D"' in body, "missing Phase D tab data-phase"
+    assert 'id="tab-count-D"' in body, "missing tab-count-D"
+    # The count badge must show 90 (literal markup inside the tab button).
+    # We grep for `>90<` inside the tab-count-D span — looser than parsing
+    # but tight enough to catch a regression to "—" or 0.
+    import re as _re
+    m = _re.search(r'id="tab-count-D"[^>]*>(\d+|—)</span>', body)
+    assert m, "tab-count-D inner text not found"
+    assert m.group(1) == "90", f"tab-count-D badge should read '90', got '{m.group(1)}'"
+    print("OK [phase-d-tab] -- Phase D tab present with count=90 badge.")
+
+
+def _check_treatment_chip_group_present() -> None:
+    """US-030: TREATMENT chip group with T1/T2/T3 values must be in the
+    filter row. Phase-gating (hide on A/B/C, show on D) is JS-driven via
+    `treatmentGroup.style.display` — the static HTML always emits the group."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert 'data-chip-group="treatment"' in body, "missing treatment chip group"
+    for v in ("T1", "T2", "T3"):
+        assert f'data-value="{v}"' in body, f"missing treatment chip value {v}"
+    # The JS must wire up phase-gated visibility for the group.
+    assert "treatmentGroup" in body, "JS must reference treatmentGroup element"
+    print("OK [treatment-chips] -- TREATMENT chip group with T1/T2/T3 present.")
+
+
+def _check_phase_d_row_has_treatment_attr() -> None:
+    """US-030: a row rendered from a Phase D metrics.json must carry
+    `data-treatment` on its <tr> dataset (the JS reads this for multi-select
+    filtering). We can't run the JS here, so we drop a synthetic Phase D
+    metrics.json and assert the inline-embedded JSON has the treatment field
+    populated on a Phase D row — the JS path is deterministic from the data."""
+    import json as _json
+    import re as _re
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        # Plant one synthetic Phase D run dir so phase_d_present_on_disk()
+        # flips to True and the aggregator enumerates Phase D rows.
+        cell_dir = runs_root / "final_D_T1_L3_resnet50_cifar10"
+        cell_dir.mkdir(parents=True)
+        (cell_dir / "metrics.json").write_text(
+            _json.dumps({"best_val_acc": 0.42, "epochs_run": 1, "runtime_s": 60.0}),
+            encoding="utf-8",
+        )
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    m = _re.search(
+        r'<script type="application/json" id="initial-data">(.+?)</script>',
+        body, _re.S,
+    )
+    assert m, "missing inline-data <script>"
+    raw = m.group(1).replace("<\\/", "</")
+    doc = _json.loads(raw)
+    t1_rows = [r for r in doc["rows"] if r.get("treatment") == "T1"]
+    assert t1_rows, "no Phase D rows with treatment='T1' embedded"
+    # And the target synthetic row must be Complete (proves the read path).
+    target = next(
+        (r for r in t1_rows if r["tag"] == "final_D_T1_L3_resnet50_cifar10"),
+        None,
+    )
+    assert target is not None, "planted Phase D row missing from embedded JSON"
+    assert target["phase"] == "D"
+    assert target["treatment"] == "T1"
+    # Final guard: the renderRows JS path must set tr.dataset.treatment.
+    assert "tr.dataset.treatment" in body, (
+        "JS must assign tr.dataset.treatment so the filter can read it"
+    )
+    print("OK [phase-d-treatment-attr] -- Phase D row carries treatment='T1' in JSON + JS reads it.")
+
+
+def _check_phase_d_recovery_section_mounts() -> None:
+    """US-030: the Phase D Recovery <details> section must be in the static
+    HTML so the JS hook always has a mount target, even on dashboards built
+    before any Phase D runs land. The JS pending placeholder is the default
+    body content."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    assert 'id="phase-d-recovery-section"' in body, "missing recovery section mount"
+    assert "renderPhaseDRecoveryStrip" in body, "JS must define recovery-strip renderer"
+    assert "phase_d_comparison.png" in body, (
+        "JS must reference the recovery comparison PNG"
+    )
+    print("OK [phase-d-recovery] -- recovery <details> section + JS renderer wired.")
+
+
+def _check_186_cell_view_byte_identical_when_phase_d_absent() -> None:
+    """US-030: when no `final_D_*` directories exist, the embedded JSON
+    must still have exactly 186 rows (the legacy 186-cell contract). The
+    Phase D tab is structural (always in the static scaffold) but rows
+    are gated by data — `phase_d_present_on_disk` is False here, so the
+    aggregator does NOT enumerate Phase D cells."""
+    import json as _json
+    import re as _re
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "Final_Exp.html"
+        runs_root = Path(td) / "runs" / "final"
+        runs_root.mkdir(parents=True)
+        build_dashboard(out_path=out, runs_root=runs_root)
+        body = out.read_text(encoding="utf-8")
+    m = _re.search(
+        r'<script type="application/json" id="initial-data">(.+?)</script>',
+        body, _re.S,
+    )
+    assert m, "missing inline-data <script>"
+    raw = m.group(1).replace("<\\/", "</")
+    doc = _json.loads(raw)
+    assert len(doc["rows"]) == 186, (
+        f"expected 186 rows when no Phase D dirs exist, got {len(doc['rows'])}"
+    )
+    assert doc["counts"]["total"] == 186, (
+        f"expected counts.total=186, got {doc['counts']['total']}"
+    )
+    # No row should carry a non-null treatment in the 186-row view.
+    treatments = [r.get("treatment") for r in doc["rows"]]
+    assert all(t is None for t in treatments), (
+        "186-row view must have treatment=null on every row"
+    )
+    print("OK [186-byte-identical] -- 186 rows embedded; no treatment field populated.")
+
+
 def main() -> int:
     _check_summary_shape()
     _check_static_scaffold()
@@ -414,6 +557,11 @@ def main() -> int:
     _check_history_fetch_uses_parent_relative_path()
     _check_curves_drawer_prefers_inline_history()
     _check_image_quality_renders_under_visual_core()
+    _check_phase_d_tab_renders()
+    _check_treatment_chip_group_present()
+    _check_phase_d_row_has_treatment_attr()
+    _check_phase_d_recovery_section_mounts()
+    _check_186_cell_view_byte_identical_when_phase_d_absent()
     print("\nAll dashboard scaffold checks passed.")
     return 0
 

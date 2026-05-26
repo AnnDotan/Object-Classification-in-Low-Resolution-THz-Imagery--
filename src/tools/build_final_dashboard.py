@@ -37,7 +37,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from src.experiments.cells import EXPECTED_COUNTS, EXPECTED_TOTAL
+from src.experiments.cells import (
+    EXPECTED_COUNTS,
+    EXPECTED_COUNTS_WITH_D,
+    EXPECTED_TOTAL,
+    PHASE_D_TREATMENTS,
+)
 
 
 _DEFAULT_OUT = Path("artifacts/Final_Exp.html")
@@ -642,7 +647,7 @@ _JS = r"""
     const JSON_PATH = './Final_Exp.json';
     const LS_ACTIVE_PHASE = 'final_exp.active_phase';
     const LS_FILTERS_PREFIX = 'final_exp.filters.';
-    const PHASES = ['A', 'B', 'C'];
+    const PHASES = ['A', 'B', 'C', 'D'];
     // US-019: 10-minute polling cadence. The aggregator pushes per-cell
     // updates after every Trainer.fit (incremental --cell mode), so the
     // dashboard does NOT need a tight polling loop — once every 10 min is
@@ -652,9 +657,9 @@ _JS = r"""
 
     const state = {
         rows: [],
-        countsByPhase: { A: {}, B: {}, C: {} },
+        countsByPhase: { A: {}, B: {}, C: {}, D: {} },
         activePhase: 'A',
-        filters: { A: {}, B: {}, C: {} },
+        filters: { A: {}, B: {}, C: {}, D: {} },
         lastGeneratedAt: null,
         lastPolledMs: null,
         pollTimer: null,
@@ -844,12 +849,14 @@ _JS = r"""
             tr.dataset.status = row.status;
             tr.dataset.level = row.level === null ? 'clean' : ('L' + row.level);
             tr.dataset.axis = row.axis || '';
+            tr.dataset.treatment = row.treatment || '';
             tr.innerHTML = (
                 '<td class="id-cell">' + escapeHtml(row.tag) + '</td>' +
                 '<td>' + escapeHtml(row.model) + '</td>' +
                 '<td>' + escapeHtml(row.dataset) + '</td>' +
                 '<td>' + escapeHtml(row.phase) + '</td>' +
                 '<td>' + levelBadgeHtml(row) + '</td>' +
+                '<td>' + (row.treatment ? escapeHtml(row.treatment) : '—') + '</td>' +
                 '<td>' + paramsHtml(row) + '</td>' +
                 '<td>' + visualCoreHtml(row) + '</td>' +
                 '<td>' + statusPillHtml(row.status, row) + '</td>' +
@@ -867,7 +874,7 @@ _JS = r"""
     }
 
     function recomputeCountsByPhase(rows) {
-        const out = { A: {}, B: {}, C: {} };
+        const out = { A: {}, B: {}, C: {}, D: {} };
         PHASES.forEach(function (p) {
             out[p] = { total: 0, pending: 0, running: 0, complete: 0, failed: 0,
                        deferred: 0, best_val_acc: null };
@@ -920,6 +927,11 @@ _JS = r"""
             const sel = f.axis || [];
             if (sel.length > 0 && sel.indexOf(tr.dataset.axis) === -1) return false;
         }
+        // Treatment filter only constrains Phase D rows (US-030).
+        if (tr.dataset.phase === 'D') {
+            const sel = f.treatment || [];
+            if (sel.length > 0 && sel.indexOf(tr.dataset.treatment) === -1) return false;
+        }
         return true;
     }
 
@@ -946,9 +958,12 @@ _JS = r"""
         document.querySelectorAll('.tab-btn').forEach(function (b) {
             b.classList.toggle('active', b.dataset.phase === phase);
         });
-        // Axis chip group is only meaningful on Phase C — hide on A/B.
+        // Axis chip group is only meaningful on Phase C — hide on A/B/D.
         const axisGroup = document.querySelector('[data-chip-group="axis"]');
         if (axisGroup) axisGroup.style.display = (phase === 'C') ? '' : 'none';
+        // Treatment chip group is only meaningful on Phase D — hide on A/B/C (US-030).
+        const treatmentGroup = document.querySelector('[data-chip-group="treatment"]');
+        if (treatmentGroup) treatmentGroup.style.display = (phase === 'D') ? '' : 'none';
 
         // Restore this phase's chip selections in the UI.
         renderChipSelections();
@@ -1029,6 +1044,28 @@ _JS = r"""
             return;
         }
         body.innerHTML = cards.join('');
+    }
+
+    // -- Phase D Recovery strip (US-030) -----------------------------------
+    // Embeds artifacts/figures/phase_d_comparison.png once at least one
+    // Phase D cell completes. Pending placeholder until then so the
+    // disclosure-section still mounts even on zero-D dashboards.
+    function renderPhaseDRecoveryStrip(rows) {
+        const section = document.getElementById('phase-d-recovery-section');
+        if (!section) return;
+        const body = section.querySelector('.us-trend-body');
+        if (!body) return;
+        const completeD = rows.filter(function (r) {
+            return r.phase === 'D' && r.status === 'Complete';
+        });
+        if (completeD.length === 0) {
+            body.innerHTML = '<span class="ut-pending">Awaiting Phase D runs.</span>';
+            return;
+        }
+        body.innerHTML =
+            '<img src="figures/phase_d_comparison.png" ' +
+                 'alt="Phase D recovery summary" ' +
+                 'style="max-width: 100%; height: auto; border-radius: 6px;">';
     }
 
     function showBanner(msg) {
@@ -1164,6 +1201,7 @@ _JS = r"""
         renderRows(doc.rows);
         renderTabCounts();
         renderExecutionUsTrend(doc.rows);
+        renderPhaseDRecoveryStrip(doc.rows);
         applyActivePhase(state.activePhase);
 
         const gen = document.getElementById('ts-generated');
@@ -1505,10 +1543,11 @@ def _html_template(initial_doc_json: str) -> str:
     from src.experiments.cells import MODELS, DATASETS  # local — already torch-free
     from src.data.degradation_levels import AXES
 
-    chip_model   = _chip_html("model",   "MODEL",   MODELS)
-    chip_dataset = _chip_html("dataset", "DATASET", DATASETS)
-    chip_status  = _chip_html("status",  "STATUS",  ("Pending", "Running", "Complete", "Failed", "Deferred"))
-    chip_axis    = _chip_html("axis",    "AXIS",    AXES)
+    chip_model     = _chip_html("model",     "MODEL",     MODELS)
+    chip_dataset   = _chip_html("dataset",   "DATASET",   DATASETS)
+    chip_status    = _chip_html("status",    "STATUS",    ("Pending", "Running", "Complete", "Failed", "Deferred"))
+    chip_treatment = _chip_html("treatment", "TREATMENT", PHASE_D_TREATMENTS)
+    chip_axis      = _chip_html("axis",      "AXIS",      AXES)
 
     # JSON is embedded inside <script type="application/json"> so browsers
     # do not parse it; the bootstrap escapes "</" sequences just in case
@@ -1562,16 +1601,29 @@ def _html_template(initial_doc_json: str) -> str:
   </div>
 </details>
 
+<!-- US-030: Phase D Recovery strip — embeds artifacts/figures/phase_d_comparison.png
+     once at least one Phase D cell is Complete. Until then, the body shows
+     a pending placeholder. Section mounts regardless of D-on-disk state so
+     the JS hook always has a target. -->
+<details class="us-trend-section phase-d-recovery-section" id="phase-d-recovery-section">
+  <summary>Phase D Recovery (Phase B v2 baseline vs T1/T2/T3)</summary>
+  <div class="us-trend-body">
+    <span class="ut-pending">Awaiting Phase D runs.</span>
+  </div>
+</details>
+
 <div class="tab-bar" role="tablist">
   <button type="button" class="tab-btn" data-phase="A" role="tab">Phase A<span class="tab-count" id="tab-count-A">{EXPECTED_COUNTS['A']}</span></button>
   <button type="button" class="tab-btn" data-phase="B" role="tab">Phase B<span class="tab-count" id="tab-count-B">{EXPECTED_COUNTS['B']}</span></button>
   <button type="button" class="tab-btn" data-phase="C" role="tab">Phase C<span class="tab-count" id="tab-count-C">{EXPECTED_COUNTS['C']}</span></button>
+  <button type="button" class="tab-btn" data-phase="D" role="tab">Phase D<span class="tab-count" id="tab-count-D">{EXPECTED_COUNTS_WITH_D['D']}</span></button>
 </div>
 
 <div class="filters">
   {chip_model}
   {chip_dataset}
   {chip_status}
+  {chip_treatment}
   {chip_axis}
   <div class="filter-actions">
     <button type="button" class="clear-all" id="clear-filters">Clear all</button>
@@ -1590,6 +1642,7 @@ def _html_template(initial_doc_json: str) -> str:
         <th>Dataset</th>
         <th>Phase</th>
         <th>Level</th>
+        <th>Treatment</th>
         <th>Degradation</th>
         <th>Visual</th>
         <th>Status</th>
@@ -1654,11 +1707,17 @@ def build_dashboard(
 
     body = _html_template(initial_doc_json=initial_doc_json)
     out_path.write_text(body, encoding="utf-8")
+    # US-030: derive Phase D inclusion from the row count the aggregator
+    # actually produced (it already consulted `phase_d_present_on_disk`).
+    # Keeps the legacy 186-row summary contract byte-identical when no
+    # `final_D_*` directories exist, and reports 276 once they do.
+    phase_d_rows = EXPECTED_COUNTS_WITH_D["D"] if len(doc["rows"]) == EXPECTED_TOTAL + EXPECTED_COUNTS_WITH_D["D"] else 0
     return {
-        "rows": EXPECTED_TOTAL,
+        "rows": EXPECTED_TOTAL + phase_d_rows,
         "phase_a": EXPECTED_COUNTS["A"],
         "phase_b": EXPECTED_COUNTS["B"],
         "phase_c": EXPECTED_COUNTS["C"],
+        "phase_d": phase_d_rows,
         "out": str(out_path),
         "embedded_rows": len(doc["rows"]),
         "generated_at": doc["generated_at"],
@@ -1705,6 +1764,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(
         f"dashboard: shell rendered "
         f"(A={summary['phase_a']}, B={summary['phase_b']}, C={summary['phase_c']}, "
+        f"D={summary['phase_d']}, "
         f"total={summary['rows']}) -> {summary['out']}"
     )
     return 0
