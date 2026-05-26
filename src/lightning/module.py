@@ -63,6 +63,8 @@ class THzClassifier(pl.LightningModule):
         patch_size: int = 4,
         pretrain_size: Optional[int] = None,
         compile_mode: str = "none",
+        log_logits: bool = False,
+        logits_dir: Optional[str] = None,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -193,6 +195,37 @@ class THzClassifier(pl.LightningModule):
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         self.log("val_acc", self.val_acc, on_epoch=True, prog_bar=True)
         self.log("val_acc5", self.val_acc5, on_epoch=True)
+
+    def predict_step(self, batch, batch_idx, dataloader_idx: int = 0):
+        """US-038 (v4) — per-batch logits dump for US-045 diagnostics.
+
+        Returns (logits, labels) for downstream confusion-matrix /
+        calibration code. When `self.hparams.log_logits` is True AND
+        `self.hparams.logits_dir` is set, also writes a `.pt` file per
+        batch to that directory.
+        """
+        if isinstance(batch, (list, tuple)) and len(batch) == 2:
+            x, y = batch
+        else:
+            x, y = batch, None
+        logits = self.model(x)
+        if getattr(self.hparams, "log_logits", False):
+            logits_dir = getattr(self.hparams, "logits_dir", None)
+            if logits_dir:
+                from pathlib import Path
+                dump_dir = Path(logits_dir)
+                dump_dir.mkdir(parents=True, exist_ok=True)
+                fname = dump_dir / f"test_batch_{batch_idx:04d}.pt"
+                torch.save(
+                    {
+                        "logits": logits.detach().cpu(),
+                        "labels": (y.detach().cpu() if y is not None else None),
+                        "batch_idx": int(batch_idx),
+                        "dataloader_idx": int(dataloader_idx),
+                    },
+                    str(fname),
+                )
+        return logits, y
 
     def configure_optimizers(self):
         if self.hparams.backbone_lr is not None:

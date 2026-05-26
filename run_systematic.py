@@ -282,6 +282,41 @@ def _apply_phase_d_treatment(spec, hparams: dict) -> dict:
     return out
 
 
+def _apply_b2_or_c2_treatment(spec, hparams: dict) -> dict:
+    """Return a new hparams blob with T3 deltas applied for Phase B2 / C2.
+
+    US-038 (v4, 2026-05-26). Phase B2 and Phase C2 are T3 carriers — the
+    dispatcher reuses `_phase_d_treatment_deltas("T3", model)` byte-for-byte.
+    Phase B2nr is a no-treatment carrier: hparams are returned unchanged
+    AND the `phase_b2nr_deltas: {}` marker is stamped explicitly for schema
+    stability.
+
+    No-op for Phase A / B / C / D cells (D is routed via
+    `_apply_phase_d_treatment`).
+    """
+    phase = getattr(spec, "phase", None)
+    if phase not in ("B2", "B2nr", "C2"):
+        return hparams
+    out = dict(hparams)
+    if phase == "B2nr":
+        out["phase_b2nr_deltas"] = {}
+        return out
+
+    treatment = getattr(spec, "treatment", None) or "T3"
+    deltas = _phase_d_treatment_deltas(treatment, spec.model)
+    bp = dict(hparams.get("best_params", {}))
+    bp.update(deltas)
+    out["best_params"] = bp
+    if phase == "B2":
+        out["phase_b2_treatment"] = treatment
+        out["phase_b2_deltas"] = deltas
+    else:  # C2
+        out["phase_c2_treatment"] = treatment
+        out["phase_c2_deltas"] = deltas
+        out["phase_c2_axis"] = getattr(spec, "axis", None)
+    return out
+
+
 def _load_hparams_for_cell(spec) -> dict:
     """Load best_hparams for a CellSpec, with Phase A / V3 TransNeXt fallback.
 
@@ -325,7 +360,14 @@ def _load_hparams_for_cell(spec) -> dict:
     return _load_best_hparams(spec.model, spec.dataset)
 
 
-def _cell_config(spec, hparams: dict, mode: str) -> dict:
+def _cell_config(
+    spec,
+    hparams: dict,
+    mode: str,
+    seed: int = 42,
+    effective_tag: Optional[str] = None,
+    log_logits: bool = False,
+) -> dict:
     """Build run_experiment kwargs from a CellSpec + best_hparams.
 
     The DegradeConfig fields override the legacy CLI flag names because
@@ -336,10 +378,17 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
     pretrain_size, compile_mode, precision) are read from CellSpec — they are
     fixed at 224x224 / bf16-mixed / no-compile but still flow through the
     CellSpec so future overrides have a single source of truth.
+
+    US-038 (v4): `seed` overrides the default `pl.seed_everything(42)` for
+    multi-seed audit runs. `effective_tag` is the on-disk tag (may include a
+    `_seed{N}` suffix); when omitted it defaults to `spec.tag`. `log_logits`
+    threads down to the trainer so US-045 diagnostics can dump per-batch
+    val/test logits to `runs/final/<tag>/logits/`.
     """
     settings = FINAL_PILOT if mode == "pilot" else FINAL_FULL
     deg = spec.degrade_config
     bp = hparams["best_params"]
+    tag_on_disk = effective_tag or spec.tag
 
     return {
         # Model + training
@@ -379,25 +428,32 @@ def _cell_config(spec, hparams: dict, mode: str) -> dict:
         "degradation_type": deg.degradation_type,
 
         # Bookkeeping
-        "tag": spec.tag,
+        "tag": tag_on_disk,
         "dataset": spec.dataset,
         "group": "final",
-        "run_name_override": spec.tag,    # forces runs/final/<tag>/
+        "run_name_override": tag_on_disk,    # forces runs/final/<tag_on_disk>/
 
         # Phase-aware training schedule
         "epochs": settings["epochs"],
         "train_subset": settings["train_subset"],
         "val_subset": settings["val_subset"],
         "early_stopping_patience": settings["early_stopping_patience"],
+
+        # US-038 (v4): multi-seed audit + logit-logging
+        "seed": int(seed),
+        "log_logits": bool(log_logits),
     }
 
 
 def _merge_metadata_into_metrics_json(
-    run_dir: Path, spec, hparams: dict,
+    run_dir: Path, spec, hparams: dict, seed: int = 42,
 ) -> None:
     """Extend metrics.json with hparams + cell metadata for round-trip reproducibility.
 
     Acceptance: "All hparam values logged to metrics.json under a `hparams` key."
+
+    US-038 (v4): adds `seed` (first-class field for multi-seed audits) and
+    Phase B2 / B2nr / C2 treatment + axis fields.
     """
     metrics_path = Path(run_dir) / "metrics.json"
     if not metrics_path.exists():
@@ -416,6 +472,10 @@ def _merge_metadata_into_metrics_json(
     metrics["axis"] = spec.axis
     metrics["model"] = spec.model
     metrics["dataset"] = spec.dataset
+    metrics["seed"] = int(seed)
+    # Treatment field (PRD §4.7): Phase A/B/B2nr/C carry None; B2/C2 carry "T3";
+    # Phase D carries one of T1/T2/T3.
+    metrics["treatment"] = getattr(spec, "treatment", None)
     # Phase D (US-026/US-028): persist treatment + deltas as top-level keys
     # so PRD US-028 acceptance criteria are literally satisfied (the merged
     # delta values already flow through metrics["hparams"], but the explicit
@@ -423,6 +483,16 @@ def _merge_metadata_into_metrics_json(
     if hparams.get("phase_d_treatment") is not None:
         metrics["phase_d_treatment"] = hparams["phase_d_treatment"]
         metrics["phase_d_deltas"] = hparams.get("phase_d_deltas", {})
+    # Phase B2 / B2nr / C2 (US-038): mirror the Phase D convention.
+    if hparams.get("phase_b2_treatment") is not None:
+        metrics["phase_b2_treatment"] = hparams["phase_b2_treatment"]
+        metrics["phase_b2_deltas"] = hparams.get("phase_b2_deltas", {})
+    if "phase_b2nr_deltas" in hparams:
+        metrics["phase_b2nr_deltas"] = hparams["phase_b2nr_deltas"]
+    if hparams.get("phase_c2_treatment") is not None:
+        metrics["phase_c2_treatment"] = hparams["phase_c2_treatment"]
+        metrics["phase_c2_deltas"] = hparams.get("phase_c2_deltas", {})
+        metrics["phase_c2_axis"] = hparams.get("phase_c2_axis")
     metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
 
@@ -453,21 +523,54 @@ def _measure_image_quality_for_cell(spec, run_dir: Path, n_samples: int = 256) -
         return f"{type(e).__name__}: {e}"
 
 
+_MULTISEED_SUFFIX_RE = __import__("re").compile(r"_seed(\d+)$")
+
+
+def _split_multiseed_tag(cell_tag: str) -> tuple[str, int]:
+    """Return (base_tag, seed). If `cell_tag` carries `_seed{N}` (N != 42),
+    strip it and return (base, N). Otherwise return (cell_tag, 42).
+
+    US-038 (v4). Multi-seed dispatches use the suffix to route to a unique
+    `runs/final/<base_tag>_seed{N}/` directory while still resolving the
+    DegradeConfig + hparams against the canonical base tag in
+    `build_final_matrix()`.
+    """
+    m = _MULTISEED_SUFFIX_RE.search(cell_tag)
+    if m is None:
+        return cell_tag, 42
+    seed = int(m.group(1))
+    base = cell_tag[: m.start()]
+    return base, seed
+
+
 def run_cell(
     cell_tag: str,
     mode: str = "full",
     engine: str = "lightning",
+    seed: int = 42,
     *,
     run_experiment_fn=None,         # injectable for testing
     measure_quality_fn=None,        # injectable for testing
+    log_logits: bool = False,
 ):
-    """Dispatch a single cell from the 186-cell matrix.
+    """Dispatch a single cell from the campaign matrix.
 
     Resolves the tag against build_final_matrix(), loads the (model, dataset)
     Optuna winner, calls run_experiment with run_name_override=tag so output
     lands at runs/final/<tag>/, then:
       1. Merges hparams + cell metadata into metrics.json (US-008).
       2. Writes image_quality.json with PSNR/SSIM (US-016) for Phase B/C cells.
+
+    Multi-seed (US-038, v4): if `cell_tag` ends in `_seed{N}` (N != 42) OR
+    the `seed` kwarg overrides 42, the run directory uses the suffixed tag
+    and `pl.seed_everything(N, workers=True)` is invoked in the trainer.
+    The DegradeConfig + hparams are resolved against the BASE tag (without
+    the `_seed{N}` suffix), so multi-seed runs share the canonical cell's
+    DegradeConfig byte-for-byte.
+
+    `log_logits` (US-038, v4): when True, the trainer dumps per-batch
+    val/test logits to `runs/final/<tag>/logits/` for downstream diagnostics
+    (US-045). Defaults to False to preserve the legacy behavior.
 
     The PSNR/SSIM step is best-effort — failure is logged to stderr and the
     return value is unaffected. `measure_quality_fn` is injectable so unit
@@ -476,12 +579,23 @@ def run_cell(
     from src.experiments.matrix import cells_by_tag
 
     by_tag = cells_by_tag()
-    if cell_tag not in by_tag:
+
+    # Resolve base tag (strip _seed{N} suffix) for matrix lookup.
+    base_tag, parsed_seed = _split_multiseed_tag(cell_tag)
+    if seed != 42 and parsed_seed == 42:
+        # Caller passed --seed but used the bare base_tag; promote to suffixed form.
+        parsed_seed = seed
+        effective_tag = f"{base_tag}_seed{seed}" if seed != 42 else base_tag
+    else:
+        effective_tag = cell_tag if parsed_seed != 42 else base_tag
+        seed = parsed_seed
+
+    if base_tag not in by_tag:
         raise ValueError(
-            f"unknown cell tag: {cell_tag!r}. "
-            f"Expected one of the 186 tags from build_final_matrix()."
+            f"unknown cell tag: {cell_tag!r} (base: {base_tag!r}). "
+            f"Expected one of the canonical tags from build_final_matrix()."
         )
-    spec = by_tag[cell_tag]
+    spec = by_tag[base_tag]
     hparams = _load_hparams_for_cell(spec)
     # §6.4 retry plumbing (Iteration 12, 2026-05-15): if the ralph driver
     # wrote a retry_config.json for this cell, it overrides best_hparams so
@@ -489,22 +603,25 @@ def run_cell(
     # head_lr÷3, weight_decay×1.5, label_smoothing+=0.05 for failed_convergence)
     # actually reach the trainer. Without this hook the retry trained with the
     # original Optuna winner hparams and produced identical results.
-    retry_path = Path("runs/final") / cell_tag / "retry_config.json"
+    retry_path = Path("runs/final") / effective_tag / "retry_config.json"
     if retry_path.exists():
         hparams = json.loads(retry_path.read_text(encoding="utf-8"))
     # Phase D (US-026): layer treatment-specific regularization deltas onto
-    # the loaded best_params. No-op for Phase A/B/C cells.
+    # the loaded best_params. No-op for Phase A/B/B2/B2nr/C/C2 cells.
     hparams = _apply_phase_d_treatment(spec, hparams)
-    config = _cell_config(spec, hparams, mode)
+    # Phase B2 / B2nr / C2 (US-038): same delta-merging pattern.
+    hparams = _apply_b2_or_c2_treatment(spec, hparams)
+    config = _cell_config(spec, hparams, mode, seed=seed,
+                          effective_tag=effective_tag, log_logits=log_logits)
 
     run_experiment = run_experiment_fn or _resolve_run_experiment(engine)
     run_dir = Path(run_experiment(**config))
-    _merge_metadata_into_metrics_json(run_dir, spec, hparams)
+    _merge_metadata_into_metrics_json(run_dir, spec, hparams, seed=seed)
 
     quality_fn = measure_quality_fn or _measure_image_quality_for_cell
     quality_err = quality_fn(spec, run_dir)
     if quality_err:
-        print(f"[run_cell][WARN] image_quality.json for {cell_tag}: {quality_err}",
+        print(f"[run_cell][WARN] image_quality.json for {effective_tag}: {quality_err}",
               file=sys.stderr)
 
     return run_dir
@@ -645,10 +762,25 @@ if __name__ == "__main__":
     p.add_argument(
         "--cell-tag",
         default=None,
-        help="Run a single cell from the 186-cell matrix (US-008). Tag form: "
-             "final_clean_{m}_{d} | final_B_L{l}_{m}_{d} | final_C_L{l}_{ax}_{m}_{d}. "
+        help="Run a single cell from the campaign matrix (US-008). Tag form: "
+             "final_clean_{m}_{d} | final_B_L{l}_{m}_{d} | final_C_L{l}_{ax}_{m}_{d} | "
+             "final_B2_L{l}_{m}_{d} | final_B2nr_L3_{m}_{d} | "
+             "final_C2_L{l}_{ax}_{m}_{d} | final_D_{T}_L{l}_{m}_{d}. "
              "Loads hparams from artifacts/best_hparams/{m}_{d}.json. When set, "
              "the legacy --level loop is bypassed.",
+    )
+    p.add_argument(
+        "--seed", type=int, default=42,
+        help="Lightning seed (US-038, v4). Default 42 — the canonical "
+             "campaign seed. Non-default values append a `_seed{N}` suffix "
+             "to the cell tag (`runs/final/<tag>_seed{N}/`) for multi-seed "
+             "audit dispatches; per-sample degradation seeds (SEED_OFFSET_*) "
+             "are independent of this knob.",
+    )
+    p.add_argument(
+        "--log-logits", action="store_true", default=False,
+        help="US-038 (v4) — dump per-batch val/test logits under "
+             "runs/final/<tag>/logits/ for downstream diagnostics (US-045).",
     )
     args = p.parse_args()
 
@@ -661,7 +793,13 @@ if __name__ == "__main__":
 
     # 186-cell single-cell dispatch (US-008): --cell-tag bypasses the legacy loop.
     if args.cell_tag:
-        run_cell(args.cell_tag, mode=args.mode, engine=args.engine)
+        run_cell(
+            args.cell_tag,
+            mode=args.mode,
+            engine=args.engine,
+            seed=args.seed,
+            log_logits=args.log_logits,
+        )
         sys.exit(0)
 
     if args.level == "all":

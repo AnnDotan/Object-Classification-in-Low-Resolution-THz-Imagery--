@@ -119,6 +119,8 @@ def run_experiment(
     precision: Optional[str] = None,
     run_name_override: Optional[str] = None,
     num_workers: Optional[int] = None,  # US-043: None -> auto-pick on CUDA, 0 on CPU
+    seed: int = 42,                      # US-038 (v4): multi-seed audits
+    log_logits: bool = False,            # US-038 (v4): US-045 diagnostics
 ):
     # All models — CNNs and TransNeXt alike — train at 224x224. The data
     # pipeline upsamples CIFAR (32) / MNIST (28) to out_size before reaching
@@ -129,7 +131,7 @@ def run_experiment(
             f"img_size={img_size}. Set --img_size to match --out_size."
         )
 
-    pl.seed_everything(42, workers=True)
+    pl.seed_everything(int(seed), workers=True)
 
     if run_name_override:
         run_name = run_name_override
@@ -189,7 +191,8 @@ def run_experiment(
         "pretrain_size": pretrain_size,
         "compile_mode": compile_mode,
         "precision": precision,
-        "seed": 42,
+        "seed": int(seed),
+        "log_logits": bool(log_logits),
     }
     _write_run_config(run_dir, config_snapshot)
 
@@ -259,6 +262,8 @@ def run_experiment(
         patch_size=patch_size,
         pretrain_size=pretrain_size,
         compile_mode=compile_mode,
+        log_logits=bool(log_logits),
+        logits_dir=(str(run_dir / "logits") if log_logits else None),
     )
 
     run_meta = {

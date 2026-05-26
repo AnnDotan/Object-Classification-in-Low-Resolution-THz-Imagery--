@@ -261,7 +261,28 @@ def run_single(exp: dict, exp_num: int, total: int, engine: str = "lightning"):
 # 90-cell *duplicate* of Phase B with treatment-specific dropout / drop-path /
 # mixup / cutmix layered on top of the L3-Optuna baselines. Phase D tags use
 # `final_D_*` so they cannot collide with Phase B's `final_B_*` directories.
-FINAL_PHASES = ("A", "B", "C", "D")
+#
+# US-038 (2026-05-26): added Phase B2 (THz protocol + T3, 30 cells), Phase
+# B2nr (B2 sans T3, 6 L3 cells), and Phase C2 (single-axis isolation under
+# the B2 protocol, 90 cells). Canonical order is A → B → B2 → B2nr → C → C2
+# → D. Tag prefixes are mutually exclusive — the legacy Phase B check must
+# use startswith("final_B_L") (the L-prefix distinguishes B1 from B2 / B2nr).
+FINAL_PHASES = ("A", "B", "B2", "B2nr", "C", "C2", "D")
+
+
+# US-038 — tag-prefix collision-safety: every phase's matrix MUST only contain
+# tags matching its canonical prefix. `startswith` checks are NOT loose: the
+# legacy Phase B check uses `final_B_L` (not just `final_B`) to disambiguate
+# from `final_B2_*` and `final_B2nr_*`.
+_PHASE_TAG_PREFIX: dict[str, str] = {
+    "A":    "final_clean_",
+    "B":    "final_B_L",     # L-prefix required vs B2 / B2nr
+    "B2":   "final_B2_L",    # L-prefix required vs B2nr
+    "B2nr": "final_B2nr_",
+    "C":    "final_C_L",     # L-prefix required vs C2
+    "C2":   "final_C2_L",
+    "D":    "final_D_",
+}
 
 
 def _has_completed_metrics(metrics_path: Path) -> bool:
@@ -367,26 +388,34 @@ def run_final_plan(
         phase_boundary_fn = _sync.commit_and_push_phase_boundary
     from src.experiments.matrix import build_final_matrix
 
-    # US-026: include Phase D iff explicitly requested. `--phase all` keeps
-    # the historical 186-cell behavior so existing callers don't sweep the
-    # 90 extra cells by accident. `--phase D` opts into the Phase D rows only.
-    include_phase_d = (phase == "D")
-    matrix = build_final_matrix(include_phase_d=include_phase_d)
+    # US-026 / US-038: include opt-in phases iff explicitly requested. `--phase
+    # all` keeps the historical 186-cell behavior so existing callers don't
+    # sweep the 216 extra cells by accident.
+    include_phase_d   = (phase == "D")
+    include_phase_b2  = (phase == "B2")
+    include_phase_b2nr = (phase == "B2nr")
+    include_phase_c2  = (phase == "C2")
+    matrix = build_final_matrix(
+        include_phase_d=include_phase_d,
+        include_phase_b2=include_phase_b2,
+        include_phase_b2nr=include_phase_b2nr,
+        include_phase_c2=include_phase_c2,
+    )
     if phase != "all":
         if phase not in FINAL_PHASES:
             raise ValueError(f"unknown phase {phase!r}; expected one of {FINAL_PHASES} or 'all'")
         matrix = [c for c in matrix if c.phase == phase]
 
-    # US-026 invariant: Phase D dispatch must never touch a Phase B directory.
-    # Every Phase D cell uses a `final_D_*` tag (build_final_matrix guarantees
-    # this) so the run_dir below is `runs/final/final_D_*`. This guard is a
-    # defense-in-depth check; if any cell's tag drifts from the scheme we abort
-    # before the runner can write to disk.
-    if phase == "D":
-        bad = [c.tag for c in matrix if not c.tag.startswith("final_D_")]
+    # US-026 / US-038 invariant: per-phase dispatch must never touch a sibling
+    # phase's directory. Every cell's tag must match the canonical prefix for
+    # its phase (the L-prefix on `final_B_L` / `final_C_L` is load-bearing —
+    # it distinguishes Phase B from Phase B2 / B2nr and Phase C from C2).
+    if phase in _PHASE_TAG_PREFIX:
+        prefix = _PHASE_TAG_PREFIX[phase]
+        bad = [c.tag for c in matrix if not c.tag.startswith(prefix)]
         assert not bad, (
-            f"Phase D dispatch contained non-D tags: {bad[:3]} "
-            f"(would have overwritten Phase B). Aborting."
+            f"Phase {phase} dispatch contained non-matching tags: {bad[:3]} "
+            f"(expected prefix {prefix!r}). Aborting."
         )
 
     # PRD US-042: optional model/dataset filters. Used by `--dry-run` smoke
