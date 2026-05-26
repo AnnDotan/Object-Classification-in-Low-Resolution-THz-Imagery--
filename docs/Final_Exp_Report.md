@@ -1,12 +1,13 @@
 # Object Classification in Low-Resolution THz-like Imagery — Final Research Report
 
-**Status:** 186 / 186 cells complete · **Generated:** 2026-05-23 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
+**Status:** 276 / 276 cells complete (186 v2 + 90 Phase D, closed 2026-05-26) · **Generated:** 2026-05-26 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
 
 ---
 
 ## Executive Summary
 
-This report presents the final outcomes of a 186-cell experimental campaign evaluating
+This report presents the final outcomes of a **276-cell** experimental campaign (186-cell v2
+core + 90-cell Phase D regularization sweep) evaluating
 the robustness of three deep-learning architectures —
 **ResNet50** (CNN, ~25M params), **DenseNet121** (CNN, ~8M params), and
 **TransNeXt-tiny** (attention, ~28M params) — under severe visual degradation that
@@ -75,13 +76,14 @@ trajectory ~12.5 pp lower than v1.
 
 ## Campaign Statistics
 
-- **Total cells:** 186 (6 Phase A + 30 Phase B + 150 Phase C)
-- **Total accumulated GPU runtime:** ~108.5 GPU-hours
-- **Total training epochs across all cells:** 5,121
+- **Total cells:** 276 (6 Phase A + 30 Phase B + 150 Phase C + 90 Phase D)
+- **Total accumulated GPU runtime:** ~165.0 GPU-hours (Phase D added 56.5 GPU-h)
+- **Total training epochs across all cells:** 7,331
 - **Architectures evaluated:** 3 (ResNet50, DenseNet121, TransNeXt-tiny)
 - **Datasets:** 2 (CIFAR-10, MNIST upsampled 28 → 224)
 - **Degradation severities:** 5 (L1 Mild → L5 Extreme)
 - **Phase C single-axis isolation axes:** 5 (resolution, noise, blur, saturation, salt_pepper)
+- **Phase D regularization treatments:** 3 (T1 architectural dropout/drop-path, T2 mixup, T3 combo)
 
 ---
 
@@ -584,6 +586,22 @@ effectively averaged out by the bicubic kernel.
    three architectures see the same pixel budget — the convergence is
    evidence about the architectures, not about the input shape.
 
+6. **Phase D regularization partially softens but does not reverse the v2
+   collapse — confirming the information-bottleneck interpretation.**
+   Across the 90-cell Phase D sweep (T1 architectural dropout/drop-path,
+   T2 mixup α=0.2, T3 the T1 ∪ T2 ∪ cutmix α=1.0 combo, layered atop the
+   frozen v2 L3-Optuna winners with no re-tune), mean Δ vs the Phase B v2
+   baseline is +0.17 pp (T1), +0.31 pp (T2), and +0.77 pp (T3) — monotonic
+   in regularization scope. TransNeXt × CIFAR-10 reaches +2.20 pp mean
+   recovery under T3 (the strongest segment, consistent with Finding 2's
+   attention-softens hypothesis), while DenseNet121 × CIFAR-10 sits at just
+   +0.22 pp mean. The CIFAR-10 L5 cells under T3 average only +0.27 pp —
+   the 3 × 3-downsample bottleneck (Finding 1) is unrescuable. Operator-
+   locked answer to the §1 research question: **Regularization recovers a
+   small fraction of the v2 collapse (mean Δ = +0.77 pp under T3 vs the
+   −12.49 pp v2 drop). The collapse is largely a fundamental information
+   bottleneck, not an overfit signal.**
+
 ---
 
 ## Operational Notes
@@ -646,6 +664,6 @@ with sentinels) is documented inline.
 
 ---
 
-*Report generated 2026-05-23 from `artifacts/Final_Exp.json` (state of disk under
+*Report generated 2026-05-26 from `artifacts/Final_Exp.json` (state of disk under
 `PIPELINE_VERSION = 2`, after the v2 noise-fix 90-cell re-run closed
 2026-05-23 / Iteration 40). Regenerate with* `python scripts/build_final_exp_report.py`.
