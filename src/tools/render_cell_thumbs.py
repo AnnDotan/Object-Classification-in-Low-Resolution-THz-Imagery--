@@ -161,7 +161,7 @@ def render_thumbs(
             "(axes are a Phase C single-axis-isolation concept)"
         )
     out_dir.mkdir(parents=True, exist_ok=True)
-    matrix = build_final_matrix()
+    matrix = build_final_matrix(include_phase_d=True)
     if tags is not None:
         tag_set = set(tags)
         by_tag = cells_by_tag(matrix)
@@ -202,8 +202,8 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Render only these cell tags (default: all 186).",
     )
     p.add_argument(
-        "--phase", default=None, choices=["A", "B", "C"],
-        help="Restrict rendering to cells of this phase (default: all phases).",
+        "--phase", default=None, choices=["A", "B", "C", "D"],
+        help="Restrict rendering to cells of this phase (default: all phases — 276 with Phase D included).",
     )
     p.add_argument(
         "--axes", default=None, type=_parse_axes_arg,
