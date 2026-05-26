@@ -67,13 +67,32 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     img: [C,H,W] float tensor in [0,1]
     returns: [C,out_size,out_size] float in [0,1]
 
+    Pipeline v2 (US-017, 2026-05-20): noise + salt-and-pepper now operate at the
+    pre-upsample resolution. Each stochastic pixel-level sample is then spread
+    across the bicubic kernel's footprint by the upsample, producing the
+    coarse-grain noise structure a real low-resolution sensor would record.
+    Pipeline v1 applied noise/S&P at 224x224 (post-upsample), which made each
+    sample land on a single 224-grid pixel and severely understated the
+    perceived noise relative to the configured noise_std.
+
     Step order (saturation BEFORE noise/S&P so noise color stays correct):
       0. degradation_type=='none' -> early-return (clean baseline, only upsample).
       1. saturation lerp (replaces stochastic p_grayscale)
-      2. downsample -> upsample
-      3. gaussian blur
-      4. additive gaussian noise
-      5. salt-and-pepper
+      2. downsample to low_res (bilinear)        <- pre-upsample begins
+      3. additive gaussian noise (at low_res)    <- v2 move
+      4. salt-and-pepper (at low_res)            <- v2 move
+      5. upsample to out_size (bicubic)          <- pre-upsample ends
+      6. gaussian blur (at out_size; kernels were calibrated for 224)
+      7. final clamp to [0,1]
+
+    Determinism: the local torch.Generator (lines below) is seeded per-sample
+    by THzLikeCIFAR10/MNIST.__getitem__ (seed = idx + SEED_OFFSET_*). Moving
+    the noise/S&P consumers earlier in the function changes how many random
+    samples each step draws (low_res^2 instead of out_size^2) but the per-sample
+    seed determinism still holds: two reads of the same val index yield
+    byte-identical pixels under v2. The MSE=0 gate in test_degradation_determinism
+    remains valid; only the cross-version comparison breaks (intentionally —
+    `degradation_levels_hash` rotates so v1 vs v2 metrics.json are distinguishable).
     """
     # Local RNG only — never mutate global state from inside __getitem__,
     # or we'd clobber the DataLoader shuffler, model init, dropout, etc.
@@ -86,10 +105,8 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
     # 32->224 upsample. Reason: bilinear introduces aliasing artifacts that
     # handicap the ImageNet-pretrained ResNet50 / DenseNet121 receptive-field
     # hierarchy. Bicubic preserves high-frequency content for the CNN baselines.
-    # Cost: rotates `metrics.json.degradation_levels_hash`; prior Phase A
-    # baselines (frozen pre-US-043) are non-comparable to runs after this
-    # commit. Re-baseline is part of the US-043 scope. Bicubic is deterministic
-    # in PyTorch >= 1.10 so the determinism gate still passes (MSE=0).
+    # Bicubic is deterministic in PyTorch >= 1.10 so the determinism gate still
+    # passes (MSE=0). Phase A is unaffected by the v2 noise/S&P move.
     if cfg.degradation_type == 'none':
         if img.shape[-1] != cfg.out_size:
             img = torch.nn.functional.interpolate(
@@ -101,6 +118,8 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
         return img.clamp(0, 1)
 
     # 1) Saturation lerp (deterministic; replaces stochastic p_grayscale).
+    # Applied first, at the native input resolution, so the grayscale luminance
+    # is computed from un-degraded RGB values.
     if cfg.degradation_type in ('all', 'saturation'):
         s = float(cfg.saturation)
         if img.shape[0] == 3 and s < 1.0:
@@ -108,29 +127,28 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
             gray3 = torch.stack([gray, gray, gray], dim=0)
             img = (1.0 - s) * gray3 + s * img
 
-    # 2) downsample to low_res then upsample to out_size.
-    # US-043: downsample stays bilinear (anti-aliased pooling is sensible for
-    # resolution loss simulation); upsample switches to bicubic to match the
-    # clean-baseline upsample mode. Both stages remain deterministic.
+    # 2) downsample to low_res (bilinear). Pre-US-017 the upsample-to-out_size
+    # was fused into the same block; v2 splits them so noise/S&P can run between
+    # the two interpolations at the lower resolution.
     # US-003 (2026-05-14): when low_res == out_size the resolution axis is at
-    # identity (Phase C inactive-axis semantic). Skip the bilinear downsample
-    # and do a single bicubic upsample so the pixels match the Phase A clean
-    # baseline upsampling exactly. Without this short-circuit, the cascade
-    # bilinear(32->224) -> bicubic(224->224) would diverge from a single
-    # bicubic(32->224), polluting the per-axis isolation signal.
+    # identity. The bilinear downsample is skipped; only the bicubic upsample
+    # at step 5 (which may be a no-op or a 32->224 enlargement, depending on
+    # input shape) is left to run.
     if cfg.degradation_type in ('all', 'downsampling'):
-        img = img.unsqueeze(0)
         if cfg.low_res != cfg.out_size:
-            img = torch.nn.functional.interpolate(img, size=(cfg.low_res, cfg.low_res), mode="bilinear", align_corners=False)
-        img = torch.nn.functional.interpolate(img, size=(cfg.out_size, cfg.out_size), mode="bicubic", align_corners=False)
-        img = img.squeeze(0)
+            img = torch.nn.functional.interpolate(
+                img.unsqueeze(0),
+                size=(cfg.low_res, cfg.low_res),
+                mode="bilinear",
+                align_corners=False,
+            ).squeeze(0)
 
-    # 3) blur
-    if cfg.degradation_type in ('all', 'blur'):
-        if cfg.blur_kernel and cfg.blur_kernel > 1:
-            img = _gaussian_blur_torch(img, kernel_size=cfg.blur_kernel, sigma=cfg.blur_sigma)
-
-    # 4) additive gaussian noise
+    # 3) additive gaussian noise (at pre-upsample resolution; v2 move).
+    # Drawing noise at low_res instead of out_size means far fewer random
+    # samples (e.g. 3*3 = 9 instead of 3*224*224 = 150K at L5 resolution),
+    # each then bicubic-upsampled into a kernel-shaped patch. The perceived
+    # noise std at 224 is lower than `gaussian_noise_std`, but the noise
+    # *structure* is realistic (sensor-grain rather than fine-grain).
     if cfg.degradation_type in ('all', 'noise'):
         if cfg.gaussian_noise_std and cfg.gaussian_noise_std > 0:
             noise = torch.randn(
@@ -138,7 +156,10 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
             ) * cfg.gaussian_noise_std
             img = (img + noise).clamp(0, 1)
 
-    # 5) salt-and-pepper noise
+    # 4) salt-and-pepper noise (at pre-upsample resolution; v2 move).
+    # A "salt" pixel at low_res becomes a small bright blob in the upsampled
+    # image rather than a single isolated bright pixel — much closer to what
+    # a real defective-pixel detector would record at THz frequencies.
     if cfg.degradation_type in ('all', 'salt_pepper'):
         if cfg.salt_pepper_amount and cfg.salt_pepper_amount > 0:
             mask = torch.rand(
@@ -150,7 +171,27 @@ def degrade_image(img: torch.Tensor, cfg: DegradeConfig, seed: Optional[int] = N
             img[:, salt.squeeze(0)] = 1.0
             img[:, pepper.squeeze(0)] = 0.0
 
-    return img
+    # 5) upsample to out_size (bicubic). Always runs when the input is not
+    # already at out_size — covers the Phase B/C path (after the optional
+    # bilinear downsample) and the resolution-identity Phase C path (where
+    # we still need to bring the native 32x32 / 28x28 input up to 224x224
+    # before the blur step).
+    if img.shape[-1] != cfg.out_size or img.shape[-2] != cfg.out_size:
+        img = torch.nn.functional.interpolate(
+            img.unsqueeze(0),
+            size=(cfg.out_size, cfg.out_size),
+            mode="bicubic",
+            align_corners=False,
+        ).squeeze(0)
+
+    # 6) blur (at out_size; kernel/sigma table was calibrated for 224x224 on
+    # 2026-05-14, so it stays post-upsample).
+    if cfg.degradation_type in ('all', 'blur'):
+        if cfg.blur_kernel and cfg.blur_kernel > 1:
+            img = _gaussian_blur_torch(img, kernel_size=cfg.blur_kernel, sigma=cfg.blur_sigma)
+
+    # 7) bicubic upsample can slightly overshoot [0,1]; clamp once at the end.
+    return img.clamp(0, 1)
 
 
 def degrade_config_for(
@@ -191,3 +232,62 @@ def degrade_config_for(
         p_grayscale=0.0,  # deprecated; saturation lerp replaces stochastic grayscale
         degradation_type='all',
     )
+
+
+def degrade_config_for_b2(
+    level: int,
+    out_size: int = 224,
+) -> DegradeConfig:
+    """Build a Phase B2 DegradeConfig (THz-protocol simplification).
+
+    US-038 (v4, 2026-05-26). Identical to `degrade_config_for(level)` except:
+      - `saturation = 0.0`         (full grayscale via deterministic lerp)
+      - `gaussian_noise_std = 0.0` (additive-Gaussian noise step skipped by
+                                    the `> 0` guard in `degrade_image`)
+    All other axes (low_res, blur_kernel, blur_sigma, salt_pepper_amount)
+    flow through `DEGRADATION_LEVELS[level]` unchanged.
+
+    Used by Phase B2 (with T3 regularization layered on top) AND Phase
+    B2-no-regularization (B2nr — bare Optuna L3 winners). Source of truth
+    locked in PRD §4.1.
+    """
+    if level not in (1, 2, 3, 4, 5):
+        raise ValueError(f"Phase B2 level must be 1..5; got {level!r}")
+    cfg = degrade_config_for(level, axis=None, out_size=out_size)
+    cfg.saturation = 0.0
+    cfg.gaussian_noise_std = 0.0
+    return cfg
+
+
+_PHASE_C2_AXES: tuple[str, ...] = ("resolution", "blur", "salt_pepper")
+
+
+def degrade_config_for_c2(
+    level: int,
+    axis: str,
+    out_size: int = 224,
+) -> DegradeConfig:
+    """Build a Phase C2 DegradeConfig (THz-protocol single-axis isolation).
+
+    US-038 (v4, 2026-05-26). Phase C2 = legacy Phase C single-axis isolation
+    (US-003 identity semantics) under the THz protocol — the named `axis` is
+    at level L, every other non-{saturation, noise_std} axis is at its
+    `IDENTITY_VALUES`, and `saturation = 0.0` + `gaussian_noise_std = 0.0`
+    are forced regardless of level.
+
+    Valid axes: {"resolution", "blur", "salt_pepper"} — `noise` and
+    `saturation` are protocol-invariant (always zero) and would produce a
+    trivial no-op cell under the C2 override, so they are rejected here.
+
+    Source of truth locked in PRD §4.3.
+    """
+    if level not in (1, 2, 3, 4, 5):
+        raise ValueError(f"Phase C2 level must be 1..5; got {level!r}")
+    if axis not in _PHASE_C2_AXES:
+        raise ValueError(
+            f"Phase C2 axis must be one of {_PHASE_C2_AXES}; got {axis!r}"
+        )
+    cfg = degrade_config_for(level, axis=axis, out_size=out_size)
+    cfg.saturation = 0.0
+    cfg.gaussian_noise_std = 0.0
+    return cfg
