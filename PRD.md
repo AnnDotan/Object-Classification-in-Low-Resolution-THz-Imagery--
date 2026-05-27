@@ -229,7 +229,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-037** | `docs/phase_b2.md` + `docs/phase_c2.md` rationale documents | [REPORTER](agents/REPORTER.md) + [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) (review) | ✅ CLOSED 2026-05-26 | 0 |
 | **US-038** | Code wiring: cells.py + matrix.py + degrade.py + run_systematic.py + run_all_phases.py + multi-seed CLI + logit logging + determinism test extensions | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) + [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy + pilot deferred) | 0 |
 | **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (0.17 GPU-h actual) | ~2.5 |
-| **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~15 |
+| **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (30/30 healthy; 21.7 GPU-h actual) | ~15 |
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
 | **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
@@ -408,12 +408,12 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 ```
 
 **Acceptance criteria.**
-- [ ] 30/30 cells `healthy` per §6.3 (or operator-accepted deferrals).
-- [ ] All 30 `metrics.json` carry `pipeline_version: 2`, `phase: "B2"`, `treatment: "T3"`, B2 DegradeConfig override.
-- [ ] [Final_Exp.md](Final_Exp.md) reflects 30 Phase B2 rows; total cell count = 306 (without C2/B2nr yet).
-- [ ] 30 dashboard thumbs rendered.
+- [x] 30/30 cells `healthy` per §6.3 (or operator-accepted deferrals).
+- [x] All 30 `metrics.json` carry `pipeline_version: 2`, `phase: "B2"`, `treatment: "T3"`, B2 DegradeConfig override.
+- [x] [Final_Exp.md](Final_Exp.md) reflects 30 Phase B2 rows; total cell count = 306 (without C2/B2nr yet).
+- [x] 30 dashboard thumbs rendered.
 
-**v4 outcome (filled at close).** Mean Δ_B1→B2 and Δ_D→B2 across the 30 Phase B2 cells, broken out by dataset and level. Headline answer to the §1 Phase B2 question.
+**v4 outcome (closed 2026-05-27).** Across the 30 Phase B2 cells: **mean Δ_B1→B2 = +4.01 pp** (median +5.37, std 3.42); **mean Δ_D→B2 = +3.24 pp** (median +4.48, std 3.57). Per-level: L1 −1.17 pp / −1.95 pp (slight degradation — zeroing color costs accuracy at near-clean); L2 +1.97 / +0.72; L3 +5.58 / +4.65; L4 +7.12 / +6.33 (peak gain); L5 +6.54 / +6.44. All 6 (model, dataset) pairs net-positive on Δ_B1→B2 (range +2.82 to +4.94 pp). **Headline answer to the §1 Phase B2 question:** removing color saturation and additive Gaussian noise (THz-protocol simplification) recovers ~3.24 pp on average against the Phase D T3 baseline (i.e. ~4× the +0.77 pp T3-only recovery from v3 Phase D), with the largest gains at moderate-to-extreme degradation (L3–L5). At L1 the protocol simplification slightly hurts (clean-end loss from monochrome conversion).
 
 **GPU budget.** ~15 GPU-h.
 

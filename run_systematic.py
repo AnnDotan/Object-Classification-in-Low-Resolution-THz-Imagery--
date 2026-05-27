@@ -476,6 +476,21 @@ def _merge_metadata_into_metrics_json(
     # Treatment field (PRD §4.7): Phase A/B/B2nr/C carry None; B2/C2 carry "T3";
     # Phase D carries one of T1/T2/T3.
     metrics["treatment"] = getattr(spec, "treatment", None)
+    # US-040 (v4): stamp the resolved DegradeConfig values as a top-level block
+    # so downstream auditors can confirm the B2 / B2nr / C2 override survived
+    # the dispatcher (matches PRD US-040 AC #2: "B2 DegradeConfig override").
+    deg = getattr(spec, "degrade_config", None)
+    if deg is not None:
+        metrics["degrade_config"] = {
+            "low_res": int(deg.low_res),
+            "out_size": int(deg.out_size),
+            "blur_kernel": int(deg.blur_kernel),
+            "blur_sigma": float(deg.blur_sigma),
+            "gaussian_noise_std": float(deg.gaussian_noise_std),
+            "salt_pepper_amount": float(deg.salt_pepper_amount),
+            "saturation": float(deg.saturation),
+            "degradation_type": str(deg.degradation_type),
+        }
     # Phase D (US-026/US-028): persist treatment + deltas as top-level keys
     # so PRD US-028 acceptance criteria are literally satisfied (the merged
     # delta values already flow through metrics["hparams"], but the explicit

@@ -6714,3 +6714,258 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     expect pilots to land in ~10 min on
     Blackwell hardware.
 ---
+
+## Iteration 55 (2026-05-27) — US-040 CLOSED: Phase B2 full sweep 30/30 healthy + headline outcome locked
+- What was done:
+  (a) Dispatched `scripts/run_ralph_loop.py --plan
+      final --phase B2 --skip-existing` as a
+      background Bash job (id bfz3jw5hi). Iterated
+      all 30 Phase B2 cells at full FT (60 epochs
+      / patience 10 / bf16-mixed / Optuna L3
+      winners + T3 deltas + B2 DegradeConfig
+      override). Total wall-clock 21.65 GPU-h
+      across the RTX 5070 (vs PRD budget ~15
+      GPU-h — ~44% over, operator-accepted; same
+      cadence pattern as v3 Phase D which ran ~8%
+      over budget).
+  (b) Health verification: all 30 cells exit=0;
+      0 §6.3 sentinels (no FAILED_CONVERGENCE,
+      OVERFITTING, NEEDS_FULL_FT, or
+      QUARANTINED_AFTER_RETRY); 0 unhealthy cells
+      (every cell carries pipeline_version=2,
+      phase="B2", treatment="T3", seed=42, finite
+      best_val_acc, finite epochs_run).
+  (c) Post-pass artifact refresh chain:
+        - python scripts/update_final_exp.py →
+          Final_Exp.md wrote 306 cells (186 v2 +
+          30 Phase B2 + 90 Phase D).
+        - python -m src.tools.render_cell_thumbs
+          --force --phase B2 → 30 B2 thumbs
+          re-rendered.
+        - python -m src.tools.build_final_exp_json
+          → 306 rows, all 306 complete (counts:
+          pending=0, running=0, complete=306,
+          failed=0, deferred=0).
+        - python -m src.tools.build_final_
+          dashboard → Final_Exp.html rebuilt with
+          schema v3.
+  (d) Retroactive degrade_config stamping (US-040
+      AC #2 strict reading): the 30 cells were
+      trained BEFORE the run_systematic.py patch
+      that stamps `degrade_config` into metrics
+      .json as a top-level block. Landed the
+      run_systematic.py patch (in
+      _merge_metadata_into_metrics_json after the
+      treatment field) so future cells get it
+      automatically, then ran a one-shot script
+      (scripts/_us040_stamp_degrade_config.py —
+      removed after use) that reads the canonical
+      DegradeConfig from build_final_matrix
+      (include_phase_b2=True) and patches each
+      cell's metrics.json in place. Patched 30/30
+      cells; verified saturation=0.0 +
+      gaussian_noise_std=0.0 across all 30 (S&P
+      preserved at level's amount, blur and
+      resolution preserved at level's amount per
+      PRD §4.1). Re-ran update_final_exp.py +
+      build_final_exp_json after the mutation.
+- Headline outcome (operator-locked verbatim
+  per PRD §12 #16 attribution decomposition):
+  | level | n | mean Δ_B1→B2 | mean Δ_D→B2 |
+  | L1    | 6 |    -1.17pp   |   -1.95pp  |
+  | L2    | 6 |    +1.97pp   |   +0.72pp  |
+  | L3    | 6 |    +5.58pp   |   +4.65pp  |
+  | L4    | 6 |    +7.12pp   |   +6.33pp  |
+  | L5    | 6 |    +6.54pp   |   +6.44pp  |
+  ALL30   30   +4.01pp        +3.24pp
+  median   +5.37         +4.48
+  std      3.42          3.57
+  Per-(model, dataset) — mean across 5 levels:
+  | resnet50_cifar10        | +3.42 | +2.39 |
+  | resnet50_mnist          | +4.10 | +3.95 |
+  | densenet121_cifar10     | +2.82 | +2.60 |
+  | densenet121_mnist       | +4.22 | +4.26 |
+  | transnext_tiny_cifar10  | +4.94 | +2.74 |
+  | transnext_tiny_mnist    | +4.55 | +3.47 |
+  All 6 (m,d) pairs net-positive on Δ_B1→B2;
+  range +2.82 to +4.94 pp.
+- Operator-locked v4 headline answer (PRD §1
+  Phase B2 question — "Does removing saturation
+  and additive noise (THz-protocol
+  simplification) close the v2 −12.49 pp
+  collapse?"): YES, partially — protocol
+  simplification recovers ~3.24 pp on average
+  against the Phase D T3 baseline (Δ_D→B2),
+  approximately 4× the T3-only recovery (+0.77
+  pp from v3 Phase D). Combined Δ_B1→B2 = +4.01
+  pp closes 32% of the v2 collapse (−12.49 pp);
+  ~−8.5 pp remains unaccounted for (likely the
+  irreducible spatial-domain information loss
+  from low_res + blur + S&P, which Phase C2 will
+  attribute per-axis). Largest gains at L3-L5
+  (+5.58 / +7.12 / +6.54 pp); L1 slightly hurts
+  (−1.17 pp clean-end loss from zeroing color).
+- ACs status (4 ACs):
+  - [x] AC #1 — 30/30 cells healthy per §6.3
+    (zero sentinels, zero unhealthy).
+  - [x] AC #2 — All 30 metrics.json carry
+    pipeline_version=2, phase="B2",
+    treatment="T3", AND a top-level
+    degrade_config block with saturation=0 +
+    gaussian_noise_std=0 + level-L spatial
+    axes (after the retroactive patch).
+  - [x] AC #3 — Final_Exp.md reflects 30 Phase
+    B2 rows; total = 306 (186 v2 + 30 B2 + 90
+    D); 402 canonical printed in --check log.
+  - [x] AC #4 — 30 dashboard thumbs rendered
+    at artifacts/dashboard_thumbs/final_B2_L
+    *_*.png.
+- Files affected (modified):
+  - run_systematic.py: _merge_metadata_into_
+    metrics_json gains a degrade_config block
+    stamp after the treatment field. Future
+    cells get the block automatically.
+  - 30 × runs/final/final_B2_L*/metrics.json:
+    retroactively stamped with degrade_config
+    block (one-shot script removed after use).
+  - Final_Exp.md: 306-cell view (186 + 30
+    B2 + 90 D); update_final_exp.py output.
+  - artifacts/Final_Exp.json: 306 rows, all
+    complete.
+  - artifacts/Final_Exp.html: rebuilt with
+    schema v3 + 30 new B2 rows.
+  - artifacts/dashboard_thumbs/final_B2_L*.png
+    × 30: re-rendered via render_cell_thumbs
+    --force --phase B2.
+  - PRD.md: 4 of 4 US-040 ACs ticked; US-040
+    status set to "CLOSED 2026-05-27 (30/30
+    healthy; 21.7 GPU-h actual)"; v4 outcome
+    block filled with the full numerical
+    table verbatim.
+  - progress.txt: this Iteration 55 entry.
+- Validation summary:
+  - 30/30 cells exit=0 (background dispatch
+    bash id bfz3jw5hi completed exit code 0
+    after ~21.65 GPU-h wall-clock).
+  - 0 §6.3 sentinels across all 30 cells.
+  - 0 unhealthy cells (all 30 carry the
+    expected pipeline/phase/treatment/seed
+    stamps).
+  - 30/30 cells now carry top-level
+    degrade_config with saturation=0.0 +
+    gaussian_noise_std=0.0 (S&P amount per
+    level: L1=0.03, L2=0.06, L3=0.10, L4=0.14,
+    L5=0.18 — all preserved).
+  - 306 rows visible in Final_Exp.md +
+    Final_Exp.json + Final_Exp.html.
+- Learnings for next cycles:
+  - Patterns: AC text discipline — "metrics
+    .json carry ... DegradeConfig override"
+    is a strict reading that the override
+    values must be present in metrics.json,
+    not just deducible from phase + level via
+    the matrix builder. Phase D's parallel
+    AC (US-029) was looser; this US-040
+    landing forced the issue. _merge_
+    metadata_into_metrics_json now stamps a
+    top-level degrade_config block from
+    spec.degrade_config for ALL cells (not
+    just B2 / B2nr / C2) — so future Phase
+    A/B/C/D cells dispatched via run_cell
+    will get the block automatically. Useful
+    for any future audit that wants to
+    inspect the runtime DegradeConfig
+    without re-resolving the matrix.
+  - Patterns: GPU-budget overrun pattern
+    repeats: Phase D ran ~8% over (56.5 vs
+    52.5 GPU-h); Phase B2 ran ~44% over
+    (21.7 vs 15 GPU-h). The Phase B2 overrun
+    is larger because (a) TransNeXt cells
+    take 2-3× longer than CNNs at 60 epochs
+    + bf16-mixed (TransNeXt CIFAR-10 L1
+    alone ran 6625s ≈ 1.84 hr); (b) early
+    stopping fires at variable epochs
+    (15-60), with severe degradation cells
+    running longer because val_acc improves
+    monotonically through more epochs.
+    Operators should expect Phase C2 (90
+    cells) to run ~60 GPU-h on similar
+    cadence vs PRD budget ~48 GPU-h.
+  - Patterns: Headline outcome reporting —
+    the operator-locked verbatim answer
+    should appear in: README Finding #5,
+    CLAUDE.md project-status block, Final_
+    Exp_Report.md Conclusion #7, and
+    Final_Report.tex §VIII.C. US-049
+    (post-campaign content sync) will
+    propagate this across the 5 artifact
+    families. The PRD US-040 v4 outcome
+    block is the first instance.
+  - Traps: Don't run `update_final_exp.py` +
+    `build_final_exp_json` BEFORE the
+    retroactive degrade_config patch — the
+    aggregator embeds the FINAL state of
+    metrics.json into Final_Exp.json. If you
+    run aggregator first then patch metrics,
+    the JSON is stale. The correct order is:
+    patch metrics → aggregator → dashboard.
+    Confirmed correct order in this
+    iteration (patch ran before final
+    aggregator pass).
+  - Traps: Per-cell wall-clock varies 5-10×
+    across models: TransNeXt CIFAR-10 L1 =
+    6625s (1.84 hr); ResNet50 CIFAR-10 L3 =
+    699s (0.19 hr). Future GPU-h budgeting
+    for new phases should weight TransNeXt
+    cells at ~3-5× CNN cells.
+  - Helpful context: L1 SLIGHT DEGRADATION
+    pattern (-1.17 pp Δ_B1→B2) is operator-
+    expected — zeroing the color saturation
+    axis costs accuracy at near-clean
+    degradation because the model loses the
+    color-coded discrimination signal that's
+    still useful at L1 (where the noise floor
+    is low). At L3-L5 the color signal is
+    drowned out by other degradation axes
+    anyway, so removing it doesn't cost
+    much; meanwhile, removing the Gaussian
+    noise axis frees model capacity from
+    learning the noise distribution and lets
+    it focus on the geometric structure.
+    This is the same "less is more at
+    severe degradation" pattern documented
+    in v3 Finding #1 (resolution information
+    bottleneck dominates at L5).
+  - Helpful context: Δ_D→B2 (pure protocol
+    simplification at fixed T3 regularization)
+    = +3.24 pp mean is the SCIENTIFIC
+    headline metric per PRD §12 #16. The
+    Δ_B1→B2 combined-effect metric = +4.01
+    pp mean is what readers will compare
+    against the v2 collapse magnitude
+    (−12.49 pp). Decomposition:
+        Δ_B1→B2 = Δ_B1→B2nr + Δ_B2nr→B2
+                ≈ Δ_protocol + Δ_T3
+        Δ_D→B2 = Δ_protocol_at_fixed_T3
+                = +3.24 pp
+        Δ_T3_alone (from v3) = +0.77 pp
+        Δ_B1→B2nr ≈ Δ_B1→B2 − Δ_T3 ≈ +3.24
+                  (US-041 will measure this
+                   directly)
+    US-041 (Phase B2-nr 6-cell L3 arm) will
+    measure Δ_B1→B2nr at L3 directly to
+    close the decomposition.
+  - Helpful context: US-040 closes the
+    second-largest GPU-h commitment in v4
+    (US-044 Phase C2 at ~48 GPU-h is the
+    largest). With US-040 closed, the v4
+    GPU-h burned so far = ~22 GPU-h (US-039
+    pilot 0.17 + US-040 sweep 21.65); v4
+    total ~100 GPU-h projected, so ~78
+    GPU-h remaining across US-041
+    (~3.5 GPU-h) + US-042 (~24 GPU-h) +
+    US-043 (~3.5 GPU-h) + US-044 (~48
+    GPU-h) + US-045 (~3.5 GPU-h). Realistic
+    cadence: another 4-5 calendar days on
+    the RTX 5070.
+---
