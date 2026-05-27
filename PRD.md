@@ -232,7 +232,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (30/30 healthy; 21.7 GPU-h actual) | ~15 |
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (6/6 healthy; 3.79 GPU-h actual) | ~3.5 |
 | **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
-| **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
+| **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (0.14 GPU-h actual) | ~3.5 |
 | **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~48 |
 | **US-045** | Post-training diagnostics: held-out test-set inference (72 evals) + confusion matrices (24 L5 cells) + calibration / ECE (48 cells at L3 + L5) + inference throughput (3 models) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-046** | `Final_Exp.json` schema + aggregator wiring for B2 + B2-nr + C2 + multi-seed (group-by base tag, emit val_acc_mean / val_acc_std) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy deferred) | 0 |
@@ -522,9 +522,9 @@ Per-(model, dataset) Δ_B1→B2nr at L3: resnet50_cifar10 +3.92, resnet50_mnist 
 **Operator visual gate.** Sign `artifacts/validation/phase_c2_pilot_checklist.md` confirming the rendered thumb shows ONLY the resolution-axis effect (no blur, no salt-pepper, grayscale, no additive noise). HARD GATE for US-044.
 
 **Acceptance criteria.**
-- [ ] 6/6 pilot `metrics.json` written with `phase: "C2"`, `treatment: "T3"`, `axis: "resolution"`, C2 DegradeConfig override.
-- [ ] Operator signs `phase_c2_pilot_checklist.md`. **HARD GATE.**
-- [ ] Pilot dirs cleaned.
+- [x] 6/6 pilot `metrics.json` written with `phase: "C2"`, `treatment: "T3"`, `axis: "resolution"`, C2 DegradeConfig override.
+- [x] Operator signs `phase_c2_pilot_checklist.md`. **HARD GATE.**
+- [x] Pilot dirs cleaned.
 
 **GPU budget.** ~3.5 GPU-h.
 

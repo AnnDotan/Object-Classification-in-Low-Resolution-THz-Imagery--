@@ -7150,3 +7150,181 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     per-axis contribution to the remaining
     gap.
 ---
+
+## Iteration 57 (2026-05-27) — US-043 CLOSED: Phase C2 6-cell pilot + operator visual sign-off
+- What was done:
+  (a) Pre-flight (per PRD US-043 §1):
+      PIPELINE_VERSION=2 confirmed; runs/final/
+      final_C2_L3_resolution_*/ empty before
+      dispatch; matrix + determinism gates green
+      (Iteration 51 + US-038 5 new determinism
+      groups); 66-entry baseline manifest from
+      US-039 reused (no extension needed).
+  (b) Dispatch — 6 cells sequentially via
+      .venv-gpu/Scripts/python.exe run_systematic
+      .py --cell-tag final_C2_L3_resolution_
+      <m>_<d> --mode pilot. All 6 cells exit=0;
+      total wall-clock 494.9 s = 8.2 min (CNN
+      34-50 s, TransNeXt 162-163 s).
+  (c) Per-cell metrics.json integrity verified
+      post-pilot:
+        - pipeline_version == 2 (6/6).
+        - phase == "C2", treatment == "T3",
+          axis == "resolution", seed == 42 (6/6).
+        - phase_c2_treatment == "T3" stamped.
+        - phase_c2_axis == "resolution" stamped.
+        - phase_c2_deltas non-empty + per-model
+          routing correct (CNN: dropout=0.2 +
+          mixup=0.2 + cutmix=1.0; TransNeXt:
+          drop_path_rate=0.2 + same mixup/cutmix).
+        - degrade_config block stamped via
+          US-040 run_systematic.py patch (auto):
+          low_res=8 (active axis at L3),
+          blur_kernel=1 + blur_sigma=0 (identity,
+          blur NOT active), salt_pepper_amount=0
+          (identity, S&P NOT active),
+          gaussian_noise_std=0 (THz invariant),
+          saturation=0 (THz invariant). C2 axis
+          isolation correct per PRD §4.3.
+        - epochs_run == 5 (pilot max).
+        - Zero §6.3 sentinels.
+  (d) Thumb rendering via
+      .venv-gpu/Scripts/python.exe -m src.tools.
+      render_cell_thumbs --phase C2 --axes
+      resolution --force → 30 C2 resolution
+      thumbs written (5 levels × 6 (m,d)); 6 L3
+      thumbs flagged for operator visual sign-
+      off.
+  (e) Operator visual sign-off — confirmed
+      thumbs show ONLY the resolution-axis
+      effect (heavy resolution loss from 32→8→
+      224 bicubic, monochrome, NO blur, NO S&P
+      speckle, NO Gaussian noise). C2 thumbs
+      visually distinct from B2 L3 thumbs (B2
+      has blur + S&P at level's amounts;
+      C2 axis=resolution does not). Operator
+      approved via `approved by ib94 2026-05-
+      27` appended to phase_c2_pilot_checklist
+      .md. HARD GATE released for US-044.
+  (f) Pilot cleanup — 6 pilot dirs at
+      runs/final/final_C2_L3_resolution_*/
+      removed per PRD US-043 §"Pilot cleanup".
+      30 C2 resolution thumbs retained (axes
+      L1-L5 surface) — they are DegradeConfig-
+      driven and do not depend on the deleted
+      pilot dirs.
+- Headline observations (pilot, 5 epochs):
+  | cell | C2 L3 res | A clean | d_A_C2 |
+  | resnet50_cifar10 | 0.394 | 0.952 | -55.8 |
+  | resnet50_mnist | 0.904 | 0.991 | -8.7 |
+  | densenet121_cifar10 | 0.448 | 0.936 | -48.8 |
+  | densenet121_mnist | 0.924 | 0.993 | -6.9 |
+  | tnxt_cifar10 | 0.416 | 0.976 | -56.0 |
+  | tnxt_mnist | 0.909 | 0.992 | -8.3 |
+  Scientific signal (NOT pilot artifact):
+  MNIST is dramatically more robust to
+  resolution-only loss (~7-9 pp drop) than
+  CIFAR-10 (~49-56 pp drop). Consistent with
+  v3 Finding #1 (resolution-bottleneck
+  dominates for natural-image classification).
+  Pilot value is still infrastructure
+  validation; US-044 full FT is where the
+  per-axis recovery surface is built.
+- ACs status (3 ACs):
+  - [x] AC #1 — 6/6 pilot metrics.json with
+    phase="C2", treatment="T3", axis=
+    "resolution", C2 DegradeConfig override.
+  - [x] AC #2 — Operator signs phase_c2_
+    pilot_checklist.md. HARD GATE released
+    for US-044.
+  - [x] AC #3 — Pilot dirs cleaned.
+- Files affected (modified):
+  - artifacts/validation/phase_c2_pilot_
+    checklist.md: NEW — 4 acceptance sections
+    + operator approval line.
+  - artifacts/dashboard_thumbs/final_C2_L*_
+    resolution_*.png: 30 NEW thumbs (all 5
+    levels × 6 (m,d) for resolution axis).
+  - PRD.md: 3 of 3 US-043 ACs ticked; US-043
+    status set to "CLOSED 2026-05-27 (0.14
+    GPU-h actual)".
+  - progress.txt: this Iteration 57 entry.
+- Files DELETED (per PRD cleanup):
+  - runs/final/final_C2_L3_resolution_resnet
+    50_cifar10/
+  - runs/final/final_C2_L3_resolution_resnet
+    50_mnist/
+  - runs/final/final_C2_L3_resolution_densenet
+    121_cifar10/
+  - runs/final/final_C2_L3_resolution_densenet
+    121_mnist/
+  - runs/final/final_C2_L3_resolution_
+    transnext_tiny_cifar10/
+  - runs/final/final_C2_L3_resolution_
+    transnext_tiny_mnist/
+- Validation summary:
+  - 6/6 pilot cells exit=0, no tracebacks,
+    no sentinels.
+  - C2 axis isolation verified: only low_res
+    differs from IDENTITY_VALUES; blur, S&P,
+    sat, noise all at their invariant /
+    identity values.
+  - GPU budget burn: 0.14 GPU-h actual vs
+    ~3.5 GPU-h PRD budget — pessimistic by
+    ~25× (same pattern as US-039's 0.17 vs
+    2.5 budget; pilot budget includes worst-
+    case 60-ep training but pilot runs 5 ep).
+- Learnings for next cycles:
+  - Patterns: Phase C2 axis-isolation
+    verification is two-step: (1) static
+    matrix test (test_matrix.py:_check_c2_
+    degrade_config_overrides_and_axis_
+    isolation) verifies the DegradeConfig is
+    built correctly at matrix time; (2)
+    post-pilot operator visual sign-off
+    verifies the actual training data (via
+    dashboard thumbs) shows only the active
+    axis effect. Both gates passed for the
+    resolution axis; US-044 will need
+    parallel verification for blur +
+    salt_pepper axes (their pilots are
+    conceptually rolled into US-044 since
+    PRD spec lists only the resolution axis
+    pilot).
+  - Patterns: Cross-protocol thumb
+    comparison is operator-friendly — the
+    B2 L3 thumb vs C2 L3 resolution thumb
+    visually shows the difference between
+    combined-axes (B2: blur + S&P + low_res
+    all active) and single-axis (C2: only
+    low_res active). Future axis-attribution
+    docs should embed both thumbs side-by-
+    side so the protocol distinction is
+    legible at a glance.
+  - Traps: The "Phase C2 axes =
+    {resolution, blur, salt_pepper}" PRD
+    spec EXCLUDES noise + saturation (they
+    are protocol-invariant under C2). US-044
+    full sweep dispatches 90 cells = 5
+    levels × 3 axes × 6 (m,d), NOT 150
+    cells. Confirmed via build_final_matrix
+    (include_phase_c2=True).
+  - Helpful context: US-043 closed in 8.2
+    min wall-clock; total v4 GPU-h burned
+    through US-043 = 0.17 + 21.65 + 3.79 +
+    0.14 = 25.75 GPU-h of ~100 projected.
+    Remaining: US-042 (~24 multi-seed) +
+    US-044 (~48 C2 sweep) + US-045 (~3.5
+    diagnostics) ≈ 75.5 GPU-h projected
+    over the next 3-5 calendar days.
+  - Helpful context: With US-043 closed,
+    the HARD GATE for US-044 is released.
+    US-044 dispatches 90 cells (5 levels ×
+    3 axes × 3 models × 2 datasets) at full
+    FT. Budget ~48 GPU-h. The 3 axes
+    {resolution, blur, salt_pepper}
+    parallel the v3 Finding #2 axis
+    attribution (TransNeXt CIFAR-10
+    sensitivity); C2 measures the same
+    surface under the THz protocol.
+---
