@@ -230,7 +230,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-038** | Code wiring: cells.py + matrix.py + degrade.py + run_systematic.py + run_all_phases.py + multi-seed CLI + logit logging + determinism test extensions | [DATA_ARCHITECT](agents/DATA_ARCHITECT.md) + [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy + pilot deferred) | 0 |
 | **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (0.17 GPU-h actual) | ~2.5 |
 | **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (30/30 healthy; 21.7 GPU-h actual) | ~15 |
-| **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
+| **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (6/6 healthy; 3.79 GPU-h actual) | ~3.5 |
 | **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
 | **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~48 |
@@ -445,12 +445,18 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 ```
 
 **Acceptance criteria.**
-- [ ] 6/6 cells `healthy`.
-- [ ] All 6 `metrics.json` carry `pipeline_version: 2`, `phase: "B2nr"`, `treatment: null` (or absent), `phase_b2nr_deltas: {}`, B2 DegradeConfig override.
-- [ ] [Final_Exp.md](Final_Exp.md) reflects 6 Phase B2-nr rows.
-- [ ] 6 dashboard thumbs rendered (visually identical to Phase B2 L3 thumbs — same DegradeConfig).
+- [x] 6/6 cells `healthy`.
+- [x] All 6 `metrics.json` carry `pipeline_version: 2`, `phase: "B2nr"`, `treatment: null` (or absent), `phase_b2nr_deltas: {}`, B2 DegradeConfig override.
+- [x] [Final_Exp.md](Final_Exp.md) reflects 6 Phase B2-nr rows.
+- [x] 6 dashboard thumbs rendered (visually identical to Phase B2 L3 thumbs — same DegradeConfig).
 
-**v4 outcome (filled at close).** Per-(model, dataset) Δ_B1→B2nr at L3. With Δ_B1→B2 (US-040) and Δ_D→B2 (also US-040), reader can decompose Phase B2's drop into protocol-simplification effect (Δ_B1→B2nr) vs T3-regularization effect (Δ_B2nr→B2 ≈ Δ_D→B2 at L3).
+**v4 outcome (closed 2026-05-27).** L3 attribution decomposition across 6 cells:
+- **Δ_B1→B2nr mean = +4.19 pp** — pure protocol-simplification effect at NO regularization.
+- **Δ_B2nr→B2 mean = +1.39 pp** — pure T3-regularization effect at fixed B2 protocol.
+- **Δ_B1→B2 = +5.58 pp at L3** (US-040; sums to Δ_B1→B2nr + Δ_B2nr→B2 by construction).
+- **Δ_D→B2 = +4.65 pp at L3** (US-040; pure protocol at fixed T3).
+
+Per-(model, dataset) Δ_B1→B2nr at L3: resnet50_cifar10 +3.92, resnet50_mnist +6.90, densenet121_cifar10 +1.46, densenet121_mnist +3.18, transnext_tiny_cifar10 +4.88, transnext_tiny_mnist +4.80 pp. Notable: **T3 at the simplified B2 protocol (+1.39 pp) recovers ~80% more than T3 at the original Phase B protocol (+0.77 pp from v3 Phase D)** — regularization is more effective when the protocol is simpler.
 
 **GPU budget.** ~3.5 GPU-h.
 

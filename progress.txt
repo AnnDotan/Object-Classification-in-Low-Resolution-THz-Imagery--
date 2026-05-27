@@ -6969,3 +6969,184 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     cadence: another 4-5 calendar days on
     the RTX 5070.
 ---
+
+## Iteration 56 (2026-05-27) — US-041 CLOSED: Phase B2nr 6-cell L3 arm + L3 attribution decomposition locked
+- What was done:
+  (a) Dispatched scripts/run_ralph_loop.py
+      --plan final --phase B2nr --skip-existing
+      as background job bpipyxo1b. 6 L3 cells at
+      full FT (60 ep / patience 10 / bf16-mixed
+      / Optuna L3 winners, NO T3 deltas, B2
+      DegradeConfig override = sat=0 + noise=0
+      + S&P preserved at L3=0.10). Total
+      wall-clock 3.79 GPU-h (vs PRD ~3.5 GPU-h
+      budget — ~8% over, operator-accepted).
+  (b) Health verification: all 6 cells exit=0;
+      0 §6.3 sentinels; 0 unhealthy cells.
+      Every cell carries pipeline_version=2,
+      phase="B2nr", treatment=None,
+      phase_b2nr_deltas={}, seed=42, finite
+      best_val_acc + epochs_run.
+  (c) degrade_config block stamped automatically
+      (run_systematic.py patch from US-040 is
+      live): all 6 cells carry top-level
+      degrade_config with saturation=0.0 +
+      gaussian_noise_std=0.0 + salt_pepper
+      _amount=0.10 + low_res=8 + blur_kernel=41
+      + blur_sigma=8.0. No retroactive patch
+      needed.
+  (d) hparams blob carries Optuna winners only;
+      hparams.dropout = None, hparams.mixup_alpha
+      = None (correctly — no T3 deltas applied).
+  (e) Post-pass refresh chain:
+        - update_final_exp.py → 312 cells (186
+          + 30 B2 + 6 B2nr + 90 D).
+        - render_cell_thumbs --force --phase
+          B2nr → 6 thumbs rendered (visually
+          identical to B2 L3 thumbs — same
+          DegradeConfig).
+        - build_final_exp_json → 312 rows, all
+          complete.
+        - build_final_dashboard → rebuilt with
+          312-row payload.
+- L3 attribution decomposition (operator-locked
+  v4 headline metric per PRD §12 #16):
+  | metric | mean | meaning |
+  | d_B1→B2nr | +4.19 pp | pure PROTOCOL at NO reg |
+  | d_B2nr→B2 | +1.39 pp | pure T3 at FIXED B2 protocol |
+  | d_B1→B2 | +5.58 pp | combined (sum by id) |
+  | d_D→B2 | +4.65 pp | pure protocol at FIXED T3 |
+  Per-(model, dataset) Δ_B1→B2nr at L3:
+  | resnet50_cifar10        | +3.92 |
+  | resnet50_mnist          | +6.90 |
+  | densenet121_cifar10     | +1.46 |
+  | densenet121_mnist       | +3.18 |
+  | transnext_tiny_cifar10  | +4.88 |
+  | transnext_tiny_mnist    | +4.80 |
+- Operator-locked scientific insight:
+  T3 regularization recovers +1.39 pp at the
+  simplified B2 protocol vs +0.77 pp at the
+  original Phase B protocol (v3 Phase D
+  measurement). T3 works ~80% MORE
+  effectively when the protocol is simpler.
+  Interpretation: removing the color +
+  Gaussian-noise axes frees model capacity
+  from learning the noise distribution and
+  color-irrelevant features, letting mixup +
+  cutmix + dropout focus on the geometric
+  structure where they actually help. This
+  is consistent with v3 Finding #1 (severe
+  degradation = information bottleneck;
+  regularization helps when the bottleneck
+  is on the "useful" axes).
+- ACs status (4 ACs):
+  - [x] AC #1 — 6/6 cells healthy.
+  - [x] AC #2 — All 6 metrics.json carry
+    pipeline_version=2, phase="B2nr",
+    treatment=null, phase_b2nr_deltas={},
+    degrade_config block with B2 override.
+  - [x] AC #3 — Final_Exp.md reflects 6
+    Phase B2nr rows; total = 312.
+  - [x] AC #4 — 6 B2nr thumbs rendered
+    (visually identical to B2 L3 thumbs;
+    same DegradeConfig).
+- Files affected (modified):
+  - 6 × runs/final/final_B2nr_L3_*/
+    metrics.json: trained with degrade_config
+    block auto-stamped (no retroactive patch
+    needed — run_systematic.py patch from
+    US-040 is live).
+  - Final_Exp.md: 312-cell view.
+  - artifacts/Final_Exp.json: 312 rows.
+  - artifacts/Final_Exp.html: rebuilt.
+  - artifacts/dashboard_thumbs/final_B2nr_L3
+    _*.png × 6: NEW thumbs.
+  - PRD.md: 4 of 4 US-041 ACs ticked; US-041
+    status set to "CLOSED 2026-05-27 (6/6
+    healthy; 3.79 GPU-h actual)"; v4 outcome
+    block filled with attribution
+    decomposition.
+  - progress.txt: this Iteration 56 entry.
+- Validation summary:
+  - bpipyxo1b background job completed exit=0
+    after ~3.79 GPU-h.
+  - 6/6 cells healthy; 0 sentinels; 0
+    unhealthy.
+  - Sanity-checked the attribution identity:
+    d_B1→B2 = d_B1→B2nr + d_B2nr→B2
+    (5.58 = 4.19 + 1.39 exact, by
+    arithmetic construction).
+  - 312/312 rows visible in Final_Exp.md /
+    Final_Exp.json / Final_Exp.html.
+- Learnings for next cycles:
+  - Patterns: The run_systematic.py
+    degrade_config-stamping patch from
+    US-040 retroactively benefited US-041
+    — all 6 B2nr cells got the block
+    automatically without needing a one-off
+    patch script. Future US that adds a
+    metrics.json field should ALSO write a
+    one-off retroactive patch for any
+    already-trained cells, AND land the
+    patch in the dispatcher so future cells
+    get it for free. The B2 cells from
+    US-040 needed the retroactive patch
+    because the dispatcher hadn't been
+    patched yet at training time; the B2nr
+    cells got it automatically.
+  - Patterns: Attribution decomposition
+    identity d_B1→B2 = d_B1→B2nr +
+    d_B2nr→B2 holds by arithmetic
+    construction (since all three deltas
+    are referenced against the same B1
+    baseline + b2nr / b2 endpoints). When
+    reporting, lead with d_B1→B2nr (pure
+    protocol) + d_B2nr→B2 (pure T3) because
+    they're orthogonal effects; d_B1→B2 is
+    the sum, useful for narrative comparison
+    against v2 collapse magnitude.
+  - Patterns: T3 amplification finding —
+    T3 alone recovers +0.77 pp at B1
+    protocol but +1.39 pp at B2 protocol
+    (~80% MORE effective). This is the
+    second-order finding worth highlighting
+    in §VIII / §X of Final_Report.pdf rev3:
+    regularization recovery is protocol-
+    dependent, not absolute. Future
+    regularization studies should sweep
+    across protocols.
+  - Traps: phase_b2nr_deltas must be {}
+    (empty dict), NOT None or absent. The
+    schema invariant (PRD §4.7) requires
+    treatment=None AND phase_b2nr_deltas={}
+    so downstream aggregators can
+    distinguish "no T3 applied" (B2nr) from
+    "no treatment routing at all" (Phase
+    A/B/C). Verified explicitly.
+  - Helpful context: US-041 GPU-h budget
+    burn was 3.79 vs ~3.5 PRD (8% over —
+    much better than US-040's 44% over).
+    Smaller cells = closer to budget. v4
+    GPU-h burned through US-041: 0.17 +
+    21.65 + 3.79 = 25.61 GPU-h of ~100
+    projected. Remaining: US-042 (~24
+    multi-seed) + US-043 (~3.5 C2 pilot) +
+    US-044 (~48 C2 sweep) + US-045 (~3.5
+    diagnostics) ≈ 79 GPU-h projected.
+  - Helpful context: With US-040 + US-041
+    closed, the v4 scientific story
+    crystallizes: (1) THz protocol
+    simplification is the dominant
+    recovery mechanism (+3-4 pp);
+    (2) T3 regularization is a secondary
+    booster (+1-1.5 pp at the simplified
+    protocol, +0.77 pp at the original);
+    (3) Combined effect closes ~32% of
+    the v2 -12.49 pp collapse; ~-8.5 pp
+    remains, mostly attributable to
+    irreducible spatial-domain information
+    loss (low_res + blur + S&P). Phase C2
+    (US-043 + US-044) will measure the
+    per-axis contribution to the remaining
+    gap.
+---
