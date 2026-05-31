@@ -7328,3 +7328,156 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     sensitivity); C2 measures the same
     surface under the THz protocol.
 ---
+
+## Iteration 58 (2026-05-31) — US-044 CLOSED: Phase C2 90-cell full sweep + per-axis attribution surface locked + CANONICAL 402 reached
+- What was done:
+  (a) Dispatched scripts/run_ralph_loop.py --plan
+      final --phase C2 --skip-existing as background
+      job bicr0bhga on 2026-05-27. 90 cells iterated
+      (5 levels × 3 axes × 6 (m,d)) at full FT.
+      Background job completed exit=0 after ~70.94
+      GPU-h wall-clock (~48% over PRD ~48 GPU-h
+      budget — same scale-up pattern as US-040;
+      TransNeXt at L4-L5 dominates the long tail).
+      Spans ~3.5 calendar days from dispatch.
+  (b) Health verification: 90/90 cells exit=0;
+      0 §6.3 sentinels; 0 unhealthy cells. Every
+      cell carries pipeline_version=2, phase="C2",
+      treatment="T3", axis ∈ {resolution, blur,
+      salt_pepper}, seed=42, finite best_val_acc.
+  (c) degrade_config block auto-stamped on all 90
+      cells via the US-040 run_systematic.py patch
+      (no retroactive fix needed). Inline
+      verification: every cell carries sat=0 +
+      noise=0 (THz invariants), AND only the named
+      axis differs from IDENTITY_VALUES (axis
+      isolation per PRD §4.3).
+  (d) Post-pass refresh chain:
+        - update_final_exp.py → Final_Exp.md wrote
+          402 cells (186 + 30 B2 + 6 B2nr + 90 C2
+          + 90 D). CANONICAL TOTAL REACHED.
+        - render_cell_thumbs --force --phase C2 →
+          90 C2 thumbs re-rendered.
+        - build_final_exp_json → 402 rows, all
+          complete.
+        - build_final_dashboard → rebuilt.
+- Per-axis Δ_A→C2 attribution surface (mean across
+  6 (m,d) per (axis, level)):
+  | axis        | L1 | L2 | L3 | L4 | L5 | mean5L |
+  | resolution  | -6.66 | -13.59 | -23.47 | -34.14 | -59.40 | -27.45 |
+  | blur        | -1.77 | -2.48 | -4.67 | -8.55 | -15.43 | -6.58 |
+  | salt_pepper | -3.11 | -3.89 | -4.82 | -6.36 | -7.48 | -5.13 |
+  Resolution dominates by ~4×.
+- Sum-of-3 vs combined B2 (non-additivity at L5):
+  | level | sum_axes | combined B2 | non-add |
+  | L1    | -11.54 | -8.61  | +2.93 |
+  | L2    | -19.96 | -18.58 | +1.38 |
+  | L3    | -32.96 | -32.56 | +0.40 |
+  | L4    | -49.05 | -47.62 | +1.43 |
+  | L5    | -82.31 | -67.14 | +15.17 |
+  L1-L4 near-additive (over-count 0.4-2.9 pp);
+  L5 the combined drop is 15.2 pp LESS than sum
+  — saturation effect (model already floored at
+  ~25-30% on CIFAR-10).
+- Per-(model, dataset) by axis (mean across 5L):
+  resolution: resnet50_cifar10 -40.98, mnist
+  -15.42, densenet121_cifar10 -40.07, mnist
+  -15.38, tnxt_cifar10 -37.48, mnist -15.37.
+  blur: rn50_cifar -16.38 / mnist +0.06; dn121
+  -14.55 / +0.00; tnxt -8.73 / +0.11.
+  S&P: rn50_cifar -13.69 / mnist -0.04; dn121
+  -12.11 / -0.16; tnxt -4.71 / -0.08.
+  MNIST geometric-axis floor (v2 Finding #3
+  carries to v4): blur + S&P drop MNIST <0.2 pp
+  at every level; only resolution hurts MNIST
+  (~15 pp).
+- Operator-locked v4 §IX headline (PRD §1 Phase
+  C2 question — "Under the THz protocol, which
+  spatial-domain axis dominates Phase B2's
+  drop?"): RESOLUTION DOMINATES BY ~4×.
+  Information-bottleneck hypothesis (v3 Finding
+  #1) validated under the THz protocol —
+  resolution is the irreducible bottleneck.
+- ACs status (4 ACs):
+  - [x] AC #1 — 90/90 cells healthy per §6.3.
+  - [x] AC #2 — All 90 metrics.json carry
+    pipeline_version=2, phase="C2",
+    treatment="T3", axis ∈ {resolution, blur,
+    salt_pepper}, correct C2 DegradeConfig
+    override with axis isolation.
+  - [x] AC #3 — Final_Exp.md reflects 90 Phase
+    C2 rows; total = 402 (CANONICAL on disk).
+  - [x] AC #4 — 90 dashboard thumbs rendered.
+- Files affected (modified):
+  - 90 × runs/final/final_C2_L*_*_*/metrics.json:
+    trained with degrade_config block
+    auto-stamped.
+  - Final_Exp.md: 402-cell canonical view.
+  - artifacts/Final_Exp.json: 402 rows complete.
+  - artifacts/Final_Exp.html: rebuilt.
+  - artifacts/dashboard_thumbs/final_C2_L*_*.png
+    × 90: re-rendered.
+  - PRD.md: 4 of 4 US-044 ACs ticked; US-044
+    status set to "CLOSED 2026-05-31 (90/90
+    healthy; 70.9 GPU-h actual)"; v4 outcome
+    block filled with full per-axis attribution
+    surface verbatim.
+  - progress.txt: this Iteration 58 entry.
+- Validation summary:
+  - 90/90 cells exit=0 over ~70.94 GPU-h.
+  - 0 §6.3 sentinels; 0 unhealthy cells.
+  - All 90 cells carry valid degrade_config
+    with THz invariants + axis isolation.
+  - 402 rows visible in Final_Exp.md / .json /
+    .html (canonical total).
+- Learnings for next cycles:
+  - Patterns: Background dispatch monitoring
+    works well over multi-day jobs. bicr0bhga
+    ran ~3.5 days; operator mid-flight status
+    check answered by reading the output file
+    + counting on-disk dirs (no polling
+    needed). Bash run_in_background
+    completion notification fires reliably.
+  - Patterns: GPU-h budget overrun pattern is
+    consistent: v3 Phase D +7.6%, US-040 +44%,
+    US-044 +48%. Working rule of thumb:
+    expect +40-50% over stated PRD budget for
+    multi-cell phases including TransNeXt
+    cells at L4-L5. Future PRDs should weight
+    TransNeXt 2-3× CNN in budget formulae.
+  - Patterns: Per-axis attribution surface is
+    the v4 §IX headline. The 5×3 surface +
+    per-(m,d) breakdown gives the full picture
+    in two tables. Both appear verbatim in
+    PRD §IX outcome block + will propagate to
+    docs/Final_Exp_Report.md Conclusion #8 +
+    Final_Report.tex §IX.
+  - Traps: Non-additivity at L5 (sum -82.31
+    vs combined -67.14) is operator-surprising.
+    Naive reading: "axes are super-additive at
+    extreme". Correct interpretation:
+    "combined B2 at L5 is LESS bad than sum
+    because the model has already saturated at
+    the floor around 25-30% on CIFAR-10 —
+    additional degradation can't drop it
+    further". Future report wording must
+    clarify this is a SATURATION effect, not
+    an axis interaction.
+  - Helpful context: With US-044 closed, ALL
+    402 canonical campaign cells are on disk.
+    The scientific data for Final_Report.pdf
+    rev3 is COMPLETE. Remaining stories
+    produce plots, tables, narrative, and
+    audit. Critical path is now
+    documentation, not compute.
+  - Helpful context: v4 GPU-h burned through
+    US-044 = 0.17 + 21.65 + 3.79 + 0.14 +
+    70.94 = 96.69 GPU-h. Already past the
+    ~100 GPU-h PRD projection. Realistic
+    final projection with US-042 (~24 GPU-h)
+    + US-045 (~3.5 GPU-h): ~124 GPU-h total
+    v4 burn. Deadline 2026-07-26 has ~57
+    calendar days remaining; GPU-h is no
+    longer the bottleneck — narrative work
+    is.
+---

@@ -233,7 +233,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (6/6 healthy; 3.79 GPU-h actual) | ~3.5 |
 | **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
 | **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (0.14 GPU-h actual) | ~3.5 |
-| **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~48 |
+| **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-31 (90/90 healthy; 70.9 GPU-h actual) | ~48 |
 | **US-045** | Post-training diagnostics: held-out test-set inference (72 evals) + confusion matrices (24 L5 cells) + calibration / ECE (48 cells at L3 + L5) + inference throughput (3 models) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
 | **US-046** | `Final_Exp.json` schema + aggregator wiring for B2 + B2-nr + C2 + multi-seed (group-by base tag, emit val_acc_mean / val_acc_std) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (code+tests; mypy deferred) | 0 |
 | **US-047** | Dashboard updates: 7 phase tabs (A / B (B1) / B2 / B2-nr / C / C2 / D) + multi-seed variance indicator + diagnostic galleries (confusion + calibration) + throughput card | [DESIGNER](agents/DESIGNER.md) | ✅ CLOSED 2026-05-26 (scaffold + stubs; comparison strips deferred until B2/C2 runs land) | 0 |
@@ -557,12 +557,20 @@ Optional staging: `--axes resolution`, `--axes blur`, `--axes salt_pepper` for t
 ```
 
 **Acceptance criteria.**
-- [ ] 90/90 cells `healthy`.
-- [ ] All 90 `metrics.json` carry `pipeline_version: 2`, `phase: "C2"`, `axis ∈ {resolution, blur, salt_pepper}`, `treatment: "T3"`, C2 DegradeConfig override with the named axis at level L and others at identity.
-- [ ] [Final_Exp.md](Final_Exp.md) reflects 90 Phase C2 rows; total cell count = 402 (with all phases).
-- [ ] 90 dashboard thumbs rendered.
+- [x] 90/90 cells `healthy`.
+- [x] All 90 `metrics.json` carry `pipeline_version: 2`, `phase: "C2"`, `axis ∈ {resolution, blur, salt_pepper}`, `treatment: "T3"`, C2 DegradeConfig override with the named axis at level L and others at identity.
+- [x] [Final_Exp.md](Final_Exp.md) reflects 90 Phase C2 rows; total cell count = 402 (with all phases).
+- [x] 90 dashboard thumbs rendered.
 
-**v4 outcome (filled at close).** Per-axis recovery curve under the THz protocol. Attributes Phase B2's drop to which axis (resolution / blur / salt_pepper) carries the most weight under T3 regularization.
+**v4 outcome (closed 2026-05-31).** Per-axis Δ_A→C2 attribution surface (90 cells, 70.94 GPU-h actual vs ~48 GPU-h budget):
+
+| axis | L1 | L2 | L3 | L4 | L5 | mean-5L |
+|---|---:|---:|---:|---:|---:|---:|
+| **resolution** | −6.66 | −13.59 | −23.47 | −34.14 | −59.40 | **−27.45** |
+| **blur** | −1.77 | −2.48 | −4.67 | −8.55 | −15.43 | **−6.58** |
+| **salt_pepper** | −3.11 | −3.89 | −4.82 | −6.36 | −7.48 | **−5.13** |
+
+**Headline answer to PRD §1 Phase C2 question** ("Under the THz protocol, which spatial-domain axis dominates Phase B2's drop?"): **Resolution dominates by ~4×.** Sum-of-3-axes is near-additive at L1-L4 (−11.5 / −20.0 / −33.0 / −49.1 pp vs combined B2 −8.6 / −18.6 / −32.6 / −47.6 pp; over-counting by 1-3 pp) but breaks at L5 (sum −82.3 vs combined B2 −67.1 — 15.2 pp non-additivity, saturation effect). MNIST geometric-axis floor confirmed: blur and S&P drop MNIST by <0.2 pp at every level (digits survive both axes); only resolution hurts MNIST (~15 pp mean drop). CIFAR-10 takes the full hit: resolution −37 to −41 pp, blur −9 to −16 pp, S&P −5 to −14 pp by model.
 
 **GPU budget.** ~48 GPU-h (90 cells × ~32 min; slightly faster than Phase C since 2 axes are no-ops).
 
