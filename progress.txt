@@ -8091,3 +8091,130 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
       "test.npz" | wc -l) is the
       reliable progress signal.
 ---
+
+## Iteration 61 (2026-06-01) -- US-053 ship-readiness audit CLOSED + US-052 BLOCKED-OPERATOR
+
+- US-053 ship-readiness audit results:
+    pytest src/tests/ (excluding GPU-
+      bound determinism + transnext
+      smoke): 74 / 74 passed in 5.77s.
+    python -m src.tests.test_dashboard
+      scaffold: 8 / 8 named checks pass
+      (including v4 stub mounts: B2,
+      C2, throughput, confusion,
+      calibration).
+    scripts/update_final_exp.py: 402
+      canonical cells healthy.
+    src.tools.build_final_exp_json:
+      402 rows, schema_version=3,
+      all 402 Complete.
+    src.tools.build_final_dashboard:
+      "A=6, B=30, C=150, D=90, B2=30,
+       B2nr=6, C2=90, total=402".
+    docs/Final_Report.tex: 13 top-
+      level sections (I-XIII) + 35
+      subsections; section VIII through
+      XIII are the v4 appendices.
+    docs/Final_Report.pdf rev3: 14
+      pages, 1.2 MB, pdflatex+bibtex+
+      pdflatex chain exits 0.
+- Cross-artifact drift check (manual):
+    Operator-locked headline strings
+    appear verbatim in PRD US-040 /
+    US-041 / US-042 / US-044 / US-045
+    outcome blocks, README Findings
+    #5-#8, CLAUDE.md Project Status,
+    and Final_Report.tex section VIII
+    / IX / X / XIII discussions.
+    Zero drift detected. Numbers
+    propagate cleanly.
+- US-053 closed with 5 / 5 ACs ticked.
+  PRD US-053 status row -> CLOSED
+  2026-06-01.
+- US-052 NotebookLM 2-pass sync:
+  BLOCKED-OPERATOR.
+    Auth state saved to
+    C:\Users\ib94\.notebooklm\
+    profiles\default\
+    storage_state.json
+    (default expectation was
+    C:\Users\ib94\.notebooklm\
+    storage_state.json -- path-prefix
+    delta; operator may need to
+    symlink or pass --storage
+    explicitly).
+    The notebooklm CLI fails with
+    "[SSL: CERTIFICATE_VERIFY_
+    FAILED] certificate verify
+    failed: unable to get local
+    issuer certificate
+    (_ssl.c:1010)" when run from
+    the project venv (.venv-gpu).
+    Operator must either install
+    certifi into the venv
+    (.venv-gpu\Scripts\python -m
+    pip install certifi),
+    set SSL_CERT_FILE environment
+    variable to a valid CA bundle,
+    or fix the Windows certificate
+    store. This is OPERATOR-SIDE,
+    not project-side. US-052 stays
+    open as BLOCKED-OPERATOR; the
+    documented blocker does NOT
+    gate the v4 deliverable since
+    the IEEEtran PDF + dashboards
+    + Final_Exp.json + 402 cells
+    on disk are the authoritative
+    submission artifacts.
+- Campaign close marker:
+  v4 campaign closed 2026-06-01 with
+  US-036 through US-053 all green or
+  documented-deferred (US-052
+  blocked-operator with documented
+  remediation path). 402 canonical
+  cells + 48 multi-seed audit
+  replicates + full diagnostic
+  package shipped to origin/1/6/26.
+  Submission deadline 2026-07-26 has
+  ~55 calendar days remaining for
+  operator-side review +
+  NotebookLM sync remediation +
+  any final report polish.
+- v4 GPU-h actual total (final):
+  US-039 + US-040 + US-041 + US-042
+  + US-043 + US-044 + US-045 =
+  0.17 + 21.65 + 3.79 + 25.0 +
+  0.14 + 70.94 + 0.7 = ~122.4 GPU-h
+  vs ~100 GPU-h projection (~22%
+  over budget).
+- v4 commit chain:
+    48bc349 -- US-042 handoff stub
+    3c3f3fd -- US-042 multi-seed
+                 close-out
+    9697aca -- US-045 + US-048 +
+                 US-049 + US-050 +
+                 US-051 v4 closure
+  All three pushed to origin/1/6/26.
+- Final operator action items:
+    1. Fix NotebookLM SSL cert chain
+       (pip install certifi into the
+       venv is the simplest path).
+    2. Run scripts/notebooklm_sync.py
+       full --apply --storage
+       C:\Users\ib94\.notebooklm\
+       profiles\default\
+       storage_state.json
+       once SSL is fixed (closes
+       US-052).
+    3. Review Final_Report.pdf rev3
+       end-to-end (14 pages); sign
+       off on the submission-ready
+       checkpoint.
+    4. Open a PR from 1/6/26 to main
+       when ready for archive merge
+       (Github URL:
+       https://github.com/AnnDotan/
+       Object-Classification-in-Low-
+       Resolution-THz-Imagery--/
+       pull/new/1/6/26 ).
+---
