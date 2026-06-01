@@ -231,7 +231,7 @@ Eighteen stories, dependency-ordered. US-036 (this PRD) closed 2026-05-26 (Itera
 | **US-039** | Phase B2 6-cell pilot (B2_L3 × all 6 (m, d) pairs) + extended baseline manifest snapshot (66 refs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-26 (0.17 GPU-h actual) | ~2.5 |
 | **US-040** | Phase B2 full sweep (remaining 24 cells) + post-pass artifact refresh | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (30/30 healthy; 21.7 GPU-h actual) | ~15 |
 | **US-041** | Phase B2-no-regularization L3 arm (6 cells, no T3 deltas) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (6/6 healthy; 3.79 GPU-h actual) | ~3.5 |
-| **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~24 |
+| **US-042** | Multi-seed L3 expansion (48 runs across B1 + D-T3 + B2 + B2-nr at seeds 43, 44) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-06-01 (48/48 healthy; 0 sentinels; 0 of 24 base tags exceed 1.5 pp std; ~25 GPU-h actual) | ~24 |
 | **US-043** | Phase C2 6-cell pilot (C2_L3_resolution × all 6 (m, d) pairs) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-27 (0.14 GPU-h actual) | ~3.5 |
 | **US-044** | Phase C2 full sweep (remaining 84 cells across all 3 axes) | [EXECUTOR](agents/EXECUTOR.md) + [DEBUGGER](agents/DEBUGGER.md) + [VALIDATOR](agents/VALIDATOR.md) | ✅ CLOSED 2026-05-31 (90/90 healthy; 70.9 GPU-h actual) | ~48 |
 | **US-045** | Post-training diagnostics: held-out test-set inference (72 evals) + confusion matrices (24 L5 cells) + calibration / ECE (48 cells at L3 + L5) + inference throughput (3 models) | [DESIGNER](agents/DESIGNER.md) + [VALIDATOR](agents/VALIDATOR.md) | ⏳ pending | ~3.5 |
@@ -487,12 +487,41 @@ Per-(model, dataset) Δ_B1→B2nr at L3: resnet50_cifar10 +3.92, resnet50_mnist 
 (Operator may stage the dispatch by phase to keep individual sessions short. The 48 runs are independent.)
 
 **Acceptance criteria.**
-- [ ] 48/48 runs `healthy`.
-- [ ] Each `<base_tag>_seed{N}/metrics.json` carries `seed: N`, `pipeline_version: 2`, and the base-tag-inherited fields.
-- [ ] `Final_Exp.json` aggregator (US-046) groups by base tag and emits `val_acc_mean` / `val_acc_std` across the 3 seeds {42, 43, 44} per cell.
-- [ ] Variance check: for each of the 24 base tags, `val_acc_std` < 1.5 pp (operator threshold for "stable cell"). Cells exceeding this threshold flagged for §X discussion.
+- [x] 48/48 runs `healthy` (0 §6.3 sentinels; 0 cells with `epochs_run<5` or `runtime_s<60`).
+- [x] Each `<base_tag>_seed{N}/metrics.json` carries `seed: N`, `pipeline_version: 2`, and the base-tag-inherited fields (phase / treatment / level / axis). Legacy canonical-seed=42 cells from Phase B1 + Phase D-T3 retain `seed: None` (pre-stamp; the aggregator treats absent seed as 42); the 12 newly written B2 + B2nr canonical cells from US-040 + US-041 already carry `seed: 42` correctly.
+- [x] `Final_Exp.json` aggregator (US-046) groups by base tag and emits `val_acc_mean` / `val_acc_std` / `seeds_observed: [42, 43, 44]` across the 3 seeds per cell.
+- [x] Variance check: for each of the 24 base tags, `val_acc_std` < 1.5 pp (operator threshold for "stable cell"). **All 24 base tags clear the threshold** — max observed std = 1.177 pp on `final_D_T3_L3_transnext_tiny_cifar10`; max span = 2.14 pp on the same cell. No cells flagged for §X discussion as "unstable".
 
-**v4 outcome (filled at close).** [mean ± std] across 3 seeds for all 24 L3 headline cells, used in `Final_Report.pdf` rev3 §X Multi-Seed Variance.
+**v4 outcome (locked 2026-06-01).** Multi-seed [mean ± std] across {42, 43, 44} for all 24 L3 headline cells (24 / 24 with std < 1.5 pp):
+
+| Base tag (canonical seed = 42 cited as headline) | mean ± std (pp) |
+|---|---|
+| `final_B_L3_resnet50_cifar10` | 36.31 ± 1.02 |
+| `final_B_L3_resnet50_mnist` | 79.17 ± 0.98 |
+| `final_B_L3_densenet121_cifar10` | 38.54 ± 0.96 |
+| `final_B_L3_densenet121_mnist` | 80.79 ± 1.03 |
+| `final_B_L3_transnext_tiny_cifar10` | 39.48 ± 0.76 |
+| `final_B_L3_transnext_tiny_mnist` | 80.05 ± 0.14 |
+| `final_D_T3_L3_resnet50_cifar10` | 37.27 ± 0.52 |
+| `final_D_T3_L3_resnet50_mnist` | 79.85 ± 0.26 |
+| `final_D_T3_L3_densenet121_cifar10` | 39.56 ± 0.28 |
+| `final_D_T3_L3_densenet121_mnist` | 81.49 ± 0.26 |
+| `final_D_T3_L3_transnext_tiny_cifar10` | 43.33 ± 1.18 |
+| `final_D_T3_L3_transnext_tiny_mnist` | 81.20 ± 0.62 |
+| `final_B2_L3_resnet50_cifar10` | 41.09 ± 0.55 |
+| `final_B2_L3_resnet50_mnist` | 84.88 ± 0.60 |
+| `final_B2_L3_densenet121_cifar10` | 42.41 ± 1.14 |
+| `final_B2_L3_densenet121_mnist` | 86.23 ± 0.22 |
+| `final_B2_L3_transnext_tiny_cifar10` | 46.43 ± 0.02 |
+| `final_B2_L3_transnext_tiny_mnist` | 85.67 ± 0.30 |
+| `final_B2nr_L3_resnet50_cifar10` | 40.31 ± 0.50 |
+| `final_B2nr_L3_resnet50_mnist` | 85.74 ± 0.05 |
+| `final_B2nr_L3_densenet121_cifar10` | 40.75 ± 0.39 |
+| `final_B2nr_L3_densenet121_mnist` | 85.70 ± 0.68 |
+| `final_B2nr_L3_transnext_tiny_cifar10` | 43.57 ± 0.33 |
+| `final_B2nr_L3_transnext_tiny_mnist` | 84.61 ± 0.35 |
+
+Operator-locked answer: **Every headline L3 pp number in `Final_Report.pdf` rev3 carries a [mean ± std] band derived from 3 seeds; the maximum observed std is 1.18 pp (TransNeXt-tiny / CIFAR-10 under D-T3 regularization), well under the 1.5 pp operator threshold. The v4 multi-seed audit confirms the v3 + v4 headline Δ measurements are stable to within ~1 pp across seeds — none of the operator-locked Δ_B1→B2 / Δ_D→B2 / Δ_B1→B2nr / Δ_B2nr→B2 conclusions reverse sign under any seed.**
 
 **GPU budget.** ~24 GPU-h (48 runs × ~30 min).
 

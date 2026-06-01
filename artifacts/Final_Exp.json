@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-05-31T11:36:32+00:00",
+  "generated_at": "2026-06-01T15:32:58+00:00",
   "rows": [
     {
       "tag": "final_B2_L1_densenet121_cifar10",
@@ -3266,10 +3266,12 @@
       },
       "status": "Complete",
       "val_acc": 0.43720000982284546,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.4240666727224986,
+      "val_acc_std": 0.009295641129312244,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.8920562267303467,
       "epochs_run": 21,
@@ -3453,10 +3455,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8619999885559082,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8622666597366333,
+      "val_acc_std": 0.001806168664905516,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.519217312335968,
       "epochs_run": 25,
@@ -3668,10 +3672,12 @@
       },
       "status": "Complete",
       "val_acc": 0.4147999882698059,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.41093332568804425,
+      "val_acc_std": 0.0045146656894384084,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.8972015380859375,
       "epochs_run": 15,
@@ -3813,10 +3819,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8547999858856201,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.848800003528595,
+      "val_acc_std": 0.004898965080137711,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.590126097202301,
       "epochs_run": 51,
@@ -4210,10 +4218,12 @@
       },
       "status": "Complete",
       "val_acc": 0.4641999900341034,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.46433332562446594,
+      "val_acc_std": 0.0001885650002377399,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.983616828918457,
       "epochs_run": 19,
@@ -4383,10 +4393,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8537999987602234,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8566666642824808,
+      "val_acc_std": 0.002456728754936912,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.6168625950813293,
       "epochs_run": 15,
@@ -7087,10 +7099,12 @@
       },
       "status": "Complete",
       "val_acc": 0.4106000065803528,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.40753333767255145,
+      "val_acc_std": 0.003151016632738436,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 3.188577890396118,
       "epochs_run": 16,
@@ -7239,10 +7253,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8514000177383423,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8570000131924947,
+      "val_acc_std": 0.0055713483429282755,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.2941548824310303,
       "epochs_run": 26,
@@ -7461,10 +7477,12 @@
       },
       "status": "Complete",
       "val_acc": 0.3977999985218048,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.4030666649341583,
+      "val_acc_std": 0.0040998612067723195,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 2.0420660972595215,
       "epochs_run": 14,
@@ -7599,10 +7617,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8575999736785889,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8574000000953674,
+      "val_acc_std": 0.000432038299405364,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.2325748205184937,
       "epochs_run": 29,
@@ -7842,10 +7862,12 @@
       },
       "status": "Complete",
       "val_acc": 0.43880000710487366,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.43573333819707233,
+      "val_acc_std": 0.0027145656804840493,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 2.8097829818725586,
       "epochs_run": 14,
@@ -7980,10 +8002,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8474000096321106,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8461333314577738,
+      "val_acc_std": 0.0028394164706691677,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.9271954298019409,
       "epochs_run": 37,
@@ -11237,10 +11261,12 @@
       },
       "status": "Complete",
       "val_acc": 0.3959999978542328,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.38540000716845196,
+      "val_acc_std": 0.007812803906038465,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 3.343683958053589,
       "epochs_run": 15,
@@ -11382,10 +11408,12 @@
       },
       "status": "Complete",
       "val_acc": 0.819599986076355,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8079333305358887,
+      "val_acc_std": 0.008425876815811922,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.9470990300178528,
       "epochs_run": 47,
@@ -11751,10 +11779,12 @@
       },
       "status": "Complete",
       "val_acc": 0.358599990606308,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.3631333311398824,
+      "val_acc_std": 0.008317583471234175,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 2.205738067626953,
       "epochs_run": 13,
@@ -11882,10 +11912,12 @@
       },
       "status": "Complete",
       "val_acc": 0.7886000275611877,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.7916666865348816,
+      "val_acc_std": 0.007975524559301108,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.942534863948822,
       "epochs_run": 14,
@@ -12020,10 +12052,12 @@
       },
       "status": "Complete",
       "val_acc": 0.38999998569488525,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.39479999740918476,
+      "val_acc_std": 0.006231112041884804,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 3.0199966430664062,
       "epochs_run": 13,
@@ -12151,10 +12185,12 @@
       },
       "status": "Complete",
       "val_acc": 0.7993999719619751,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8004666566848755,
+      "val_acc_std": 0.0011115564086783974,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.0167112350463867,
       "epochs_run": 15,
@@ -92743,10 +92779,12 @@
       },
       "status": "Complete",
       "val_acc": 0.39239999651908875,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.3956000010172526,
+      "val_acc_std": 0.0022686290992707994,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.9147316217422485,
       "epochs_run": 16,
@@ -92895,10 +92933,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8172000050544739,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8148666620254517,
+      "val_acc_std": 0.0021561407571207567,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.6989126205444336,
       "epochs_run": 36,
@@ -93187,10 +93227,12 @@
       },
       "status": "Complete",
       "val_acc": 0.367000013589859,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.37273334463437396,
+      "val_acc_std": 0.004259366537565337,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 1.9647547006607056,
       "epochs_run": 15,
@@ -93332,10 +93374,12 @@
       },
       "status": "Complete",
       "val_acc": 0.7979999780654907,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.7985333204269409,
+      "val_acc_std": 0.0021561407571207567,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.7675825953483582,
       "epochs_run": 28,
@@ -93568,10 +93612,12 @@
       },
       "status": "Complete",
       "val_acc": 0.4198000133037567,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.4333333373069763,
+      "val_acc_std": 0.009611559683776128,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 2.2687222957611084,
       "epochs_run": 17,
@@ -93727,10 +93773,12 @@
       },
       "status": "Complete",
       "val_acc": 0.8136000037193298,
-      "val_acc_mean": null,
-      "val_acc_std": null,
+      "val_acc_mean": 0.8119999965031942,
+      "val_acc_std": 0.005027932857618719,
       "seeds_observed": [
-        42
+        42,
+        43,
+        44
       ],
       "val_loss": 0.9730589985847473,
       "epochs_run": 25,

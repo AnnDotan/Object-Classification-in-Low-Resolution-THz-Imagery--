@@ -7642,3 +7642,150 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     / US-044 outcome blocks; ready for
     US-049 propagation.
 ---
+
+## Iteration 59 (2026-06-01) — US-042 CLOSED: Multi-seed L3 audit 48/48 healthy + variance bands locked
+
+- US-042 background batch (b6ws33tjp,
+  dispatched iter 58.5) ran to completion
+  while session was offline; 48 / 48
+  *_seed{43,44} cells landed in
+  runs/final/ between 2026-06-01
+  11:14 → 17:05 UTC. Final 3 TransNeXt
+  B2nr tail cells finalized 14:51, 15:31,
+  17:05. Total elapsed wall ~25 GPU-h
+  (matches PRD estimate).
+- Cell-level health check (inline
+  /tmp/us042_audit.py): 48/48 carry
+  pipeline_version=2 + correct
+  phase/treatment/level/axis stamps;
+  all 48 have well-formed metrics.json
+  with seed in {43, 44}; 0 sentinels
+  (no epochs_run<5, no runtime_s<60,
+  no NaN val_acc). 12 legacy canonical
+  (seed=42) cells in B1 + D-T3 retain
+  metrics.seed=None — pre-stamp legacy
+  (cells trained 2026-05-20 → 2026-05-25,
+  before US-038 seed-field landed). The
+  aggregator treats absent seed as 42 by
+  convention; the 12 newly written B2 +
+  B2nr canonical cells (US-040, US-041)
+  already carry seed=42 correctly.
+- 24 base tags × 3 seeds variance
+  computation: ALL 24 base tags
+  satisfy AC #4 (val_acc_std < 1.5 pp).
+  Worst case: final_D_T3_L3_transnext_
+  tiny_cifar10 at std=1.18 pp /
+  span=2.14 pp. Mean std across the 24
+  tags = ~0.53 pp; mean span ~1.0 pp.
+- AC #4 operator-locked answer:
+    "Every headline L3 pp number in
+    Final_Report.pdf rev3 carries a
+    [mean ± std] band derived from 3
+    seeds; max observed std = 1.18 pp
+    (TransNeXt-tiny CIFAR-10 D-T3),
+    well under the 1.5 pp operator
+    threshold. The v4 multi-seed audit
+    confirms the v3 + v4 headline Delta
+    measurements are stable to within
+    ~1 pp across seeds — none of the
+    operator-locked Delta_B1->B2 /
+    Delta_D->B2 / Delta_B1->B2nr /
+    Delta_B2nr->B2 conclusions reverse
+    sign under any seed."
+- Headline cells most + least variable
+  (operator pin):
+    Most variable: D-T3 transnext_tiny
+      cifar10 (std=1.18 pp)
+    Least variable: B2 transnext_tiny
+      cifar10 (std=0.02 pp) — three seeds
+      converge to within 4 hundredths
+      of a percent.
+  Both extremes live on TransNeXt-tiny
+  cifar10 — TransNeXt is the most
+  seed-sensitive model in the matrix.
+- Artifact refresh pass:
+    1. scripts/update_final_exp.py: 402
+       canonical cells in Final_Exp.md.
+    2. python -m src.tools.build_final_
+       exp_json: 402 rows in
+       artifacts/Final_Exp.json, schema_
+       version=3, seeds_observed
+       populated for all 24 L3 multi-seed
+       cells.
+    3. python -m src.tools.build_final_
+       dashboard: shell rendered; 7-tab
+       scaffold from US-047 still served
+       as stubs (US-048 will fill the
+       diagnostic galleries).
+- Sample row inspection
+  (final_B2_L3_resnet50_cifar10):
+    seed: 42
+    seeds_observed: [42, 43, 44]
+    val_acc: 0.4148 (canonical)
+    val_acc_mean: 0.4109
+    val_acc_std: 0.0045
+    treatment: T3
+    phase: B2
+    level: 3
+  Schema v3 multi-seed aggregator
+  working as designed.
+- PRD updates: US-042 status row set
+  to "CLOSED 2026-06-01 (48/48 healthy;
+  0 sentinels; 0 of 24 base tags exceed
+  1.5 pp std; ~25 GPU-h actual)". All
+  4 ACs ticked. v4 outcome block
+  carries the full 24-row [mean ± std]
+  table for downstream §X reference.
+- v4 GPU-h totals at this iter close:
+  US-039 + US-040 + US-041 + US-042 +
+  US-043 + US-044 = 0.17 + 21.65 +
+  3.79 + 25.0 + 0.14 + 70.94 ≈
+  ~121.7 GPU-h closed. v4 PRD
+  projection was ~100 GPU-h, so the
+  campaign is ~22% over the GPU
+  estimate — still well inside the
+  2026-07-26 deadline buffer (~55
+  calendar days remaining).
+- Next stories (operator queue):
+    US-045 (~3.5 GPU-h, GPU dispatch)
+      diagnostics: test-set inference
+      72 evals, 24 L5 confusion mats,
+      48 calibration diagrams, 3-model
+      throughput.
+    US-048 (no GPU, parallel-safe with
+      US-045) — comparison plots +
+      LaTeX tables + dashboard JS for
+      stub fill-in.
+    US-049 / US-050 / US-051 (no GPU)
+      content sync + Final_Report.pdf
+      rev3 appendices + §XIII Final
+      Conclusions chapter.
+    US-053 (no GPU) — final
+      verification + ship-readiness
+      audit.
+- Learnings re-validated this iter:
+    - Background bash tasks DO NOT
+      persist across session boundaries;
+      the b6ws33tjp task_id was gone
+      but the writes-to-disk had
+      completed. Always reconcile by
+      file system, not task_id.
+    - The fs ls call's first read
+      returned a stale partial listing
+      for the final-running cell; a
+      second ls -la showed full
+      contents. PowerShell + Windows
+      filesystem caching can briefly
+      hide files written within the
+      last few seconds; rely on the
+      ls -la output not the bare ls.
+    - Final_Exp.md does NOT expose
+      multi-seed [mean ± std]; it
+      remains the canonical
+      single-seed tracker. The
+      structured Final_Exp.json is
+      the source of truth for
+      multi-seed audit. This
+      separation is by design
+      (US-046 lock).
+---
