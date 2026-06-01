@@ -7481,3 +7481,164 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
     longer the bottleneck — narrative work
     is.
 ---
+
+## Session handoff (2026-06-01, mid-Iteration-59) — US-042 in flight
+- US-042 multi-seed L3 audit dispatched 2026-05-31
+  via scripts/run_ralph_loop.py --phase multiseed
+  --seeds 43,44 --cells <24 base tags>. Background
+  job id `b6ws33tjp`. Output at:
+  C:\Users\ib94\AppData\Local\Temp\claude\
+    c--Users-ib94-Object-Classification-in-Low-
+    Resolution-THz-Imagery--\dfd523c3-2d2c-4710-
+    8350-1e830258f009\tasks\b6ws33tjp.output
+- Progress at handoff time (2026-06-01):
+  45 / 48 runs complete; 23.25 GPU-h burned;
+  0 §6.3 sentinels.
+- 3 cells remaining (all slow TransNeXt B2nr):
+  - final_B2nr_L3_transnext_tiny_cifar10_seed44
+  - final_B2nr_L3_transnext_tiny_mnist_seed43
+  - final_B2nr_L3_transnext_tiny_mnist_seed44
+  Expected ~5-6 hours wall-clock for completion
+  at TransNeXt full-FT cadence (~1.8 hr/cell).
+- Next session resume steps when bash job
+  b6ws33tjp completes (or after operator
+  manually verifies the 3 missing cells land):
+  1. Health-check 48 _seed{43,44} dirs — same
+     pattern as US-040 / US-044. Confirm 0
+     sentinels + all carry pipeline_version=2,
+     phase ∈ {B, D, B2, B2nr}, treatment per
+     base phase, seed ∈ {43, 44}.
+  2. Compute val_acc_mean / val_acc_std /
+     seeds_observed across {42, 43, 44} per
+     base tag (24 base tags). The US-046
+     aggregator (src/tools/build_final_exp_
+     json.py:_scan_multiseed_replicates +
+     _multiseed_aggregate) does this
+     automatically — just run
+     `python -m src.tools.build_final_exp_json`
+     after the cells land.
+  3. PRD AC #4 (operator threshold): for each
+     of the 24 base tags, val_acc_std < 1.5 pp.
+     Cells exceeding this threshold flagged for
+     §X discussion. Compute + report any
+     outliers.
+  4. Run the post-pass refresh chain:
+     - python scripts/update_final_exp.py
+     - python -m src.tools.build_final_exp_json
+     - python -m src.tools.build_final_dashboard
+     (No render_cell_thumbs needed — multi-seed
+     runs share the canonical base tag's
+     DegradeConfig + thumb.)
+  5. Tick the 4 US-042 ACs in PRD.md; set
+     status row to CLOSED 2026-06-XX (48/48
+     healthy; XX.X GPU-h actual). Fill the
+     "v4 outcome (filled at close)" block
+     with the 24-base-tag [mean ± std] table.
+  6. Append Iteration 59 to progress.txt (same
+     template as Iteration 58). Commit.
+- Remaining v4 stories after US-042 closes
+  (in dependency order):
+  - US-045 (~3.5 GPU-h GPU): post-training
+    diagnostics. Needs new scripts under
+    src/tools/ + scripts/. Test-set inference
+    (72 evals × 24 L3 cells × 3 seeds);
+    24 L5 confusion matrices; 48 calibration
+    diagrams (24 L3 + 24 L5); 3-model
+    throughput report.
+    test_split_indices.json must be committed
+    at US-045 pre-flight (seed=99 stratified
+    1000 per class on official CIFAR-10 /
+    MNIST test partitions).
+  - US-048 (no GPU): comparison plots +
+    LaTeX tables. CAN RUN IN PARALLEL WITH
+    US-045. All input data on disk. Produces:
+    - artifacts/figures/phase_b2_comparison_
+      {m}_{d}.png × 6 + composite + LaTeX
+      recovery table at docs/_autogen/
+      phase_b2_comparison_table.tex.
+    - artifacts/figures/phase_c2_axis_*.png +
+      LaTeX axis attribution table at
+      docs/_autogen/phase_c2_axis_table.tex.
+    - Multi-seed [mean ± std] bars per L3
+      headline cell.
+    - Also: dashboard JS renderers for the 5
+      empty-state stubs from US-047 (phase-
+      b2-comparison-section, phase-c2-
+      comparison-section, throughput-card-
+      section, confusion-gallery-section,
+      calibration-gallery-section). Closes
+      US-047 AC #5 (deferred).
+  - US-049 (no GPU): post-campaign content
+    sync. README + CLAUDE.md + docs/Final_
+    Exp_Report.md + progress.txt for v4.
+    Adds Findings #5-#8 with the verbatim
+    operator-locked answers from PRD US-040
+    / US-041 / US-044 v4-outcome blocks.
+    Phase B → Phase B1 rename DISCIPLINE
+    (docs only; phase=='B' enum stays).
+    SYNCHRONIZER cross-check.
+  - US-050 (no GPU): Final_Report.pdf rev3
+    appendices §VIII Phase B2 + §IX Phase C2
+    + §X Multi-Seed Variance + §XI Test-Set
+    Confirmation + §XII Diagnostics. Target
+    ≥ 16 pages.
+  - US-051 (no GPU): §XIII Final Conclusions
+    chapter. PRD §12 #15 — non-optional, is
+    a US-053 gate.
+  - US-052 (operator-side): NotebookLM 2-pass
+    sync (pass 1 PRD v4 upload IMMEDIATE; pass
+    2 full re-source post-US-051). Storage-
+    state path risk flagged in PRD §9(g).
+  - US-053 (no GPU): final verification +
+    ship-readiness audit + submission close.
+    Confirms all 402 canonical cells healthy
+    + 48 multi-seed audit runs healthy + all
+    artifacts in lockstep + IEEE report rev3
+    closing chapter present + NotebookLM
+    aligned.
+- Operator-locked headline strings that must
+  propagate verbatim across artifacts during
+  US-049 + US-050 + US-051 (per PRD §12
+  decision #16):
+  - Phase B2: "Removing color saturation and
+    additive Gaussian noise (THz-protocol
+    simplification) recovers ~3.24 pp on
+    average against the Phase D T3 baseline
+    — about 4× the +0.77 pp T3-only recovery
+    from v3. Combined Δ_B1→B2 = +4.01 pp
+    closes 32% of the v2 −12.49 pp collapse."
+  - Phase C2: "Resolution dominates the THz-
+    protocol axis attribution by ~4× (−27.45
+    pp mean drop across 5 levels, vs blur
+    −6.58 pp and salt_pepper −5.13 pp)."
+  - L3 decomposition: "T3 regularization
+    recovers +1.39 pp at the simplified B2
+    protocol vs +0.77 pp at the original
+    Phase B protocol — regularization is
+    ~80% more effective when the protocol
+    is simpler."
+- v4 GPU-h projected total at handoff:
+  US-039+040+041+043+044 = 96.69 + US-042 in
+  flight ~25 (estimated final) + US-045
+  ~3.5 = ~125 GPU-h. Already 25% past the
+  PRD ~100 GPU-h projection. 2026-07-26
+  submission deadline has ~55 calendar days
+  remaining; narrative work (US-048..US-051)
+  is now the critical path.
+- Session metrics (this run):
+  - 12 commits landed (US-036, US-037,
+    US-038/A/B/C, US-046, US-047, US-039,
+    US-040, US-041, US-043, US-044).
+  - 11 stories closed end-to-end.
+  - 5 of 7 GPU dispatches completed
+    (US-039 pilot, US-040 sweep, US-041
+    sweep, US-043 pilot, US-044 sweep);
+    US-042 in flight, US-045 not yet
+    dispatched.
+  - Operator visual sign-offs on US-039 +
+    US-043 pilots (both approved).
+  - Headline scientific results locked
+    operator-verbatim in PRD US-040 / US-041
+    / US-044 outcome blocks; ready for
+    US-049 propagation.
+---
