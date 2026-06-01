@@ -1,6 +1,6 @@
 # Object Classification in Low-Resolution THz-like Imagery — Final Research Report
 
-**Status:** 276 / 276 cells complete (186 v2 + 90 Phase D, closed 2026-05-26) · **Generated:** 2026-05-26 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
+**Status:** 276 / 276 cells complete (186 v2 + 90 Phase D, closed 2026-05-26) · **Generated:** 2026-06-01 · **Hardware:** RTX 5070 (Blackwell sm_120, 12 GB)
 
 ---
 
@@ -77,8 +77,8 @@ trajectory ~12.5 pp lower than v1.
 ## Campaign Statistics
 
 - **Total cells:** 276 (6 Phase A + 30 Phase B + 150 Phase C + 90 Phase D)
-- **Total accumulated GPU runtime:** ~165.0 GPU-hours (Phase D added 56.5 GPU-h)
-- **Total training epochs across all cells:** 7,331
+- **Total accumulated GPU runtime:** ~261.4 GPU-hours (Phase D added 56.5 GPU-h)
+- **Total training epochs across all cells:** 11,600
 - **Architectures evaluated:** 3 (ResNet50, DenseNet121, TransNeXt-tiny)
 - **Datasets:** 2 (CIFAR-10, MNIST upsampled 28 → 224)
 - **Degradation severities:** 5 (L1 Mild → L5 Extreme)
@@ -664,6 +664,6 @@ with sentinels) is documented inline.
 
 ---
 
-*Report generated 2026-05-26 from `artifacts/Final_Exp.json` (state of disk under
+*Report generated 2026-06-01 from `artifacts/Final_Exp.json` (state of disk under
 `PIPELINE_VERSION = 2`, after the v2 noise-fix 90-cell re-run closed
 2026-05-23 / Iteration 40). Regenerate with* `python scripts/build_final_exp_report.py`.

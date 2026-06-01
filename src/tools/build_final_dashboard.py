@@ -1090,6 +1090,100 @@ _JS = r"""
                  'style="max-width: 100%; height: auto; border-radius: 6px;">';
     }
 
+    // -- v4 strips (US-048): Phase B2, Phase C2, Throughput, Confusion, Calibration
+
+    function renderPhaseB2ComparisonStrip(rows) {
+        const section = document.getElementById('phase-b2-comparison-section');
+        if (!section) return;
+        const body = section.querySelector('.us-trend-body');
+        if (!body) return;
+        const hasB2 = rows.some(function (r) { return r.phase === 'B2' && r.status === 'Complete'; });
+        if (!hasB2) {
+            body.innerHTML = '<span class="ut-pending">Awaiting Phase B2 runs (US-040 / US-041).</span>';
+            return;
+        }
+        body.innerHTML =
+            '<img src="figures/phase_b2_comparison_summary.png" ' +
+                 'alt="Phase B2 comparison summary" ' +
+                 'style="max-width: 100%; height: auto; border-radius: 6px;">';
+    }
+
+    function renderPhaseC2AttributionStrip(rows) {
+        const section = document.getElementById('phase-c2-comparison-section');
+        if (!section) return;
+        const body = section.querySelector('.us-trend-body');
+        if (!body) return;
+        const hasC2 = rows.some(function (r) { return r.phase === 'C2' && r.status === 'Complete'; });
+        if (!hasC2) {
+            body.innerHTML = '<span class="ut-pending">Awaiting Phase C2 runs (US-044).</span>';
+            return;
+        }
+        body.innerHTML =
+            '<img src="figures/phase_c2_attribution_summary.png" ' +
+                 'alt="Phase C2 axis attribution summary" ' +
+                 'style="max-width: 100%; height: auto; border-radius: 6px;">';
+    }
+
+    function renderThroughputCard() {
+        const body = document.getElementById('throughput-body');
+        if (!body) return;
+        fetch('figures/inference_throughput.png?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) {
+                if (!r.ok) throw new Error('not-ready');
+                body.innerHTML =
+                    '<img src="figures/inference_throughput.png" ' +
+                         'alt="Inference throughput" ' +
+                         'style="max-width: 100%; height: auto; border-radius: 6px;">';
+            })
+            .catch(function () {
+                body.innerHTML = '<span class="ut-pending">Awaiting US-045 throughput measurement.</span>';
+            });
+    }
+
+    function renderConfusionGallery(rows) {
+        const body = document.getElementById('confusion-gallery-body');
+        if (!body) return;
+        const completeL5 = rows.filter(function (r) {
+            return r.level === 5 && r.status === 'Complete' && (r.phase === 'B' || r.phase === 'D' || r.phase === 'B2');
+        });
+        if (completeL5.length === 0) {
+            body.innerHTML = '<span class="ut-pending">Awaiting US-045 confusion-matrix dump (18 L5 cells × seed=42).</span>';
+            return;
+        }
+        // Build a simple thumbnail grid; PNGs are at figures/confusion/<tag>_L5.png
+        const items = completeL5.map(function (r) {
+            const tag = r.tag;
+            return '<a href="figures/confusion/' + tag + '_L5.png" target="_blank" ' +
+                   'style="display:inline-block;margin:4px;text-align:center;font-size:11px;">' +
+                   '<img src="figures/confusion/' + tag + '_L5.png" loading="lazy" ' +
+                        'alt="' + tag + '" style="width:180px;height:auto;border:1px solid #ddd;border-radius:4px;">' +
+                   '<div>' + tag + '</div></a>';
+        }).join('');
+        body.innerHTML = '<div style="display:flex;flex-wrap:wrap;">' + items + '</div>';
+    }
+
+    function renderCalibrationGallery(rows) {
+        const body = document.getElementById('calibration-gallery-body');
+        if (!body) return;
+        const targets = rows.filter(function (r) {
+            return r.status === 'Complete' && (r.level === 3 || r.level === 5);
+        });
+        if (targets.length === 0) {
+            body.innerHTML = '<span class="ut-pending">Awaiting US-045 calibration / ECE diagnostics (42 cells).</span>';
+            return;
+        }
+        const items = targets.map(function (r) {
+            const tag = r.tag;
+            const lvl = 'L' + r.level;
+            return '<a href="figures/calibration/' + tag + '_' + lvl + '.png" target="_blank" ' +
+                   'style="display:inline-block;margin:4px;text-align:center;font-size:11px;">' +
+                   '<img src="figures/calibration/' + tag + '_' + lvl + '.png" loading="lazy" ' +
+                        'alt="' + tag + ' ' + lvl + '" style="width:170px;height:auto;border:1px solid #ddd;border-radius:4px;">' +
+                   '<div>' + tag + ' ' + lvl + '</div></a>';
+        }).join('');
+        body.innerHTML = '<div style="display:flex;flex-wrap:wrap;">' + items + '</div>';
+    }
+
     function showBanner(msg) {
         const b = document.getElementById('banner');
         if (b) {
@@ -1224,6 +1318,11 @@ _JS = r"""
         renderTabCounts();
         renderExecutionUsTrend(doc.rows);
         renderPhaseDRecoveryStrip(doc.rows);
+        renderPhaseB2ComparisonStrip(doc.rows);
+        renderPhaseC2AttributionStrip(doc.rows);
+        renderThroughputCard();
+        renderConfusionGallery(doc.rows);
+        renderCalibrationGallery(doc.rows);
         applyActivePhase(state.activePhase);
 
         const gen = document.getElementById('ts-generated');
@@ -1782,13 +1881,19 @@ def build_dashboard(
     # actually produced (it already consulted `phase_d_present_on_disk`).
     # Keeps the legacy 186-row summary contract byte-identical when no
     # `final_D_*` directories exist, and reports 276 once they do.
-    phase_d_rows = EXPECTED_COUNTS_WITH_D["D"] if len(doc["rows"]) == EXPECTED_TOTAL + EXPECTED_COUNTS_WITH_D["D"] else 0
+    # US-048 (v4): count v4 phases from the actual row data.
+    from collections import Counter as _Counter
+    phase_count = _Counter(r.get("phase") for r in doc["rows"])
+    phase_d_rows = phase_count.get("D", 0)
     return {
-        "rows": EXPECTED_TOTAL + phase_d_rows,
-        "phase_a": EXPECTED_COUNTS["A"],
-        "phase_b": EXPECTED_COUNTS["B"],
-        "phase_c": EXPECTED_COUNTS["C"],
+        "rows": len(doc["rows"]),
+        "phase_a": phase_count.get("A", EXPECTED_COUNTS["A"]),
+        "phase_b": phase_count.get("B", EXPECTED_COUNTS["B"]),
+        "phase_c": phase_count.get("C", EXPECTED_COUNTS["C"]),
         "phase_d": phase_d_rows,
+        "phase_b2": phase_count.get("B2", 0),
+        "phase_b2nr": phase_count.get("B2nr", 0),
+        "phase_c2": phase_count.get("C2", 0),
         "out": str(out_path),
         "embedded_rows": len(doc["rows"]),
         "generated_at": doc["generated_at"],
@@ -1836,6 +1941,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         f"dashboard: shell rendered "
         f"(A={summary['phase_a']}, B={summary['phase_b']}, C={summary['phase_c']}, "
         f"D={summary['phase_d']}, "
+        f"B2={summary.get('phase_b2', 0)}, "
+        f"B2nr={summary.get('phase_b2nr', 0)}, "
+        f"C2={summary.get('phase_c2', 0)}, "
         f"total={summary['rows']}) -> {summary['out']}"
     )
     return 0

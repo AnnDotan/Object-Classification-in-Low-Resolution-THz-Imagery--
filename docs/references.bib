@@ -1,0 +1,149 @@
+% docs/references.bib
+% Bibliography for docs/Final_Report.tex (US-024).
+% Hand-authored, IEEEtran/ieee style compatible. Canonical CVPR/ICLR/etc. entries.
+% Scope follows PRD §US-024 "New files" list:
+%   TransNeXt (Shi 2024), DenseNet (Huang 2017), TResNet (Ridnik 2020),
+%   EfficientNetV2 (Tan & Le 2021), NASNet (Zoph 2018), CIFAR-10, MNIST,
+%   plus a small core of methodology references actually cited in the prose
+%   (ResNet for ResNet50, AdamW, cosine LR, stochastic depth, Optuna,
+%    PyTorch Lightning, ImageNet pretraining baseline).
+%
+% Keys are short and stable; do not rename without updating Final_Report.tex
+% \cite{...} commands in lockstep.
+
+% ---------------------------------------------------------------------------
+% Backbone architectures evaluated in this study
+% ---------------------------------------------------------------------------
+
+@inproceedings{shi2024transnext,
+  author    = {Dai Shi},
+  title     = {{TransNeXt}: Robust Foveal Visual Perception for Vision Transformers},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2024},
+  pages     = {17773--17783}
+}
+
+@inproceedings{huang2017densenet,
+  author    = {Gao Huang and Zhuang Liu and Laurens van der Maaten and Kilian Q. Weinberger},
+  title     = {Densely Connected Convolutional Networks},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2017},
+  pages     = {4700--4708}
+}
+
+@inproceedings{he2016resnet,
+  author    = {Kaiming He and Xiangyu Zhang and Shaoqing Ren and Jian Sun},
+  title     = {Deep Residual Learning for Image Recognition},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2016},
+  pages     = {770--778}
+}
+
+% ---------------------------------------------------------------------------
+% Related architectures cited in Related Work / discussion
+% ---------------------------------------------------------------------------
+
+@inproceedings{ridnik2021tresnet,
+  author    = {Tal Ridnik and Hussam Lawen and Asaf Noy and Itamar Friedman and Emanuel Ben Baruch and Gilad Sharir},
+  title     = {{TResNet}: High Performance {GPU}-Dedicated Architecture},
+  booktitle = {Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year      = {2021},
+  pages     = {1400--1409}
+}
+
+@inproceedings{tan2021efficientnetv2,
+  author    = {Mingxing Tan and Quoc V. Le},
+  title     = {{EfficientNetV2}: Smaller Models and Faster Training},
+  booktitle = {Proceedings of the 38th International Conference on Machine Learning (ICML)},
+  year      = {2021},
+  pages     = {10096--10106}
+}
+
+@inproceedings{zoph2018nasnet,
+  author    = {Barret Zoph and Vijay Vasudevan and Jonathon Shlens and Quoc V. Le},
+  title     = {Learning Transferable Architectures for Scalable Image Recognition},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2018},
+  pages     = {8697--8710}
+}
+
+% ---------------------------------------------------------------------------
+% Datasets
+% ---------------------------------------------------------------------------
+
+@techreport{krizhevsky2009cifar,
+  author      = {Alex Krizhevsky},
+  title       = {Learning Multiple Layers of Features from Tiny Images},
+  institution = {University of Toronto},
+  year        = {2009},
+  type        = {Technical Report}
+}
+
+@article{lecun1998mnist,
+  author  = {Yann LeCun and L{\'e}on Bottou and Yoshua Bengio and Patrick Haffner},
+  title   = {Gradient-Based Learning Applied to Document Recognition},
+  journal = {Proceedings of the IEEE},
+  volume  = {86},
+  number  = {11},
+  pages   = {2278--2324},
+  year    = {1998}
+}
+
+@inproceedings{deng2009imagenet,
+  author    = {Jia Deng and Wei Dong and Richard Socher and Li-Jia Li and Kai Li and Li Fei-Fei},
+  title     = {{ImageNet}: A Large-Scale Hierarchical Image Database},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2009},
+  pages     = {248--255}
+}
+
+% ---------------------------------------------------------------------------
+% Training methodology (cited in §II Methodology / §III Experimental Design)
+% ---------------------------------------------------------------------------
+
+@inproceedings{loshchilov2019adamw,
+  author    = {Ilya Loshchilov and Frank Hutter},
+  title     = {Decoupled Weight Decay Regularization},
+  booktitle = {Proceedings of the International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+@inproceedings{loshchilov2017sgdr,
+  author    = {Ilya Loshchilov and Frank Hutter},
+  title     = {{SGDR}: Stochastic Gradient Descent with Warm Restarts},
+  booktitle = {Proceedings of the International Conference on Learning Representations (ICLR)},
+  year      = {2017}
+}
+
+@inproceedings{szegedy2016rethinking,
+  author    = {Christian Szegedy and Vincent Vanhoucke and Sergey Ioffe and Jon Shlens and Zbigniew Wojna},
+  title     = {Rethinking the Inception Architecture for Computer Vision},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2016},
+  pages     = {2818--2826}
+}
+
+@inproceedings{huang2016stochastic,
+  author    = {Gao Huang and Yu Sun and Zhuang Liu and Daniel Sedra and Kilian Q. Weinberger},
+  title     = {Deep Networks with Stochastic Depth},
+  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV)},
+  year      = {2016},
+  pages     = {646--661}
+}
+
+@inproceedings{akiba2019optuna,
+  author    = {Takuya Akiba and Shotaro Sano and Toshihiko Yanase and Takeru Ohta and Masanori Koyama},
+  title     = {{Optuna}: A Next-Generation Hyperparameter Optimization Framework},
+  booktitle = {Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining (KDD)},
+  year      = {2019},
+  pages     = {2623--2631}
+}
+
+@misc{falcon2019lightning,
+  author       = {William Falcon and {The PyTorch Lightning team}},
+  title        = {{PyTorch Lightning}},
+  year         = {2019},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.3828935},
+  howpublished = {\url{https://github.com/Lightning-AI/pytorch-lightning}}
+}

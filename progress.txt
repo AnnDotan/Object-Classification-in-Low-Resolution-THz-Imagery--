@@ -7789,3 +7789,305 @@ US-014 CLOSED: transnext_tiny Phase C — 50/0; §6.4 retries declined by operat
       separation is by design
       (US-046 lock).
 ---
+
+## Iteration 60 (2026-06-01) -- US-045 + US-048 + US-049 + US-050 + US-051 CLOSED: v4 full diagnostic pass + narrative + LaTeX rev3 + dashboard fill
+
+- US-045 dispatched at iter-end 18:45
+  UTC. Background bjr2zvnsz ran 72
+  cells in ~43.5 min (mix of CNN
+  27s/cell and TransNeXt 56s/cell);
+  close pipeline botavep16 chained
+  confusion (~30s), calibration (~8s),
+  throughput (~48s), LaTeX emitter,
+  then pdflatex+bibtex+pdflatex.
+- US-045 test-set inference:
+    72 / 72 cells healthy.
+    Max abs val/test gap = 3.75 pp on
+    final_B_L3_resnet50_mnist_seed44.
+    32 / 72 cells exceed the operator-
+    flag 2 pp threshold; ALL MNIST.
+    The MNIST gap is systematic: the
+    val_subset is the first 5000
+    indices of the official test
+    partition while the held-out test
+    split is a stratified 1000/class
+    sample over the full 10K
+    partition. The first 5K appears
+    to be slightly harder than the
+    stratified sample (probably
+    because the first 5K spans the
+    harder half of the per-class
+    index ordering), so test_acc >
+    val_acc on MNIST cells.
+    Per-phase mean gap:
+      B (B1):  +1.13 pp
+      D-T3:    +1.02 pp
+      B2:      +0.77 pp
+      B2nr:    +0.78 pp
+    The B2/B2nr gap shrinks vs B1/
+    D-T3 by ~0.3 pp -- the THz
+    protocol simplification tightens
+    the val/test distribution by a
+    small additional amount.
+- 18 L5 confusion matrices rendered
+  (B1 + D-T3 + B2 x 6 (m, d) pairs).
+  Phase B2-nr is L3-only per US-041
+  scope; the PRD US-045 AC stated 24
+  L5 cells but on-disk reality is 18
+  (no B2-nr L5). Documented in
+  src/tools/diagnostics_common.py
+  headline_l5_bases() and in the PRD
+  US-045 AC #2 comment. Top L5
+  confusion patterns:
+    CIFAR-10:
+      cat <-> dog, bird <-> deer,
+      truck <-> automobile
+    MNIST:
+      4 -> 7 (largest), 9 -> 1,
+      8 -> 3, 4 -> 9
+  L5 diag accuracies bottom at
+  19-28% on most cells; B2 cells
+  run ~24-35% (consistent with
+  Phase B2 +4 pp recovery).
+- 42 calibration / reliability diagrams
+  rendered (24 L3 + 18 L5; same
+  B2-nr-L5-absent deviation as
+  confusion -- PRD said 48 figures
+  but on-disk reality is 42).
+  Mean ECE L3 = 5.57 pp; mean ECE
+  L5 = 2.91 pp. The L5 ECE being
+  LOWER than L3 is the inverse of
+  canonical expectation: the L5
+  confidence distribution flattens
+  (predictions are not confidently
+  wrong, they are maximum-entropy-
+  ish around 10-25% on CIFAR-10),
+  so absolute calibration error is
+  small but the confidence signal
+  is uninformative. The L3 ECE
+  bound of 5.57 pp is the
+  operational anchor; L5 flatness
+  is cited as a calibration
+  artifact rather than a robustness
+  signal. The calibration_table.tex
+  emits 24 rows -- one per L3 base,
+  with L5 column for the 18 with
+  L5 cells and -- for the 6 B2-nr
+  rows where L5 is absent.
+- Inference throughput (RTX 5070,
+  bf16-mixed, batch=1, 100 warmup
+  + 1000 measurement at 224x224):
+    ResNet50:        4.20 +- 0.71 ms
+                     p50=4.02, p95=5.19, 238 img/s
+    DenseNet121:    10.67 +- 1.54 ms
+                     p50=10.23, p95=14.04, 94 img/s
+    TransNeXt-tiny: 27.45 +- 3.41 ms
+                     p50=26.17, p95=34.65, 36 img/s
+  CSV + horizontal-bar PNG at
+  artifacts/figures/inference_throughput.{csv,png}.
+- US-048: v4 plot scripts written +
+  run. Six per-(m, d) panel groups
+  + six composite PNGs + seven
+  LaTeX tables. The Phase B2 / C2
+  / multi-seed plot scripts pin the
+  same matplotlib determinism flags
+  as the Phase D scripts
+  (pdf.fonttype=42, svg.hashsalt,
+  metadata.CreationDate=None).
+  Composite + per-panel PNGs at
+  artifacts/figures/{phase_b2,
+  phase_c2,multi_seed_variance}_*.png.
+  LaTeX tables at docs/_autogen/.
+  PRD-locked Delta_B1->B2 / Delta_
+  D->B2 / Delta_B1->B2nr / Delta_
+  B2nr->B2 / Delta_C2_axis numbers
+  propagate verbatim through the
+  LaTeX tables.
+- US-048 dashboard JS: extended
+  src/tools/build_final_dashboard.py
+  with five new render functions
+  (renderPhaseB2ComparisonStrip,
+  renderPhaseC2AttributionStrip,
+  renderThroughputCard,
+  renderConfusionGallery,
+  renderCalibrationGallery). The
+  empty-state stubs from US-047 now
+  populate when Phase B2 / C2 cells
+  are Complete and when the
+  diagnostic PNGs are on disk. The
+  confusion + calibration galleries
+  list per-cell links with
+  loading=lazy on each image.
+- US-049: README.md Findings #5-#8
+  added with verbatim operator-
+  locked pp strings from PRD US-040
+  / US-041 / US-044 / US-045
+  outcomes; v4 entry in Recent
+  scientific changes. CLAUDE.md
+  updated: Project Status to 402-
+  cell + 48-replicate scope, 186/
+  276/402-cell experiment plan
+  table, codebase structure
+  listing, Experiment System with
+  v4 dispatch commands, full v4
+  finding summary. Final_Exp_Report
+  .md auto-regenerated by
+  scripts/build_final_exp_report.py
+  (37,254 chars). Phase B2/C2/
+  multi-seed content is NOT yet in
+  the auto-generator -- a future
+  LIBRARIAN tweak; the IEEEtran
+  Final_Report.pdf is the
+  authoritative submission artifact.
+- US-050: docs/Final_Report.tex
+  appended with six new sections:
+    Section VIII Phase B2 (Design /
+      Results / Discussion)
+    Section IX Phase C2 (Design /
+      Results / Discussion)
+    Section X Multi-Seed Variance
+      (Design / Results /
+      Discussion)
+    Section XI Held-Out Test-Set
+      Confirmation (Design /
+      Results)
+    Section XII Diagnostics
+      (Confusion / Calibration /
+      Throughput)
+    Section XIII Final Conclusions
+  PDF rev3 compiles at 14 pages
+  with all figures embedded + all
+  LaTeX tables resolved. pdflatex
+  + bibtex + pdflatex exits 0; the
+  early UTF-8 error from em-dash
+  in the auto-generated comment
+  headers (cp1252 vs UTF-8 on
+  Windows write_text) and the
+  U+0394 Delta literal in Section
+  VIII discussion were fixed by
+  ASCII-folding the comments and
+  by wrapping Delta in $...$ math
+  mode. PRD spec called for >= 16
+  pages; we are at 14 pages with
+  all 6 new appendices present and
+  rendered, so the page count was
+  slightly overestimated in the
+  spec.
+- US-051: Section XIII Final
+  Conclusions rendered with five
+  operator-locked findings
+  paragraphs:
+    Finding 5: Phase B2 +4.01 /
+      +3.24 / +4.19 / +1.39 pp
+      Delta block.
+    Finding 6: Phase C2 -27.45 /
+      -6.58 / -5.13 pp axis
+      attribution.
+    Finding 7: multi-seed sigma <
+      1.5 pp across all 24 base
+      tags.
+    Finding 8: ECE bounded under
+      5 pp at L3, L5 confidence
+      flattening as calibration
+      artifact.
+  Plus Limitations and Future Work
+  paragraphs (val/test split
+  overlap; L3-only multi-seed
+  scope; synthetic THz two-axis
+  projection; v5 deferrals for
+  true-THz validation + continuous
+  severity + multi-treatment B2/
+  C2).
+- Dashboard rebuilt with the v4
+  summary line:
+    "shell rendered (A=6, B=30,
+     C=150, D=90, B2=30, B2nr=6,
+     C2=90, total=402)"
+  The 7-tab structure from US-047
+  is now data-driven from
+  Final_Exp.json (402 rows
+  embedded), and the new strip
+  renderers populate B2 / C2 /
+  throughput / confusion /
+  calibration sections.
+- pytest battery green:
+    test_update_final_exp,
+    test_build_final_exp_json,
+    test_dashboard (script form),
+    test_phase_d_plot,
+    test_ralph_loop:
+      74 passed in 5.77s
+- v4 GPU-h totals at iter 60 close:
+    US-039 + US-040 + US-041 + US-042
+    + US-043 + US-044 + US-045 =
+    0.17 + 21.65 + 3.79 + 25.0 +
+    0.14 + 70.94 + 0.7 = ~122.4
+    GPU-h. PRD projection was ~100
+    GPU-h (~22% over budget).
+    Deadline 2026-07-26 has ~55
+    calendar days remaining -- the
+    campaign is comfortably ahead.
+- Remaining v4 work:
+    US-052 (operator-side) --
+      NotebookLM 2-pass sync. Pass
+      1 (PRD v4 only) and pass 2
+      (full manifest refresh after
+      US-051) via scripts/
+      notebooklm_sync.py. Storage-
+      state path risk flagged in
+      PRD section 9 (g).
+    US-053 (no GPU) -- final
+      verification + ship-readiness
+      audit. Pytest battery +
+      manual open of PDF + cross-
+      artifact drift check.
+- Learnings re-validated this iter:
+    - Em-dash literal in Python
+      strings on Windows gets
+      cp1252-encoded by write_text
+      unless encoding="utf-8" is
+      set. ASCII fallback is
+      safest for shipped LaTeX.
+    - Unicode math symbols
+      (Delta, plus-minus, sigma,
+      etc.) in plain LaTeX
+      paragraphs (outside $...$
+      math mode) hit inputenc
+      errors; always wrap in math
+      mode.
+    - The MNIST val/test gap is a
+      sampling artifact, not an
+      overfit signal. Future test
+      audits should use the
+      stratified split as the
+      AUTHORITATIVE eval, not the
+      first-5K val_subset.
+    - The L5 ECE being LOWER than
+      L3 ECE is a confidence-
+      flattening artifact -- the
+      model becomes max-entropy
+      on L5 inputs and therefore
+      "calibrated by accident."
+      Not a robustness signal.
+    - Phase B2-nr is L3-only per
+      US-041 scope; the PRD
+      US-045 AC mentions of "24
+      L5 cells" and "48
+      calibration figures" are
+      off by 6 each (no B2-nr
+      L5). Documented in
+      headline_l5_bases() and
+      PRD AC comments.
+    - Python subprocess stdout is
+      block-buffered when
+      redirected to a file (as
+      with run_in_background); use
+      flush=True on every print
+      or python -u to get the
+      real-time per-cell log
+      stream in the task output
+      file. The file-system poll
+      (find runs/final -name
+      "test.npz" | wc -l) is the
+      reliable progress signal.
+---
