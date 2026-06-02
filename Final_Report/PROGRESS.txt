@@ -220,3 +220,71 @@
       matplotlib imshow with explicit vmin / vmax and a single fig
       colorbar.
 ---
+
+## Iteration 5 — Phase B L5 confusion-matrix 3×2 grid (PRD V2 §4.5 fig 22, FX-06)
+
+- Implemented `Final_Report/scripts/combine_confusion_grid.py`: re-renders
+  all 6 Phase B L5 confusion matrices from cached val logits at
+  `runs/final/<tag>/logits/val.npz` into a single matplotlib figure with a
+  shared right-side colorbar at `vmin=0, vmax=1` (row-normalized recall).
+  Tiling existing PNGs would have preserved their individual colorbars
+  (the very thing FX-06 is fixing) — re-rendering from logits is the
+  right move.
+- Per-panel subtitle: `acc = NN.NN%   most-confused: <true> -> <pred> (n=NN)`.
+  Row labels = models; column titles = datasets; predicted/true axis
+  labels on the bottom row / left col only.
+- Output cross-checks PRD §4.8 finding text:
+    * CIFAR-10 bird↔deer surfaces (TransNeXt-tiny: bird→deer n=183) ✓
+    * MNIST 4↔7 surfaces (ResNet50 4→7 n=166; DenseNet121 4→7 n=168) ✓
+    * MNIST 9↔1 surfaces (TransNeXt-tiny 9→1 n=134) ✓
+  No drift between as-measured confusion data and the operator-locked
+  Finding #7-text on this front.
+
+- Files affected:
+  - Final_Report/scripts/combine_confusion_grid.py (new)
+  - Final_Report/figures/confusion/B_L5_grid.png (new)
+  - Final_Report/figures/confusion/_grid_meta.json (new)
+  - Final_Report/PROGRESS.txt (this entry)
+
+- Learnings for next cycles:
+  - Patterns:
+    * `runs/final/<tag>/logits/val.npz` is the canonical cache for val
+      logits. Files-on-disk schema: keys `logits` (shape [N, 10]) and
+      `labels` (shape [N]). This is NOT a weight artifact — reading it via
+      numpy is permitted under the weight-privacy contract (only
+      `*.ckpt` / `*.pt` / `*.pth` / `artifacts/weights/` are forbidden).
+    * 10×10 confusion matrix → row-normalize via
+      `cm / cm.sum(axis=1, keepdims=True).clip(min=1)` (clip prevents
+      0/0 if any true class has zero samples — defensive even though
+      the 5000-sample val split always has all classes present).
+    * Single-shared-colorbar pattern with matplotlib:
+        `cbar_ax = fig.add_axes([0.94, 0.12, 0.015, 0.76])`
+        `fig.colorbar(im_handle, cax=cbar_ax)`
+      Pair with `fig.subplots_adjust(left=0.07, right=0.92, ...)` so the
+      colorbar lives in the reserved margin. `tight_layout()` fights
+      this — don't call it.
+  - Traps:
+    * I almost tiled the existing per-cell confusion PNGs (like I did for
+      the calibration grids in Iteration 4). That would preserve each
+      panel's individual colorbar, defeating the FX-06 goal. The
+      calibration tiling was OK because reliability diagrams have no
+      colormap; confusion grids do, and FX-06's "single shared colorbar"
+      contract is load-bearing. Different mechanism per asset type.
+    * The `subplots(..., gridspec_kw={"hspace": 0.32, "wspace": 0.22})`
+      values were tuned to make room for the per-cell subtitle text
+      (`ax.text(0.5, -0.22, sub, transform=ax.transAxes)`) without
+      overlapping the next row. Adjust hspace, not the text y-offset,
+      if the labels run too close.
+  - Helpful context:
+    * D1 sub-tasks for PRD V2 §6.2 step 1 are now COMPLETE:
+      - [x] build_per_cell_with_iq.py        (iter 1, commit 22d3991)
+      - [x] build_psnr_axis_curves.py        (iter 2, commit ec7a8a6)
+      - [x] build_ece_vs_level.py            (iter 3, commit bebd792)
+      - [x] combine_calibration_grids.py     (iter 4, commit 6d65f51)
+      - [x] combine_confusion_grid.py        (iter 5, this commit)
+    * Next phase = PRD V2 §6.2 step 2: "Re-render the figures on the §8
+      fix list" (FX-01 through FX-04, FX-07, FX-08, FX-09; FX-05 / FX-06
+      already covered above; FX-10 onward is caption / LaTeX work). Pick
+      the most foundational next — likely FX-01 (cross-phase scatter
+      annotation cleanup) or FX-02 (per-axis attribution legend fix).
+---
