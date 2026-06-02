@@ -1,0 +1,80 @@
+% Problems and solutions (BGU \S 10.7.2.8).
+% PRD V2 \S 7.9: compressed to four entries (was seven). Each one line:
+% symptom -> remedy. The Windows DataLoader, the native-resolution detour,
+% and the Phase B v2 collapse motivation are absorbed into \S \ref{sec:spec}
+% as drift-list entries (avoid duplication).
+\section{Problems and Solutions}
+\label{sec:problems}
+
+This section enumerates the substantive problems encountered during the
+campaign and how each was resolved. Each entry pairs the observed symptom
+with the corrective action that closed the issue.
+
+\subsection{Vision-transformer hardware bring-up}
+\textbf{Symptom.}\quad TransNeXt training crashed on the RTX 5070 (Blackwell,
+sm\_120) with an opaque CUDA kernel launch error during the first
+attention block. The PyTorch 2.x stack at project start shipped kernels
+compiled for sm\_75 through sm\_90, and the TransNeXt
+\texttt{swattention} extension was not built with sm\_120 prebuilt
+binaries.
+
+\textbf{Fix.}\quad TransNeXt was temporarily quarantined until the
+upstream \texttt{swattention} package was rebuilt with sm\_120 support
+via the PyTorch 2.x Blackwell release. The quarantine predicate is now a
+permanent no-op (the rebuild has shipped) but is preserved in code so
+future GPU substitutions can re-use the path. A startup self-test in
+\texttt{src/lightning/THzDataModule} now runs a one-iteration forward
+pass on the configured GPU before the campaign driver dispatches the
+first cell, surfacing compute-capability mismatches with a structured
+error instead of a raw CUDA stack trace.
+
+\subsection{Vision-transformer parameter budget}
+\textbf{Symptom.}\quad The preliminary specification selected
+\texttt{transnext\_small} ($\sim 50$M parameters). At the projected
+$\sim 8$ GPU-hours per cell versus $\sim 2.5$ for ResNet50, the 62
+TransNeXt rows would have slipped the submission deadline by roughly two
+weeks. The parameter budget was also $\sim 2\times$ the ResNet50
+reference, so the fair-comparison invariant on architectural capacity
+was not satisfied.
+
+\textbf{Fix.}\quad Substituted \texttt{transnext\_tiny} ($\sim 28$M
+parameters), which retains the same foveal-attention mechanism that
+motivated the original choice and is a closer match to the ResNet50
+parameter budget ($\sim 25$M). The substitution saved $\sim 310$
+GPU-hours across the TransNeXt rows. The model-loader registry now
+rejects \texttt{transnext\_small} with an explicit error so future
+contributors cannot silently re-introduce the variant.
+
+\subsection{Per-pixel blur invisibility at $224 \times 224$}
+\textbf{Symptom.}\quad The Phase C blur axis at L5 produced
+indistinguishable accuracy from L1 on DenseNet121 (delta below
+$1$~\Mpp{}). The blur kernels K $= 3 \ldots 13$ with $\sigma = 0.8 \ldots
+2.3$ had been calibrated for native $32 \times 32$ imagery; once applied
+on the $224 \times 224$ upsampled tensor they covered only $\sim 1$ to
+$6\%$ of the image width and produced essentially imperceptible
+smoothing.
+
+\textbf{Fix.}\quad Rescaled the blur kernel and sigma schedule to
+pixel-domain values at $224 \times 224$ (K $= 13 \ldots 91$,
+$\sigma = 2.5 \ldots 18$), with the kernel-to-sigma rule
+$K = 2 \lceil 2.5 \sigma \rceil + 1$ so the kernel always captures the
+$2.5 \sigma$ Gaussian footprint. A unit test now asserts that the L5
+blur configuration produces at least a $5$~dB PSNR drop versus L1, which
+guards against any future schedule that fails to scale with the input
+size.
+
+\subsection{Single-seed reproducibility exposure}
+\textbf{Symptom.}\quad The L3 headline cells were originally reported as
+single-seed point estimates at seed $42$. A peer-review style critique
+asked for an explicit run-to-run variance bound on the load-bearing
+cross-model magnitudes (the +$5$~\Mpp{} / +$7$~\Mpp{} / $<1$~\Mpp{}
+margins at L1 to L5).
+
+\textbf{Fix.}\quad Added a 48-replicate multi-seed audit at seeds $43$
+and $44$ across all $24$ L3 headline cells. Every audited cell shows
+$\sigma < 1.5$~\Mpp{}; the largest variance is on the TransNeXt-tiny
+CIFAR-10 Phase B L3 cell ($\sigma = 1.31$~\Mpp{}). Schema version 3 of
+\texttt{Final\_Exp.json} carries the
+$\langle\mathrm{val\_acc}\rangle \pm \sigma$ pair on every multi-seed
+cell, and the dashboard renders the variance band by default so the
+reproducibility floor is visible without re-running the audit.
