@@ -32,8 +32,8 @@ acceptance criteria against the measured outcome. Figure
 Criterion & Plan & Actual \\
 \midrule
 Top-1 accuracy on the moderate-degradation operating point
-& $\geq 80\%$ on CIFAR-10 L3
-& Met at L3 on MNIST (every backbone). Met at L1 and L2 on CIFAR-10. Not met at L3 on CIFAR-10 (best $\sim 74\%$); not met at L4 / L5 on either dataset. \\
+& four-fifths CIFAR-10 L3 accuracy (PDR criterion)
+& Met at L3 on MNIST (every backbone). Met at L1 and L2 on CIFAR-10. Not met at L3 on CIFAR-10 (best $\sim 74$~\Mpp{}); not met at L4 / L5 on either dataset. \\
 \midrule
 Accuracy drop ceiling
 & $\leq 15$ \Mpp{} drop relative to clean
@@ -65,13 +65,13 @@ Reproducibility
 Of the four original goals from the preliminary specification:
 
 \textbf{Goal 1 (high accuracy on degraded data, target 80\%).}\quad
-\emph{Partially met.} The 80\% threshold is achieved on MNIST at every
-level up to L3 and on CIFAR-10 at L1 and L2. At L3 on CIFAR-10 the best
-cell ($\sim 74\%$) falls $\sim 6$ \Mpp{} short, and at L4 / L5 the
-accuracy collapses on every backbone (the L5 ceiling on CIFAR-10 is
-$\sim 40\%$). The shortfall is consistent with the per-axis attribution:
-resolution alone costs $-27$ \Mpp{} at L3 to L5, which exceeds the
-remaining headroom against the 80\% target.
+\emph{Partially met.} The eighty-percent threshold is achieved on MNIST
+at every level up to L3 and on CIFAR-10 at L1 and L2. At L3 on CIFAR-10
+the best cell ($\sim 74$~\Mpp{}) falls $\sim 6$~\Mpp{} short of that
+target, and at L4 / L5 the accuracy collapses on every backbone (the L5
+ceiling on CIFAR-10 is $\sim 40$~\Mpp{}). The shortfall is consistent
+with the per-axis attribution: resolution alone costs $-27$~\Mpp{} at
+L3 to L5, which exceeds the remaining headroom.
 
 \textbf{Goal 2 (minimize the accuracy drop, target $\leq 15$ \Mpp{}).}\quad
 \emph{Partially met.} The drop is bounded by 15 \Mpp{} up to L2 on
