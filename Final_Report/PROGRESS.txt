@@ -1,0 +1,53 @@
+## Iteration 1 — Per-cell accuracy ↔ image-quality join (PRD V2 §4.1, §6.2 step 1)
+
+- Implemented `Final_Report/scripts/build_per_cell_with_iq.py`: joins the 402
+  canonical accuracy rows in `artifacts/Final_Exp.json` with the per-pipeline
+  PSNR / SSIM in `Final_Report/data/image_quality/_index.csv`. Outputs
+  `Final_Report/data/tables/per_cell_with_iq.csv` matching the PRD §4.1 column
+  contract (`tag, model, dataset, phase, level, axis, regularization, seed,
+  val_acc, psnr_mean, psnr_std, ssim_mean, ssim_std`) + 3 multi-seed bonus
+  columns (`val_acc_mean, val_acc_std, n_seeds`).
+- Script asserts row-count = 402 and that every non-A cell has a populated IQ
+  join; raises SystemExit otherwise. Run output: 402 rows, 6 Phase A (null IQ
+  by construction), 396 non-A with IQ.
+
+- Files affected:
+  - Final_Report/scripts/build_per_cell_with_iq.py (new)
+  - Final_Report/data/tables/per_cell_with_iq.csv (new)
+  - Final_Report/PROGRESS.txt (this entry)
+
+- Learnings for next cycles:
+  - Patterns:
+    * `artifacts/Final_Exp.json` (schema_version=3) is the canonical accuracy
+      source: 402 rows, one per canonical cell at seed=42. Multi-seed audit
+      replicates at seeds {43, 44} are NOT separate rows — they are aggregated
+      into `val_acc_mean` / `val_acc_std` / `seeds_observed` on the base tag.
+    * Phase D rows must reuse Phase B1 IQ (degradation pipeline is identical;
+      only training-time regularization differs). Implemented by mapping
+      `iq_phase = "B" if phase == "D" else phase` on the IQ lookup key.
+    * Phase A rows carry null PSNR / SSIM — identity pipeline, IQ undefined.
+      Six rows total (3 models × 2 datasets). Downstream curves / scatters
+      must filter these out before computing Spearman ρ etc.
+  - Traps:
+    * PowerShell calls go through Bash by default; use the dedicated PowerShell
+      tool for JSON `ConvertFrom-Json` exploration. Bash escaping for `$()`
+      mangles the call.
+    * `_index.csv` has 102 pipelines but NO Phase A entries — assume null IQ
+      for A rather than asserting coverage.
+    * `treatment` (the in-repo column name from `Final_Exp.json`) maps to the
+      PRD V2 column name `regularization`. Keep the rename local to this
+      script; don't propagate upstream.
+  - Helpful context:
+    * `scripts/aggregate_pipelines.py` already produces the precursor
+      `Final_Report/data/tables/per_cell.csv` with similar columns. The new
+      `per_cell_with_iq.csv` is the PRD V2-named, contract-bound version
+      meant for §4.2 (per-axis PSNR / SSIM curves) and §10 QA gate #21
+      (headline pp value cross-check).
+    * Next D1 sub-tasks per PRD §6.2 step 1:
+        - `scripts/build_psnr_axis_curves.py` → 8 PNG/PDF pairs + Spearman ρ
+          metadata JSON (§4.2)
+        - `scripts/build_ece_vs_level.py` → ECE vs level line chart
+        - `scripts/combine_calibration_grids.py` → `B_L3_grid.png`,
+          `B_L5_grid.png`
+        - `scripts/combine_confusion_grid.py` → `B_L5_grid.png`
+---
