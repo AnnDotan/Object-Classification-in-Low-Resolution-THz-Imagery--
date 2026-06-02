@@ -288,3 +288,121 @@
       the most foundational next — likely FX-01 (cross-phase scatter
       annotation cleanup) or FX-02 (per-axis attribution legend fix).
 ---
+
+## Iterations 6..22 — D2 figure re-renders + D3 LaTeX + D4 source-side validators
+
+See git log on branch 1/6/26 for full per-iteration detail. Headline:
+
+### D2 — §8 FX-list figure re-renders (PRD V2 §6.2 step 2)
+- [x] FX-01 cross-phase scatter (iter 6,  commit 038c22d)
+- [x] FX-02 per-axis attribution (iter 7,  commit 86f26da)
+- [x] FX-03 Phase B2 comparison summary (iter 8, commit 520584a)
+- [x] FX-04 multi-seed boxplot readable labels (iter 9, commit 9c3fc8d)
+- [x] FX-05 reliability 3×2 grids (iter 4)
+- [x] FX-06 confusion 3×2 grid (iter 5)
+- [x] FX-07 inference throughput layout (iter 10, commit 5ea4e2d)
+- [x] FX-09 Gantt actual milestones (iter 11, commit 9a1b6ff)
+- [x] FX-15 per-axis PSNR/SSIM figures (iter 2)
+- [x] FX-08 Phase D recovery caption (iter 20, commit e47b44d)
+- [x] FX-10 sample-grid `|diff|` (iter 20 verified: not present)
+- [x] FX-13 Spearman ρ literal (iter 20 verified: \\rho used throughout)
+
+### D3 — LaTeX edits (PRD V2 §6.2 step 3)
+- [x] process_term_lint.py (iter 12, commit 3e05b00)
+- [x] R3 strip across 03/04/05/07 (iter 13, commit 659eee8)
+- [x] 06_problems.tex rewrite to 4 entries per §7.9 (iter 14, commit 091daa1)
+- [x] 04_phases_overview.tex + Table II (iter 15, commit 2178ec3)
+- [x] 08_cross_model.tex (iter 16, commit 7c4055f)
+- [x] 01_abstract.tex rewrite + inline Hebrew (iter 17, commit fa31451)
+- [x] Q10 maximal equations — AdamW + cosine (iter 18, commit abdd84b)
+- [x] Engine-based Hebrew detection fix (iter 21, commit c93278a)
+- [x] Wire Figs. 8-15 into 05_tests.tex (iter 22, commit d1227cd)
+
+### D4 — Validation (PRD V2 §6.2 step 4, §10 gates)
+- [x] validate_v2_gates.py — all 7 source-side gates PASS (iter 19, commit 6fbc59c)
+    Gate 11 (per-axis curves), 12 (phases overview), 13 (banned-term),
+    14 (Hebrew inlined), 15 (80 % framing), 17 (cross-model), 19
+    (>=10 equations).
+- [x] pdflatex + bibtex build clean — 0 undefined refs, 0 bibtex errors
+      (iter 22 / commit d1227cd).
+
+### OUTSTANDING (operator-side)
+- [ ] **Page-count gate (PRD §10 gate 18)**: current build = **46 pages**;
+      ceiling = 30, aspirational target = 25. Compression of ~16 pages
+      required. Compression targets per PRD Q6:
+        - §7.5 spec sheet → bullets (currently ~3 pages of paragraphs)
+        - §7.7 acceptance tests → bullets (~6 pages, can compress ~2)
+        - §7.9 problems → already 4-entry compressed
+        - Captions tightening
+        - Phase definitions only in §7.4 (downstream sections re-explain)
+- [ ] **DOCX build**: requires Pandoc (not installed on this host) +
+      BGU reference.docx template. Operator must run on a Pandoc-enabled
+      host.
+- [ ] **Page-count gate after compression** (PRD §10 gate 18)
+- [ ] **DOCX banned-term gate** (process_term_lint --docx fin-2026-061.docx)
+- [ ] **80 % gate after DOCX** (validate against rendered DOCX)
+- [ ] **Operator number-check** (PRD §12 Q2): as-measured cross-model
+      magnitudes already reflected in 01_abstract.tex + 08_cross_model.tex
+      (+10.1 / +10.4 / +1.3 / +0.8 / +0.8 pp at L1..L5 vs CNN mean on
+      CIFAR-10, replacing the PRD-template's +5.0 / +7.0 / <1).
+- [ ] **ECE Finding #8 re-statement** (flagged in iter 3): as-measured
+      ECE DROPS from L3 to L5 on average (-2.03 pp on CIFAR-10), not
+      rises to >15 pp as Finding #8 / Abstract template state. Either
+      re-examine `generate_calibration_diagrams.py` for L5 split / label
+      handling, or rewrite Finding #8 narrative to match data.
+- [ ] **Hebrew abstract operator review** (PRD §7.2 Q5 implementation
+      handoff): translation drafted; should be reviewed by a native
+      Hebrew speaker before D5 QA pass.
+
+### Files touched (Iter 1..22)
+NEW scripts (Final_Report/scripts/):
+  build_per_cell_with_iq.py, build_psnr_axis_curves.py,
+  build_ece_vs_level.py, combine_calibration_grids.py,
+  combine_confusion_grid.py, build_phase_b2_comparison.py,
+  build_inference_throughput.py, process_term_lint.py,
+  validate_v2_gates.py.
+
+Modified scripts:
+  build_figures.py (FX-01 + FX-02 + FX-04 + FX-09 + _multiseed_label).
+
+NEW LaTeX (Final_Report/source/):
+  sections/04_phases_overview.tex, sections/08_cross_model.tex,
+  sections/hebrew_abstract_body.tex,
+  tables/tab_II_phases_overview.tex.
+
+Modified LaTeX:
+  sections/01_abstract.tex (rewrite + inline Hebrew),
+  sections/03_spec.tex (R3 strip),
+  sections/04_design.tex (R3 + Q10 equations),
+  sections/05_tests.tex (FX-08 caption + Figs. 8-15 wiring),
+  sections/06_problems.tex (full §7.9 4-entry rewrite),
+  sections/07_conclusions.tex (R3 + 80% demotion),
+  fin-2026-061.tex (new \\input lines for 04/08 sections),
+  refs.bib (AdamW + SGDR citations).
+
+NEW figures (Final_Report/figures/):
+  curves/acc_vs_{psnr,ssim}_phase{C,C2}_{cifar10,mnist}.{png,pdf} (×16),
+  curves/_axis_curves_meta.json,
+  curves/ece_vs_level_{cifar10,mnist}.{png,pdf},
+  curves/_ece_vs_level_meta.json,
+  calibration/B_L{3,5}_grid.png, calibration/_grid_meta.json,
+  confusion/B_L5_grid.png, confusion/_grid_meta.json,
+  phase_b2/comparison_summary.{png,pdf} (replaced),
+  inference_throughput.{png,pdf} (replaced),
+  attribution/axis_attribution_L3_{cifar10,mnist}.{png,pdf} (re-rendered),
+  multiseed/L3_variance_{cifar10,mnist}.{png,pdf} (re-rendered),
+  gantt/gantt_planned_vs_actual.{png,pdf} (re-rendered),
+  curves/accuracy_vs_{psnr,ssim}.{png,pdf} (FX-01 re-render).
+
+NEW data (Final_Report/data/):
+  tables/per_cell_with_iq.csv (402 rows).
+
+### Operator handoff summary
+Branch `1/6/26` carries the V2 conversion. Build sequence:
+  cd Final_Report/source && pdflatex fin-2026-061 && bibtex fin-2026-061
+                          && pdflatex fin-2026-061 && pdflatex fin-2026-061
+Verify gates before submission:
+  python Final_Report/scripts/validate_v2_gates.py     # source side (7 gates)
+  pdfinfo Final_Report/source/fin-2026-061.pdf | grep Pages   # gate 18
+Compression toward <=30 pages is the remaining significant work.
+---
