@@ -77,6 +77,27 @@ def _val_acc(r: dict) -> float | None:
     return r.get("val_acc_mean") or r.get("val_acc")
 
 
+def _multiseed_label(r: dict) -> str:
+    """Human-readable cell label for the FX-04 multi-seed boxplot.
+
+    Examples: "B / DenseNet121 / no reg", "C / ResNet50 / resolution",
+              "D / TransNeXt-tiny / T3", "B2 / ResNet50 / T3".
+    """
+    phase = r["phase"]
+    model = MODEL_LABELS.get(r["model"], r["model"])
+    axis = r.get("axis")
+    treatment = r.get("treatment")
+    if axis:
+        third = AXIS_LABELS.get(axis, axis).lower()
+    elif treatment:
+        third = treatment
+    elif phase in ("B", "B2nr"):
+        third = "no reg"
+    else:
+        third = "-"
+    return f"{phase} / {model} / {third}"
+
+
 # ---------------------------------------------------------------------------
 # Fig. 6: Accuracy vs degradation level, one panel per dataset, line per model x phase.
 # ---------------------------------------------------------------------------
@@ -235,24 +256,27 @@ def fig_multiseed_variance(rows: list[dict]) -> None:
         # Plot mean accuracy with std error bars, one bar per cell, color by phase.
         cells.sort(key=lambda r: (r["phase"], r["model"], r.get("axis") or "", r.get("treatment") or ""))
         n = len(cells)
-        fig, ax = plt.subplots(figsize=(max(6, n * 0.35), 3.6))
+        # FX-04: fixed figsize=(11, 5.5), 45-degree x-labels, legend outside,
+        # human-readable cell labels (was `B/res/-` truncations).
+        fig, ax = plt.subplots(figsize=(11, 5.5))
         x = np.arange(n)
         means = [r["val_acc_mean"] * 100 for r in cells]
         stds = [r["val_acc_std"] * 100 for r in cells]
         colors = [PHASE_COLORS.get(r["phase"], "#7f7f7f") for r in cells]
         ax.bar(x, means, yerr=stds, color=colors, capsize=2, edgecolor="black", linewidth=0.3)
-        labels = [f"{r['phase']}/{r['model'][:3]}/{(r.get('axis') or r.get('treatment') or '-')[:4]}"
-                  for r in cells]
+        labels = [_multiseed_label(r) for r in cells]
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=80, fontsize=6)
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=7)
         ax.set_ylabel("Validation accuracy (\\%)")
         ax.set_title(f"{DATASET_LABELS[d]} - multi-seed variance at L3 (mean $\\pm$ $\\sigma$, n=3)")
         ax.grid(True, linestyle=":", alpha=0.4, axis="y")
-        # Phase legend
+        # Phase legend outside the data box.
         import matplotlib.patches as mpatches
         handles = [mpatches.Patch(color=PHASE_COLORS[p], label=p)
                    for p in ("B", "C", "D", "B2", "B2nr", "C2") if p in {r["phase"] for r in cells}]
-        ax.legend(handles=handles, fontsize=7, loc="lower right", frameon=False)
+        ax.legend(handles=handles, fontsize=8, loc="upper left",
+                  bbox_to_anchor=(1.02, 1.0), framealpha=0.85)
+        fig.tight_layout(rect=[0, 0, 0.88, 1])
         _save(fig, f"multiseed/L3_variance_{d}")
 
 
