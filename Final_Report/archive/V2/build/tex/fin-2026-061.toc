@@ -1,0 +1,53 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{Abstract}{i}{section*.1}%
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Motivation}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Problem statement}{1}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Alternative approaches considered}{1}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Contributions}{2}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Roadmap}{2}{subsection.1.5}%
+\contentsline {section}{\numberline {2}Final Technical Specification}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Product overview}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Inputs, outputs, interfaces}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Final specification of the system}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Drift from the preliminary specification}{5}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Phases of the experimental program}{5}{subsection.2.5}%
+\contentsline {section}{\numberline {3}Engineering Design}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Mathematical model}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Image-quality metrics}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Calibration metric}{8}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Regularization treatments (Phase D)}{9}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Software architecture}{9}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Final Acceptance Tests}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Test rig}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Per-pipeline image quality}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Clean baseline accuracy (Phase A)}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Combined-degradation accuracy (Phase B)}{10}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Accuracy versus image quality}{10}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Per-axis isolation (Phase C)}{14}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Regularization recovery (Phase D)}{14}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}THz protocol simplification (Phase B2 and B2-nr)}{14}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Single-axis under the THz protocol (Phase C2)}{20}{subsection.4.9}%
+\contentsline {subsection}{\numberline {4.10}Multi-seed audit}{20}{subsection.4.10}%
+\contentsline {subsection}{\numberline {4.11}Calibration}{21}{subsection.4.11}%
+\contentsline {subsection}{\numberline {4.12}Confusion matrices at L5}{21}{subsection.4.12}%
+\contentsline {subsection}{\numberline {4.13}Inference throughput}{21}{subsection.4.13}%
+\contentsline {section}{\numberline {5}Problems and Solutions}{25}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Blackwell GPU compatibility (US-014)}{25}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}TransNeXt variant downsizing (US-016)}{25}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Windows DataLoader workers (memory feedback)}{26}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Fair-comparison invariant violation (V3 refactor rollback)}{26}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Blur kernel rescaling (2026-05-14)}{27}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Phase B v2 collapse explanation (Phase D)}{27}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Single-seed criticism (multi-seed audit, US-042)}{27}{subsection.5.7}%
+\contentsline {section}{\numberline {6}Conclusions and Recommendations}{28}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Work summary}{28}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Plan vs achieved}{28}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Success and failure analysis vs goals}{28}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Strengths of the chosen approach}{31}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Weaknesses of the chosen approach}{31}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}Recommendations for continuation}{32}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}Cost summary}{32}{subsection.6.7}%
+\contentsline {section}{\numberline {A}Hebrew Abstract}{35}{appendix.A}%
+\contentsline {section}{\numberline {B}Source listings}{35}{appendix.B}%
+\contentsline {section}{\numberline {C}Honoring intellectual property rights}{35}{appendix.C}%

@@ -1,0 +1,43 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase C single-axis isolation validation accuracy (\%). The named axis is at level L; every other axis is at its identity value.}
+\label{tab:phase_c}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lllrrrrr}
+\toprule
+Model & Dataset & Axis & L1 & L2 & L3 & L4 & L5 \\
+\midrule
+ResNet50 & CIFAR-10 & Resolution & 88.00 & 78.98 & 68.46 & 60.50 & 43.16 \\
+ResNet50 & CIFAR-10 & Blur & 93.54 & 89.88 & 86.78 & 81.46 & 70.98 \\
+ResNet50 & CIFAR-10 & Noise & 89.14 & 84.70 & 78.06 & 72.76 & 66.88 \\
+ResNet50 & CIFAR-10 & S\&P & 90.42 & 89.92 & 86.52 & 84.64 & 83.30 \\
+ResNet50 & CIFAR-10 & Saturation & 92.06 & 92.82 & 92.56 & 91.78 & 88.22 \\
+ResNet50 & MNIST & Resolution & 98.84 & 98.50 & 93.48 & 81.22 & 44.26 \\
+ResNet50 & MNIST & Blur & 99.32 & 99.14 & 99.18 & 99.20 & 98.82 \\
+ResNet50 & MNIST & Noise & 99.10 & 99.16 & 99.10 & 99.10 & 98.96 \\
+ResNet50 & MNIST & S\&P & 99.08 & 98.98 & 98.88 & 98.90 & 98.62 \\
+ResNet50 & MNIST & Saturation & 98.94 & 99.18 & 99.36 & 99.18 & 99.10 \\
+DenseNet121 & CIFAR-10 & Resolution & 86.52 & 79.60 & 67.68 & 57.76 & 44.32 \\
+DenseNet121 & CIFAR-10 & Blur & 90.54 & 90.40 & 86.44 & 82.04 & 71.42 \\
+DenseNet121 & CIFAR-10 & Noise & 88.92 & 83.64 & 79.54 & 75.06 & 68.46 \\
+DenseNet121 & CIFAR-10 & S\&P & 90.72 & 88.98 & 87.96 & 86.44 & 85.08 \\
+DenseNet121 & CIFAR-10 & Saturation & 91.84 & 91.42 & 91.66 & 91.30 & 88.34 \\
+DenseNet121 & MNIST & Resolution & 99.22 & 98.62 & 93.60 & 81.32 & 45.40 \\
+DenseNet121 & MNIST & Blur & 99.06 & 99.34 & 98.96 & 99.28 & 98.46 \\
+DenseNet121 & MNIST & Noise & 99.34 & 99.26 & 99.24 & 99.34 & 99.28 \\
+DenseNet121 & MNIST & S\&P & 99.18 & 99.14 & 99.06 & 98.76 & 98.72 \\
+DenseNet121 & MNIST & Saturation & 99.32 & 99.24 & 99.26 & 99.28 & 99.14 \\
+TransNeXt-tiny & CIFAR-10 & Resolution & 95.14 & 88.62 & 79.64 & 68.40 & 46.24 \\
+TransNeXt-tiny & CIFAR-10 & Blur & 97.66 & 97.24 & 94.96 & 90.88 & 82.44 \\
+TransNeXt-tiny & CIFAR-10 & Noise & 95.98 & 93.34 & 89.40 & 85.98 & 80.08 \\
+TransNeXt-tiny & CIFAR-10 & S\&P & 97.28 & 96.60 & 95.48 & 94.74 & 94.22 \\
+TransNeXt-tiny & CIFAR-10 & Saturation & 97.92 & 97.78 & 97.54 & 97.56 & 95.34 \\
+TransNeXt-tiny & MNIST & Resolution & 99.14 & 98.08 & 92.48 & 80.08 & 44.86 \\
+TransNeXt-tiny & MNIST & Blur & 99.24 & 98.96 & 99.14 & 99.28 & 99.06 \\
+TransNeXt-tiny & MNIST & Noise & 99.16 & 99.28 & 99.24 & 99.16 & 99.14 \\
+TransNeXt-tiny & MNIST & S\&P & 99.00 & 99.16 & 98.82 & 98.76 & 98.94 \\
+TransNeXt-tiny & MNIST & Saturation & 99.36 & 98.96 & 99.18 & 99.24 & 99.04 \\
+\bottomrule
+\end{tabular}
+\end{table}

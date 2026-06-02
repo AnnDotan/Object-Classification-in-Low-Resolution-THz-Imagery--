@@ -1,0 +1,82 @@
+% Abstract (English then Hebrew). Per BGU \S 10.7.2.3.
+% PRD V2 \S 7.2 R1, R5, Q4, Q5, FX-16. The 80 \% CIFAR-10 acceptance
+% criterion is NOT mentioned here (R1) -- it appears once, in the
+% Conclusions section, against the as-measured numbers. Cross-model
+% magnitudes are the as-measured values (PRD \S 12 Q2 escape clause).
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+\noindent\textbf{Background.}\quad
+Terahertz (THz) imaging sensors produce frames that are simultaneously low
+resolution, low signal-to-noise, and colorless. ImageNet-pretrained
+classifiers, which rely on fine textures and saturated chroma, lose
+accuracy quickly under those conditions, but the magnitude and the
+mechanism of the loss across modern deep-learning architectures are not
+documented quantitatively.
+
+\noindent\textbf{Aim.}\quad
+Compare the robustness of three representative deep architectures (a
+residual CNN, a densely connected CNN, and a foveal vision transformer)
+under controlled synthetic THz-like degradation, decompose the loss into
+per-axis contributions, and quantify how much of it can be recovered by
+training-time regularization.
+
+\noindent\textbf{Methods.}\quad
+The 402-cell campaign trains ResNet50, DenseNet121, and TransNeXt-tiny
+on CIFAR-10 and MNIST under a five-level degradation curve (saturation,
+downsample, blur, additive noise, salt and pepper). Seven phases isolate
+the effects: A clean baseline, B1 combined, C single-axis, D
+regularization recovery, B2 and B2-nr THz-protocol simplification, and
+C2 single-axis under the THz protocol. A 48-replicate multi-seed audit
+on the 24 L3 headline cells bounds reproducibility. Every degradation
+pipeline is anchored to a deterministic 256-image PSNR / SSIM probe so
+the cross-phase comparison sits on a physical scale.
+
+\noindent\textbf{Findings.}\quad
+Under Phase B1 on CIFAR-10, TransNeXt-tiny holds the highest accuracy
+margin over the two CNNs at the mild and moderate end of the curve
+($+10.1\,$\Mpp{} at L1, $+10.4\,$\Mpp{} at L2 vs the CNN mean), and the
+margin narrows to under $1.5\,$\Mpp{} from L3 onward. Resolution
+dominates the per-axis attribution by a factor of approximately four
+(mean L1 to L5 effect on CIFAR-10: $-27.45\,$\Mpp{} for resolution vs
+$-6.58$ for blur and $-5.13$ for salt and pepper). Regularization (T3 in
+Phase D) recovers approximately $0.77\,$\Mpp{} of the $\sim 12.5\,$\Mpp{}
+Phase B1 accuracy collapse. The multi-seed audit confirms
+$\sigma < 1.5\,$\Mpp{} on every L3 headline cell.
+
+\noindent\textbf{Conclusions.}\quad
+The accuracy collapse is best modeled as an information bottleneck, not
+as an overfit. The foveal transformer holds the highest robustness
+margin at mild and moderate degradation; all three architectures
+converge into the $[19, 21]\,$\Mpp{} band at L5. Future THz deployments
+should invest in resolution restoration before denoising or deblurring.
+
+\noindent\textbf{Keywords.}\quad
+object classification, deep learning, low resolution, THz imaging,
+robustness, PSNR, SSIM, calibration, transformer, residual network,
+dense network.
+
+\bigskip
+\hrule
+\bigskip
+
+% ====================================================================
+% Hebrew abstract (PRD V2 \S 7.2 R5, Q5, FX-16). Inlined here so both the
+% XeLaTeX-rendered PDF and the Pandoc-rendered DOCX carry the Hebrew text
+% inline with the English abstract (not as a separate appendix).
+%
+% XeLaTeX + polyglossia: \begin{hebrew}...\end{hebrew} sets RTL with the
+% David system font (set in fin-2026-061.tex preamble).
+% Pandoc DOCX: reads the body text UTF-8 directly; the LaTeX env wrapper
+% becomes a no-op span, but the Hebrew characters render with the
+% reference template's default font.
+% pdflatex: cannot render Hebrew script; build switches to XeLaTeX as the
+% canonical PDF engine per PRD V2 §6.1.
+% ====================================================================
+\ifdefined\XeTeXversion
+  \begin{hebrew}
+  \input{sections/hebrew_abstract_body.tex}
+  \end{hebrew}
+\else
+  \input{sections/hebrew_abstract_body.tex}
+\fi

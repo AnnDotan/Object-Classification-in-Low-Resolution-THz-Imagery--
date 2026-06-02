@@ -1,0 +1,128 @@
+{
+  "b2nr_L3_only_pp": {
+    "resnet50/cifar10": 4.9190404926286995,
+    "resnet50/mnist": 3.4255625591342,
+    "densenet121/cifar10": 12.653849232486786,
+    "densenet121/mnist": 3.448541076402259,
+    "transnext_tiny/cifar10": 11.529274312122197,
+    "transnext_tiny/mnist": 9.725330646233948
+  },
+  "cifar10": {
+    "dataset": "cifar10",
+    "y_range_pp": [
+      -0.25261552868661474,
+      13.147954387553364
+    ],
+    "series": {
+      "resnet50/B1 (no reg)": {
+        "L3_pp": 1.1929749923637645,
+        "L5_pp": 3.225353238901299,
+        "delta_pp": 2.0323782465375344
+      },
+      "resnet50/D-T3 (full reg)": {
+        "L3_pp": 1.2684042467076344,
+        "L5_pp": 2.16178342624428,
+        "delta_pp": 0.8933791795366457
+      },
+      "resnet50/B2-T3 (THz prot.)": {
+        "L3_pp": 4.3270430134853575,
+        "L5_pp": 0.7473844713133853,
+        "delta_pp": -3.5796585421719724
+      },
+      "densenet121/B1 (no reg)": {
+        "L3_pp": 7.461439125697542,
+        "L5_pp": 2.768794145820388,
+        "delta_pp": -4.692644979877153
+      },
+      "densenet121/D-T3 (full reg)": {
+        "L3_pp": 1.2819298708704017,
+        "L5_pp": 1.3029713409470658,
+        "delta_pp": 0.021041470076664126
+      },
+      "densenet121/B2-T3 (THz prot.)": {
+        "L3_pp": 1.992771408498873,
+        "L5_pp": 3.0635664864664838,
+        "delta_pp": 1.0707950779676108
+      },
+      "transnext_tiny/B1 (no reg)": {
+        "L3_pp": 6.233992108687413,
+        "L5_pp": 3.649266133867485,
+        "delta_pp": -2.5847259748199276
+      },
+      "transnext_tiny/D-T3 (full reg)": {
+        "L3_pp": 5.718339625769085,
+        "L5_pp": 0.8841802663590064,
+        "delta_pp": -4.834159359410078
+      },
+      "transnext_tiny/B2-T3 (THz prot.)": {
+        "L3_pp": 9.205514668189137,
+        "L5_pp": 2.638527698222785,
+        "delta_pp": -6.566986969966352
+      }
+    },
+    "mean_L3_pp": 4.298045451141023,
+    "mean_L5_pp": 2.27131413423802,
+    "mean_delta_L3_to_L5_pp": -2.0267313169030032,
+    "png": "Final_Report/figures/curves/ece_vs_level_cifar10.png",
+    "pdf": "Final_Report/figures/curves/ece_vs_level_cifar10.pdf"
+  },
+  "mnist": {
+    "dataset": "mnist",
+    "y_range_pp": [
+      -0.25261552868661474,
+      13.147954387553364
+    ],
+    "series": {
+      "resnet50/B1 (no reg)": {
+        "L3_pp": 1.243894778579864,
+        "L5_pp": 3.596441539550815,
+        "delta_pp": 2.3525467609709514
+      },
+      "resnet50/D-T3 (full reg)": {
+        "L3_pp": 6.546002635013504,
+        "L5_pp": 1.5734359679774195,
+        "delta_pp": -4.972566667036084
+      },
+      "resnet50/B2-T3 (THz prot.)": {
+        "L3_pp": 7.78169542814818,
+        "L5_pp": 3.296885348260508,
+        "delta_pp": -4.484810079887672
+      },
+      "densenet121/B1 (no reg)": {
+        "L3_pp": 6.935620765958184,
+        "L5_pp": 4.777967692592255,
+        "delta_pp": -2.157653073365929
+      },
+      "densenet121/D-T3 (full reg)": {
+        "L3_pp": 3.2268980844525825,
+        "L5_pp": 3.236202755734686,
+        "delta_pp": 0.009304671282103438
+      },
+      "densenet121/B2-T3 (THz prot.)": {
+        "L3_pp": 11.147954387553364,
+        "L5_pp": 2.4227441967560415,
+        "delta_pp": -8.725210190797323
+      },
+      "transnext_tiny/B1 (no reg)": {
+        "L3_pp": 3.4427947870025712,
+        "L5_pp": 5.864120379329323,
+        "delta_pp": 2.421325592326752
+      },
+      "transnext_tiny/D-T3 (full reg)": {
+        "L3_pp": 6.598990644674474,
+        "L5_pp": 4.305156150644257,
+        "delta_pp": -2.293834494030217
+      },
+      "transnext_tiny/B2-T3 (THz prot.)": {
+        "L3_pp": 2.3812873447083196,
+        "L5_pp": 2.823538961421047,
+        "delta_pp": 0.4422516167127273
+      }
+    },
+    "mean_L3_pp": 5.478348761787894,
+    "mean_L5_pp": 3.544054776918484,
+    "mean_delta_L3_to_L5_pp": -1.9342939848694103,
+    "png": "Final_Report/figures/curves/ece_vs_level_mnist.png",
+    "pdf": "Final_Report/figures/curves/ece_vs_level_mnist.pdf"
+  }
+}

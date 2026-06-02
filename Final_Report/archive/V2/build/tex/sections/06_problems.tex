@@ -1,0 +1,152 @@
+% Problems and solutions (BGU \S 10.7.2.8).
+\section{Problems and Solutions}
+\label{sec:problems}
+
+This section enumerates the substantive problems encountered during the
+campaign and how each was resolved. Every incident is traceable to a
+specific User Story (US) in the project ledger and to the git history of
+the repository.
+
+\subsection{Blackwell GPU compatibility (US-014)}
+\textbf{Symptom.}\quad TransNeXt training crashed on the RTX 5070 with an
+opaque CUDA kernel launch error during the first attention block.
+
+\textbf{Root cause.}\quad The 5070 reports compute capability sm\_120
+(Blackwell). The PyTorch 2.11 stack ships kernels compiled for
+sm\_75 / sm\_80 / sm\_86 / sm\_89 / sm\_90; sm\_120 falls outside the
+supported range, and the TransNeXt \texttt{swattention} extension was not
+shipped with sm\_120 prebuilt binaries.
+
+\textbf{Fix.}\quad TransNeXt was quarantined until the upstream
+\texttt{swattention} package was rebuilt with sm\_120 support. The
+quarantine predicate is now a permanent no-op (the rebuild has shipped),
+but the predicate is preserved in code so future GPU substitutions can
+re-use the path.
+
+\textbf{Permanent guard.}\quad A startup self-test in
+\texttt{src/lightning/THzDataModule} runs a $1$-iteration forward pass
+on the configured GPU before the campaign driver dispatches the first
+cell; failures are reported with the GPU compute capability and a pointer
+to the upstream issue rather than a raw CUDA stack trace.
+
+\subsection{TransNeXt variant downsizing (US-016)}
+\textbf{Symptom.}\quad TransNeXt-small training was projected to consume
+$\sim 8$ GPU-hours per cell vs $\sim 2.5$ for ResNet50; at 62 cells, the
+campaign would have slipped the submission deadline by two weeks.
+
+\textbf{Root cause.}\quad The preliminary spec selected
+\texttt{transnext\_small} ($\sim 50$M parameters), which is roughly double
+the size of the ResNet50 reference and overstates the architectural
+parameter-budget that the project intended to study.
+
+\textbf{Fix.}\quad Substituted \texttt{transnext\_tiny} ($\sim 28$M),
+which is a closer parameter-match to ResNet50 ($\sim 25$M) and which uses
+the same foveal-attention mechanism that motivated the original choice.
+Saved $\sim 310$ GPU-hours across the TransNeXt rows.
+
+\textbf{Permanent guard.}\quad The model-loader registry rejects
+\texttt{transnext\_small} with an explicit error pointing to the US-016
+decision, so future contributors cannot silently re-introduce the variant
+without revising the parameter-budget invariant.
+
+\subsection{Windows DataLoader workers (memory feedback)}
+\textbf{Symptom.}\quad Training crashed with
+\texttt{BrokenPipeError: [Errno 32] Broken pipe} inside the DataLoader
+after the first epoch when TransNeXt-tiny was paired with multi-worker
+loading.
+
+\textbf{Root cause.}\quad The Windows \texttt{spawn} multiprocessing
+backend pickles the worker payload through a system pipe whose buffer
+on this host truncated the TransNeXt \texttt{swattention} extension
+state.
+
+\textbf{Fix.}\quad Forced \texttt{num\_workers = 0} on the 5070 host.
+Throughput cost is negligible because the GPU was already the
+bottleneck.
+
+\textbf{Permanent guard.}\quad Documented in
+\texttt{CLAUDE.md} as a project-wide feedback note; the Lightning
+\texttt{THzDataModule} defaults to \texttt{num\_workers = 0} on
+\texttt{platform.system() == "Windows"}.
+
+\subsection{Fair-comparison invariant violation (V3 refactor rollback)}
+\textbf{Symptom.}\quad Phase B accuracy on TransNeXt diverged from the
+expected curve by $\sim 4$ \Mpp{} after the V3 native-resolution
+refactor.
+
+\textbf{Root cause.}\quad The V3 refactor trained TransNeXt at native
+$32 \times 32$ (CIFAR-10) and a $28 \rightarrow 32$ pad (MNIST). The
+choice maximized TransNeXt's pretrained checkpoint match
+(TransNeXt's smallest pretrain is $32 \times 32$ on CIFAR-10), but it
+violated the fair-comparison invariant: the three backbones no longer
+saw the same tensor shape, so the cross-backbone accuracy comparison
+was not interpretable.
+
+\textbf{Fix.}\quad Rolled back V3. Every cell trains at
+$224 \times 224$. The TransNeXt $224 \times 224$ checkpoint is used,
+which matches its full-FT differential learning-rate schedule
+(head $5 \times 10^{-4}$, backbone $5 \times 10^{-5}$).
+
+\textbf{Permanent guard.}\quad The training entry point asserts that
+every model's input pipeline produces a $3 \times 224 \times 224$
+tensor; mismatches fail at config time.
+
+\subsection{Blur kernel rescaling (2026-05-14)}
+\textbf{Symptom.}\quad The Phase C blur axis at L5 produced
+indistinguishable accuracy from L1 on DenseNet121 (delta below 1 \Mpp{}).
+
+\textbf{Root cause.}\quad The 2026-05-12 blur schedule used kernels
+designed for native $32 \times 32$ imagery (K $= 3 \ldots 13$,
+$\sigma = 0.8 \ldots 2.3$). At $224 \times 224$, those kernels covered
+$\sim 1$ to $6 \%$ of the image width, which is below the spatial
+frequency that the ImageNet-pretrained CNN backbone is sensitive to.
+The blur was visually imperceptible at $224 \times 224$.
+
+\textbf{Fix.}\quad Rescaled the blur kernel and sigma schedule to
+pixel-domain values at $224 \times 224$ (K $= 13 \ldots 91$,
+$\sigma = 2.5 \ldots 18$), with the kernel-to-sigma rule
+$K = 2 \lceil 2.5 \sigma \rceil + 1$ so the kernel always captures the
+$2.5 \sigma$ Gaussian footprint.
+
+\textbf{Permanent guard.}\quad A unit test asserts that the L5 blur
+configuration produces a measurable PSNR drop ($> 5$ dB) versus L1,
+which would catch any future schedule that fails to scale with the
+input size.
+
+\subsection{Phase B v2 collapse explanation (Phase D)}
+\textbf{Symptom.}\quad The v2 pipeline (US-017) produced a $-12.49$
+\Mpp{} mean accuracy drop versus the v1 pipeline at the same level,
+even though the per-axis parameters were identical.
+
+\textbf{Root cause hypothesis.}\quad Two candidates: (a) v2's
+pre-upsample noise sampling creates spatially correlated noise patches
+that defeat the ImageNet-pretrained low-level features; (b) v2
+overfits the noise pattern more easily because the per-batch noise
+realization is locked in by the per-sample seed.
+
+\textbf{Fix.}\quad Added Phase D, a regularization-recovery sweep
+(T1 / T2 / T3 $\times$ 5 levels $\times$ 6 (model, dataset) cells $=$
+90 cells, $\sim$ 52.5 GPU-hours). The campaign-level conclusion:
+regularization recovers only $\sim 0.77$ \Mpp{} of the v2 collapse,
+which rules out hypothesis (b) and supports hypothesis (a). The v2
+to v1 drop is therefore an information-bottleneck effect, not a
+training-side artifact.
+
+\textbf{Permanent guard.}\quad Phase D-T3 is included in the canonical
+report tables so the reader can verify the recovery floor without
+re-running the sweep.
+
+\subsection{Single-seed criticism (multi-seed audit, US-042)}
+\textbf{Symptom.}\quad The L3 headline cells were reported as single-seed
+point estimates in the original PRD v4. A peer-review style critique
+asked for an explicit run-to-run variance bound.
+
+\textbf{Fix.}\quad Added US-042: a 48-replicate multi-seed audit at
+seeds 43 and 44 across the 24 L3 headline cells. Every audited cell
+shows $\sigma < 1.5$ \Mpp{}; the largest variance is on the
+TransNeXt-tiny CIFAR-10 Phase B L3 cell ($\sigma = 1.31$ \Mpp{}).
+
+\textbf{Permanent guard.}\quad Schema version 3 of
+\texttt{Final\_Exp.json} carries the
+$\langle\mathrm{val\_acc}\rangle \pm \sigma$ pair on every multi-seed
+cell. The dashboard renders the variance band by default.

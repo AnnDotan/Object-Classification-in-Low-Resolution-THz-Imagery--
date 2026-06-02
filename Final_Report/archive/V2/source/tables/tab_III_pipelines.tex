@@ -1,0 +1,115 @@
+\begin{table}[htbp]
+\centering
+\caption{Mean PSNR and SSIM per degradation pipeline. Each value is computed over a fixed deterministic 256-sample validation subset using torchmetrics with data\_range=1, sample seed offset = $2 \times 10^{7}$, clean reference upsampled to $224 \times 224$ by bilinear interpolation.}
+\label{tab:pipelines}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llllrr}
+\toprule
+Dataset & Phase & Level & Axis & PSNR (dB) & SSIM \\
+\midrule
+CIFAR-10 & B & L1 & -- & 21.23 $\pm$ 1.54 & 0.801 $\pm$ 0.041 \\
+CIFAR-10 & B & L2 & -- & 17.54 $\pm$ 1.32 & 0.697 $\pm$ 0.059 \\
+CIFAR-10 & B & L3 & -- & 14.87 $\pm$ 1.41 & 0.635 $\pm$ 0.078 \\
+CIFAR-10 & B & L4 & -- & 13.10 $\pm$ 1.41 & 0.601 $\pm$ 0.087 \\
+CIFAR-10 & B & L5 & -- & 10.85 $\pm$ 1.81 & 0.566 $\pm$ 0.110 \\
+CIFAR-10 & B2 & L1 & -- & 19.50 $\pm$ 2.31 & 0.816 $\pm$ 0.054 \\
+CIFAR-10 & B2 & L2 & -- & 17.25 $\pm$ 1.88 & 0.733 $\pm$ 0.067 \\
+CIFAR-10 & B2 & L3 & -- & 15.24 $\pm$ 1.72 & 0.673 $\pm$ 0.079 \\
+CIFAR-10 & B2 & L4 & -- & 14.18 $\pm$ 1.86 & 0.652 $\pm$ 0.086 \\
+CIFAR-10 & B2 & L5 & -- & 12.40 $\pm$ 2.50 & 0.624 $\pm$ 0.108 \\
+CIFAR-10 & B2nr & L3 & -- & 15.24 $\pm$ 1.72 & 0.673 $\pm$ 0.079 \\
+CIFAR-10 & C & L1 & Blur & 41.98 $\pm$ 2.54 & 0.983 $\pm$ 0.007 \\
+CIFAR-10 & C & L1 & Noise & 28.60 $\pm$ 0.42 & 0.841 $\pm$ 0.021 \\
+CIFAR-10 & C & L1 & Resolution & 30.78 $\pm$ 2.70 & 0.917 $\pm$ 0.035 \\
+CIFAR-10 & C & L1 & S\&P & 21.66 $\pm$ 1.10 & 0.858 $\pm$ 0.023 \\
+CIFAR-10 & C & L1 & Saturation & 36.45 $\pm$ 2.39 & 0.975 $\pm$ 0.010 \\
+CIFAR-10 & C & L2 & Blur & 33.58 $\pm$ 2.59 & 0.952 $\pm$ 0.020 \\
+CIFAR-10 & C & L2 & Noise & 23.34 $\pm$ 0.36 & 0.642 $\pm$ 0.038 \\
+CIFAR-10 & C & L2 & Resolution & 25.33 $\pm$ 2.65 & 0.845 $\pm$ 0.060 \\
+CIFAR-10 & C & L2 & S\&P & 18.61 $\pm$ 0.87 & 0.755 $\pm$ 0.032 \\
+CIFAR-10 & C & L2 & Saturation & 31.34 $\pm$ 3.42 & 0.968 $\pm$ 0.014 \\
+CIFAR-10 & C & L3 & Blur & 27.22 $\pm$ 2.54 & 0.885 $\pm$ 0.045 \\
+CIFAR-10 & C & L3 & Noise & 20.12 $\pm$ 0.42 & 0.489 $\pm$ 0.047 \\
+CIFAR-10 & C & L3 & Resolution & 21.75 $\pm$ 2.64 & 0.784 $\pm$ 0.079 \\
+CIFAR-10 & C & L3 & S\&P & 16.38 $\pm$ 0.70 & 0.635 $\pm$ 0.035 \\
+CIFAR-10 & C & L3 & Saturation & 27.94 $\pm$ 4.23 & 0.958 $\pm$ 0.022 \\
+CIFAR-10 & C & L4 & Blur & 23.63 $\pm$ 2.52 & 0.822 $\pm$ 0.066 \\
+CIFAR-10 & C & L4 & Noise & 17.87 $\pm$ 0.44 & 0.381 $\pm$ 0.050 \\
+CIFAR-10 & C & L4 & Resolution & 19.42 $\pm$ 2.67 & 0.745 $\pm$ 0.091 \\
+CIFAR-10 & C & L4 & S\&P & 14.96 $\pm$ 0.60 & 0.538 $\pm$ 0.038 \\
+CIFAR-10 & C & L4 & Saturation & 25.41 $\pm$ 4.72 & 0.945 $\pm$ 0.033 \\
+CIFAR-10 & C & L5 & Blur & 21.06 $\pm$ 2.52 & 0.772 $\pm$ 0.082 \\
+CIFAR-10 & C & L5 & Noise & 15.49 $\pm$ 0.43 & 0.277 $\pm$ 0.048 \\
+CIFAR-10 & C & L5 & Resolution & 15.88 $\pm$ 2.82 & 0.692 $\pm$ 0.109 \\
+CIFAR-10 & C & L5 & S\&P & 13.88 $\pm$ 0.58 & 0.456 $\pm$ 0.041 \\
+CIFAR-10 & C & L5 & Saturation & 24.17 $\pm$ 4.93 & 0.936 $\pm$ 0.041 \\
+CIFAR-10 & C2 & L1 & Blur & 24.67 $\pm$ 5.66 & 0.943 $\pm$ 0.040 \\
+CIFAR-10 & C2 & L1 & Resolution & 23.11 $\pm$ 3.97 & 0.883 $\pm$ 0.050 \\
+CIFAR-10 & C2 & L1 & S\&P & 19.27 $\pm$ 2.05 & 0.824 $\pm$ 0.043 \\
+CIFAR-10 & C2 & L2 & Blur & 23.74 $\pm$ 4.42 & 0.915 $\pm$ 0.044 \\
+CIFAR-10 & C2 & L2 & Resolution & 21.22 $\pm$ 3.09 & 0.819 $\pm$ 0.068 \\
+CIFAR-10 & C2 & L2 & S\&P & 17.19 $\pm$ 1.43 & 0.724 $\pm$ 0.044 \\
+CIFAR-10 & C2 & L3 & Blur & 22.05 $\pm$ 3.35 & 0.855 $\pm$ 0.057 \\
+CIFAR-10 & C2 & L3 & Resolution & 19.34 $\pm$ 2.65 & 0.763 $\pm$ 0.082 \\
+CIFAR-10 & C2 & L3 & S\&P & 15.46 $\pm$ 1.03 & 0.609 $\pm$ 0.044 \\
+CIFAR-10 & C2 & L4 & Blur & 20.43 $\pm$ 2.77 & 0.798 $\pm$ 0.071 \\
+CIFAR-10 & C2 & L4 & Resolution & 17.79 $\pm$ 2.47 & 0.729 $\pm$ 0.092 \\
+CIFAR-10 & C2 & L4 & S\&P & 14.28 $\pm$ 0.84 & 0.516 $\pm$ 0.044 \\
+CIFAR-10 & C2 & L5 & Blur & 18.92 $\pm$ 2.46 & 0.753 $\pm$ 0.084 \\
+CIFAR-10 & C2 & L5 & Resolution & 15.08 $\pm$ 2.49 & 0.681 $\pm$ 0.108 \\
+CIFAR-10 & C2 & L5 & S\&P & 13.35 $\pm$ 0.74 & 0.437 $\pm$ 0.045 \\
+MNIST & B & L1 & -- & 19.56 $\pm$ 1.75 & 0.577 $\pm$ 0.030 \\
+MNIST & B & L2 & -- & 15.50 $\pm$ 1.30 & 0.423 $\pm$ 0.039 \\
+MNIST & B & L3 & -- & 12.58 $\pm$ 1.30 & 0.318 $\pm$ 0.043 \\
+MNIST & B & L4 & -- & 10.90 $\pm$ 1.31 & 0.248 $\pm$ 0.048 \\
+MNIST & B & L5 & -- & 9.02 $\pm$ 1.96 & 0.247 $\pm$ 0.072 \\
+MNIST & B2 & L1 & -- & 19.81 $\pm$ 1.56 & 0.864 $\pm$ 0.027 \\
+MNIST & B2 & L2 & -- & 16.09 $\pm$ 1.45 & 0.737 $\pm$ 0.052 \\
+MNIST & B2 & L3 & -- & 13.05 $\pm$ 1.54 & 0.586 $\pm$ 0.077 \\
+MNIST & B2 & L4 & -- & 11.41 $\pm$ 1.38 & 0.490 $\pm$ 0.085 \\
+MNIST & B2 & L5 & -- & 9.60 $\pm$ 2.42 & 0.419 $\pm$ 0.121 \\
+MNIST & B2nr & L3 & -- & 13.05 $\pm$ 1.54 & 0.586 $\pm$ 0.077 \\
+MNIST & C & L1 & Blur & 36.55 $\pm$ 1.49 & 0.976 $\pm$ 0.006 \\
+MNIST & C & L1 & Noise & 29.48 $\pm$ 0.74 & 0.601 $\pm$ 0.027 \\
+MNIST & C & L1 & Resolution & 27.18 $\pm$ 1.51 & 0.927 $\pm$ 0.017 \\
+MNIST & C & L1 & S\&P & 19.86 $\pm$ 1.20 & 0.888 $\pm$ 0.022 \\
+MNIST & C & L1 & Saturation & 32.35 $\pm$ 1.64 & 0.963 $\pm$ 0.010 \\
+MNIST & C & L2 & Blur & 29.67 $\pm$ 1.21 & 0.939 $\pm$ 0.012 \\
+MNIST & C & L2 & Noise & 25.36 $\pm$ 0.30 & 0.480 $\pm$ 0.033 \\
+MNIST & C & L2 & Resolution & 21.05 $\pm$ 1.58 & 0.847 $\pm$ 0.036 \\
+MNIST & C & L2 & S\&P & 16.93 $\pm$ 0.96 & 0.820 $\pm$ 0.030 \\
+MNIST & C & L2 & Saturation & 32.35 $\pm$ 1.64 & 0.963 $\pm$ 0.010 \\
+MNIST & C & L3 & Blur & 22.34 $\pm$ 1.20 & 0.819 $\pm$ 0.037 \\
+MNIST & C & L3 & Noise & 22.23 $\pm$ 0.21 & 0.413 $\pm$ 0.033 \\
+MNIST & C & L3 & Resolution & 16.37 $\pm$ 1.23 & 0.730 $\pm$ 0.055 \\
+MNIST & C & L3 & S\&P & 14.69 $\pm$ 0.71 & 0.736 $\pm$ 0.033 \\
+MNIST & C & L3 & Saturation & 32.36 $\pm$ 1.64 & 0.963 $\pm$ 0.010 \\
+MNIST & C & L4 & Blur & 18.18 $\pm$ 1.19 & 0.674 $\pm$ 0.062 \\
+MNIST & C & L4 & Noise & 19.86 $\pm$ 0.20 & 0.366 $\pm$ 0.032 \\
+MNIST & C & L4 & Resolution & 13.89 $\pm$ 1.19 & 0.645 $\pm$ 0.070 \\
+MNIST & C & L4 & S\&P & 13.24 $\pm$ 0.60 & 0.663 $\pm$ 0.034 \\
+MNIST & C & L4 & Saturation & 32.36 $\pm$ 1.64 & 0.963 $\pm$ 0.010 \\
+MNIST & C & L5 & Blur & 15.50 $\pm$ 1.25 & 0.496 $\pm$ 0.085 \\
+MNIST & C & L5 & Noise & 17.16 $\pm$ 0.19 & 0.315 $\pm$ 0.029 \\
+MNIST & C & L5 & Resolution & 11.12 $\pm$ 1.80 & 0.507 $\pm$ 0.107 \\
+MNIST & C & L5 & S\&P & 12.13 $\pm$ 0.53 & 0.596 $\pm$ 0.035 \\
+MNIST & C & L5 & Saturation & 32.36 $\pm$ 1.64 & 0.963 $\pm$ 0.010 \\
+MNIST & C2 & L1 & Blur & 36.56 $\pm$ 1.49 & 0.976 $\pm$ 0.006 \\
+MNIST & C2 & L1 & Resolution & 27.18 $\pm$ 1.51 & 0.927 $\pm$ 0.017 \\
+MNIST & C2 & L1 & S\&P & 19.86 $\pm$ 1.20 & 0.888 $\pm$ 0.022 \\
+MNIST & C2 & L2 & Blur & 29.67 $\pm$ 1.21 & 0.939 $\pm$ 0.012 \\
+MNIST & C2 & L2 & Resolution & 21.05 $\pm$ 1.58 & 0.847 $\pm$ 0.036 \\
+MNIST & C2 & L2 & S\&P & 16.93 $\pm$ 0.96 & 0.820 $\pm$ 0.030 \\
+MNIST & C2 & L3 & Blur & 22.34 $\pm$ 1.20 & 0.819 $\pm$ 0.037 \\
+MNIST & C2 & L3 & Resolution & 16.37 $\pm$ 1.23 & 0.730 $\pm$ 0.055 \\
+MNIST & C2 & L3 & S\&P & 14.69 $\pm$ 0.71 & 0.736 $\pm$ 0.033 \\
+MNIST & C2 & L4 & Blur & 18.18 $\pm$ 1.19 & 0.674 $\pm$ 0.062 \\
+MNIST & C2 & L4 & Resolution & 13.89 $\pm$ 1.19 & 0.645 $\pm$ 0.070 \\
+MNIST & C2 & L4 & S\&P & 13.24 $\pm$ 0.60 & 0.663 $\pm$ 0.034 \\
+MNIST & C2 & L5 & Blur & 15.50 $\pm$ 1.25 & 0.496 $\pm$ 0.085 \\
+MNIST & C2 & L5 & Resolution & 11.12 $\pm$ 1.80 & 0.507 $\pm$ 0.107 \\
+MNIST & C2 & L5 & S\&P & 12.13 $\pm$ 0.53 & 0.596 $\pm$ 0.035 \\
+\bottomrule
+\end{tabular}
+\end{table}

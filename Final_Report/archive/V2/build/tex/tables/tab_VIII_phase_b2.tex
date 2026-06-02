@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase B2 (THz-protocol simplification, saturation $=0$, noise $=0$) and Phase B2-nr (L3 only, no regularization) validation accuracy (\%).}
+\label{tab:phase_b2}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lllrrrrr}
+\toprule
+Model & Dataset & Arm & L1 & L2 & L3 & L4 & L5 \\
+\midrule
+ResNet50 & CIFAR-10 & B2 (T3) & 74.96 & 55.32 & 41.09 $\pm$ 0.45 & 32.66 & 24.86 \\
+ResNet50 & CIFAR-10 & B2nr & -- & -- & 40.31 $\pm$ 0.41 & -- & -- \\
+ResNet50 & MNIST & B2 (T3) & 98.90 & 97.14 & 84.88 $\pm$ 0.49 & 63.00 & 34.84 \\
+ResNet50 & MNIST & B2nr & -- & -- & 85.74 $\pm$ 0.04 & -- & -- \\
+DenseNet121 & CIFAR-10 & B2 (T3) & 73.98 & 56.68 & 42.41 $\pm$ 0.93 & 34.70 & 24.88 \\
+DenseNet121 & CIFAR-10 & B2nr & -- & -- & 40.75 $\pm$ 0.32 & -- & -- \\
+DenseNet121 & MNIST & B2 (T3) & 98.86 & 97.62 & 86.23 $\pm$ 0.18 & 66.30 & 35.22 \\
+DenseNet121 & MNIST & B2nr & -- & -- & 85.70 $\pm$ 0.56 & -- & -- \\
+TransNeXt-tiny & CIFAR-10 & B2 (T3) & 86.52 & 68.20 & 46.43 $\pm$ 0.02 & 36.46 & 26.50 \\
+TransNeXt-tiny & CIFAR-10 & B2nr & -- & -- & 43.57 $\pm$ 0.27 & -- & -- \\
+TransNeXt-tiny & MNIST & B2 (T3) & 99.18 & 97.62 & 85.67 $\pm$ 0.25 & 65.24 & 34.94 \\
+TransNeXt-tiny & MNIST & B2nr & -- & -- & 84.61 $\pm$ 0.28 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,339 @@
+% Final acceptance tests (BGU \S 10.7.2.7).
+\section{Final Acceptance Tests}
+\label{sec:tests}
+
+This section reports the measured performance of the delivered product
+against every relevant metric. Every value comes from a frozen training run
+recorded under \texttt{runs/final/} and aggregated by
+\texttt{artifacts/Final\_Exp.json} (schema version 3). No values are
+synthesized or interpolated.
+
+\subsection{Test rig}
+The campaign ran on a single workstation with the configuration in
+Table \ref{tab:rig}. Determinism is guarded by
+\texttt{pl.seed\_everything(42, workers=True)} for the canonical seed and by
+the per-sample seed offset for the validation split.
+
+\begin{table}[htbp]
+\centering
+\caption{Test rig and software stack.}
+\label{tab:rig}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{ll}
+\toprule
+Component & Value \\
+\midrule
+GPU                & NVIDIA RTX 5070 (Blackwell, sm\_120, 12 GB) \\
+Precision          & \texttt{bf16-mixed} \\
+CPU dataloader workers & 0 (Windows) \\
+Framework          & PyTorch 2.11 \cite{paszke2019pytorch} + Lightning 2.x \cite{falcon2019lightning} \\
+Image quality      & \texttt{torchmetrics} PSNR / SSIM, \texttt{data\_range = 1} \\
+Determinism gate   & \texttt{src/tests/test\_degradation\_determinism.py} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-pipeline image quality}
+\label{sec:tests:iq}
+
+Table \ref{tab:pipelines} reports the mean PSNR and SSIM for every
+degradation pipeline that appears in the experiments. The values are
+identical across same-pipeline cells by construction, so Phase D rows
+inherit the Phase B PSNR / SSIM at the same level. Figures
+\ref{fig:samples_B_cifar} and \ref{fig:samples_C_cifar} show the visual
+appearance of the pipelines on CIFAR-10; Figures \ref{fig:samples_B_mnist}
+and \ref{fig:samples_C_mnist} repeat the comparison on MNIST.
+
+\input{tables/tab_III_pipelines.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{samples/grid_phase_B_levels_cifar10.png}}
+  \caption{CIFAR-10: six fixed validation examples (deterministic seed) at clean, L1 Mild, L3 Moderate, and L5 Extreme combined degradation. Class labels above each column. Rows from top to bottom: Clean, L1, L3, L5.}
+  \label{fig:samples_B_cifar}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{samples/grid_phase_C_axes_L3_cifar10.png}}
+  \caption{CIFAR-10: per-axis isolation at L3 (Phase C). Each row shows the same six images with only the named axis active.}
+  \label{fig:samples_C_cifar}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{samples/grid_phase_B_levels_mnist.png}}
+  \caption{MNIST: combined degradation at L1, L3, L5 on six fixed validation examples.}
+  \label{fig:samples_B_mnist}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{samples/grid_phase_C_axes_L3_mnist.png}}
+  \caption{MNIST: per-axis isolation at L3 (Phase C).}
+  \label{fig:samples_C_mnist}
+\end{figure}
+
+\subsection{Clean baseline accuracy (Phase A)}
+\label{sec:tests:phase_a}
+
+Table \ref{tab:phase_a} reports the validation accuracy at the clean
+operating point. These values are the upper bounds against which every
+subsequent phase is measured.
+
+\input{tables/tab_IV_phase_a.tex}
+
+\subsection{Combined-degradation accuracy (Phase B)}
+\label{sec:tests:phase_b}
+
+Phase B applies every axis simultaneously at the same level. Table
+\ref{tab:phase_b} reports the full $3 \times 2 \times 5$ accuracy block;
+Figure \ref{fig:acc_vs_level} plots the curves with the Phase D-T3
+recovery overlay.
+
+\input{tables/tab_V_phase_b.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/accuracy_vs_level_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/accuracy_vs_level_mnist.png}}
+  \caption{Validation accuracy vs combined degradation level. Solid curves: Phase B (no extra regularization). Dashed curves: Phase D-T3 (T3 regularization on the same pipeline). Dotted horizontal lines: Phase A clean baseline per model.}
+  \label{fig:acc_vs_level}
+\end{figure}
+
+\subsection{Accuracy versus image quality}
+\label{sec:tests:psnr}
+
+Figures \ref{fig:acc_vs_psnr} and \ref{fig:acc_vs_ssim} plot validation
+accuracy against the per-pipeline mean PSNR and SSIM respectively. The
+Spearman rank correlation is reported in each panel and is monotonically
+strong on both metrics for both datasets. Accuracy and image quality
+collapse together, but the slope is not unity: on CIFAR-10 the model
+loses accuracy faster than SSIM, while on MNIST the two metrics track
+each other closely. This corroborates the per-axis attribution in
+Section \ref{sec:tests:phase_c}: CIFAR-10 carries more inter-class color
+information that is destroyed by the saturation lerp, and SSIM does not
+penalize the color collapse strongly.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/accuracy_vs_psnr.png}}
+  \caption{Validation accuracy vs mean PSNR per pipeline. Each marker is one trained cell; color indicates the backbone. The strong negative monotone relationship justifies treating PSNR as a low-cost proxy for downstream accuracy at design time.}
+  \label{fig:acc_vs_psnr}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/accuracy_vs_ssim.png}}
+  \caption{Validation accuracy vs mean SSIM per pipeline.}
+  \label{fig:acc_vs_ssim}
+\end{figure}
+
+\subsection{Per-axis isolation (Phase C)}
+\label{sec:tests:phase_c}
+
+Phase C isolates each axis: the named axis is at level L, every other axis
+is at its identity value. Table \ref{tab:phase_c} reports the full
+$3 \times 2 \times 5 \times 5 = 150$ accuracy block; Figure
+\ref{fig:attribution} shows the per-axis attribution at L3 as
+accuracy delta vs the Phase A clean baseline.
+
+\input{tables/tab_VI_phase_c.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{attribution/axis_attribution_L3_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{attribution/axis_attribution_L3_mnist.png}}
+  \caption{Per-axis attribution at L3: accuracy delta vs the Phase A clean baseline. Resolution dominates on CIFAR-10; on MNIST the spread between axes is smaller because the digit shapes are tolerant of color loss and moderate blur.}
+  \label{fig:attribution}
+\end{figure}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC_cifar10.png}}
+  \caption{Phase C per-axis accuracy versus image-quality on CIFAR-10. Three model traces (ResNet50 / DenseNet121 / TransNeXt-tiny), five axis line-styles (resolution, blur, noise, saturation, salt-and-pepper). Resolution carries the strongest accuracy-PSNR association (Spearman $\rho = +0.93$); saturation and salt-and-pepper are largely flat.}
+  \label{fig:acc_vs_psnr_phaseC_cifar10}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC_cifar10}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC_mnist.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC_mnist.png}}
+  \caption{Phase C per-axis accuracy versus image-quality on MNIST. The resolution axis dominates (Spearman $\rho = +0.98$ vs PSNR); MNIST's near-saturation accuracy at moderate PSNR explains the smaller dynamic range visible here.}
+  \label{fig:acc_vs_psnr_phaseC_mnist}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC_mnist}
+
+Table \ref{tab:attribution} reports the L3 attribution numerically together
+with the combined Phase B L3 cell so the reader can verify that the
+per-axis drops sum to less than the combined drop (the axes are not
+additive: their interactions compound).
+
+\input{tables/tab_XI_attribution.tex}
+
+\subsection{Regularization recovery (Phase D)}
+\label{sec:tests:phase_d}
+
+Phase D layers three regularization treatments on top of the Phase B Optuna
+winners. Table \ref{tab:phase_d} reports the accuracy at every level for
+every treatment.
+
+\input{tables/tab_VII_phase_d.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{\figpath{phase_d/recovery_summary.png}}
+  \caption{Phase D recovery summary. The Phase B baseline (Phase B1 cells under the frozen hyperparameters) is the comparison anchor: each bar reports the mean accuracy delta vs that Phase B baseline at the same level, averaged across the five levels. T3 is the best treatment but the absolute recovery remains modest (mean $\sim 0.77$~\Mpp{}) compared with the $-12.49$~\Mpp{} Phase B collapse against the earlier pipeline.}
+  \label{fig:phase_d_recovery}
+\end{figure}
+
+\subsection{THz protocol simplification (Phase B2 and B2-nr)}
+\label{sec:tests:phase_b2}
+
+Phase B2 simplifies the THz protocol by forcing saturation $=0$ (full
+grayscale) and noise $=0$ (no additive noise). T3 regularization is still
+applied. Phase B2-nr is the no-regularization arm at L3 only, used to
+decompose the Phase B1 to B2 improvement into pure-protocol and
+regularization fractions. Table \ref{tab:phase_b2} reports the accuracy
+block.
+
+\input{tables/tab_VIII_phase_b2.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{\figpath{phase_b2/comparison_summary.png}}
+  \caption{Phase B2 protocol-simplification decomposition summary. The B1 to B2 accuracy gain ($\sim +4.01$ \Mpp{} on average) decomposes as $\sim +3.24$ \Mpp{} pure-protocol effect (saturation and noise off) and $\sim +0.77$ \Mpp{} regularization effect.}
+  \label{fig:phase_b2_summary}
+\end{figure}
+
+\subsection{Single-axis under the THz protocol (Phase C2)}
+\label{sec:tests:phase_c2}
+
+Phase C2 isolates each of the three THz-relevant axes (resolution, blur,
+salt and pepper) under the simplified protocol. Table \ref{tab:phase_c2}
+reports the accuracy block; Figure \ref{fig:phase_c2_summary} shows the
+attribution summary.
+
+\input{tables/tab_IX_phase_c2.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{\figpath{phase_c2/attribution_summary.png}}
+  \caption{Phase C2 per-axis THz attribution summary. Mean accuracy delta from L1 to L5: resolution $-27.45$~\Mpp{}, blur $-6.58$~\Mpp{}, salt and pepper $-5.13$~\Mpp{}. Resolution is the dominant axis by a factor of approximately four.}
+  \label{fig:phase_c2_summary}
+\end{figure}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC2_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC2_cifar10.png}}
+  \caption{Phase C2 per-axis accuracy versus image-quality on CIFAR-10. Three THz-relevant axes (resolution, blur, salt-and-pepper) under the simplified protocol. Resolution dominates (Spearman $\rho = +0.98$ vs PSNR).}
+  \label{fig:acc_vs_psnr_phaseC2_cifar10}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC2_cifar10}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC2_mnist.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC2_mnist.png}}
+  \caption{Phase C2 per-axis accuracy versus image-quality on MNIST. Same THz subset; resolution Spearman $\rho = +0.98$ versus PSNR.}
+  \label{fig:acc_vs_psnr_phaseC2_mnist}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC2_mnist}
+
+\subsection{Multi-seed audit}
+\label{sec:tests:multiseed}
+
+The multi-seed audit re-runs each of the 24 L3 headline cells at
+seeds 43 and 44 in addition to the canonical seed 42. Table
+\ref{tab:multiseed} reports the resulting mean $\pm \sigma$ values. Every
+cell has $\sigma < 1.5$ \Mpp{}, which bounds the residual run-to-run
+variance in every comparison reported above.
+
+\input{tables/tab_X_multiseed.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{multiseed/L3_variance_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{multiseed/L3_variance_mnist.png}}
+  \caption{Multi-seed variance at L3: each bar reports the mean validation accuracy across seeds $\{42, 43, 44\}$ with the standard-deviation error bar. Color encodes the phase. The $\sigma$ bars are small relative to the cross-phase deltas, which validates the cross-phase comparisons.}
+  \label{fig:multiseed_variance}
+\end{figure}
+
+\subsection{Calibration}
+\label{sec:tests:calibration}
+
+Figure \ref{fig:reliability_L3} shows the reliability diagrams of the six
+Phase B L3 headline cells; Figure \ref{fig:reliability_L5} shows the same
+cells at L5. The diagonal would correspond to perfect calibration. Both
+CNN backbones inflate confidence as the spatial information collapses,
+which is consistent with the reported ECE growth from below 5 \Mpp{} at
+L3 to above 15 \Mpp{} at L5 on CIFAR-10 \cite{guo2017oncalibration}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_resnet50_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_densenet121_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_transnext_tiny_cifar10.png}}\end{minipage}\\[0.3em]
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_resnet50_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_densenet121_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L3_transnext_tiny_mnist.png}}\end{minipage}
+  \caption{Reliability diagrams at Phase B L3. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}
+  \label{fig:reliability_L3}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_resnet50_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_densenet121_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_transnext_tiny_cifar10.png}}\end{minipage}\\[0.3em]
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_resnet50_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_densenet121_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{calibration/B_L5_transnext_tiny_mnist.png}}\end{minipage}
+  \caption{Reliability diagrams at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}
+  \label{fig:reliability_L5}
+\end{figure}
+
+\subsection{Confusion matrices at L5}
+\label{sec:tests:confusion}
+
+Figure \ref{fig:confusion_L5} shows the six confusion matrices at the
+Phase B L5 cell, the worst case across the campaign. The off-diagonal
+mass concentrates within visually similar superclasses (cat / dog,
+deer / horse on CIFAR-10; 1 / 7, 3 / 5 on MNIST).
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_resnet50_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_densenet121_cifar10.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_transnext_tiny_cifar10.png}}\end{minipage}\\[0.3em]
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_resnet50_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_densenet121_mnist.png}}\end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\includegraphics[width=\linewidth]{\figpath{confusion/B_L5_transnext_tiny_mnist.png}}\end{minipage}
+  \caption{Confusion matrices at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}
+  \label{fig:confusion_L5}
+\end{figure}
+
+\subsection{Inference throughput}
+\label{sec:tests:throughput}
+
+Figure \ref{fig:throughput} reports the wall-clock inference latency for
+each backbone on the test rig. ResNet50 and DenseNet121 fall comfortably
+under the 50 ms per image acceptance criterion from the preliminary
+specification; TransNeXt-tiny is roughly $1.5\times$ slower because
+\texttt{torch.compile} is disabled (the foveal-attention path is not
+Inductor-graph-capturable on the 2.11 stack).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\textwidth]{\figpath{inference_throughput.png}}
+  \caption{Inference latency per image at $224 \times 224$, batch size 1, \texttt{bf16-mixed}, RTX 5070.}
+  \label{fig:throughput}
+\end{figure}

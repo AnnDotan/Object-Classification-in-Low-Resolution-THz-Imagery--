@@ -1,0 +1,16 @@
+\babel@toc {english}{}\relax 
+\contentsline {table}{\numberline {1}{\ignorespaces Training hyperparameters (final).}}{4}{table.caption.5}%
+\contentsline {table}{\numberline {2}{\ignorespaces Five-level synthetic degradation schedule. Blur kernel and $\sigma $ are pixel-domain values at the $224 \times 224$ model input.}}{4}{table.caption.6}%
+\contentsline {table}{\numberline {3}{\ignorespaces Experimental phases of the 402-cell campaign. Multi-seed audit replicates are layered on top of the 24 L3 headline cells.}}{6}{table.caption.7}%
+\contentsline {table}{\numberline {4}{\ignorespaces Test rig and software stack.}}{10}{table.caption.10}%
+\contentsline {table}{\numberline {5}{\ignorespaces Mean PSNR and SSIM per degradation pipeline. Each value is computed over a fixed deterministic 256-sample validation subset using torchmetrics with data\_range=1, sample seed offset = $2 \times 10^{7}$, clean reference upsampled to $224 \times 224$ by bilinear interpolation.}}{11}{table.caption.11}%
+\contentsline {table}{\numberline {6}{\ignorespaces Phase A clean-baseline accuracy (\%) on the held-out validation split. No degradation applied; values are upper bounds for every subsequent phase.}}{12}{table.caption.16}%
+\contentsline {table}{\numberline {7}{\ignorespaces Phase B (combined degradation) validation accuracy (\%). All five axes active at the same level L. Cells with $\pm $ values are multi-seed audited (seeds $\{42, 43, 44\}$).}}{12}{table.caption.17}%
+\contentsline {table}{\numberline {8}{\ignorespaces Phase C single-axis isolation validation accuracy (\%). The named axis is at level L; every other axis is at its identity value.}}{17}{table.caption.21}%
+\contentsline {table}{\numberline {9}{\ignorespaces Per-axis accuracy attribution at L3: validation-accuracy drop (percentage points) relative to the Phase A clean baseline. "Combined" is the Phase B L3 cell (all five axes active simultaneously).}}{18}{table.caption.23}%
+\contentsline {table}{\numberline {10}{\ignorespaces Phase D regularization-recovery validation accuracy (\%). T1 = architectural regularization only; T2 = label-mixing only; T3 = combination. Degradation pipeline matches Phase B at the same level.}}{18}{table.caption.24}%
+\contentsline {table}{\numberline {11}{\ignorespaces Phase B2 (THz-protocol simplification, saturation $=0$, noise $=0$) and Phase B2-nr (L3 only, no regularization) validation accuracy (\%).}}{19}{table.caption.26}%
+\contentsline {table}{\numberline {12}{\ignorespaces Phase C2 single-axis isolation under the THz protocol (saturation $=0$, noise $=0$, T3 regularization) validation accuracy (\%).}}{21}{table.caption.28}%
+\contentsline {table}{\numberline {13}{\ignorespaces Multi-seed audit: validation accuracy at L3 across seeds $\{42, 43, 44\}$, on the 24 L3 headline cells. Standard deviation is reported in percentage points.}}{22}{table.caption.30}%
+\contentsline {table}{\numberline {14}{\ignorespaces Acceptance criteria from the preliminary specification vs the measured outcome.}}{29}{table.caption.36}%
+\contentsline {table}{\numberline {15}{\ignorespaces Final cost summary (NIS-equivalent, supervisor signature required for submission).}}{32}{table.caption.38}%

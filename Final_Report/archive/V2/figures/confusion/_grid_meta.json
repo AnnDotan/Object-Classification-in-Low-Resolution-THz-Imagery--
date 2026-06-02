@@ -1,0 +1,89 @@
+{
+  "png": "Final_Report/figures/confusion/B_L5_grid.png",
+  "panels": [
+    {
+      "tag": "final_B_L5_resnet50_cifar10",
+      "model": "resnet50",
+      "dataset": "cifar10",
+      "level": 5,
+      "diag_acc": 0.1906,
+      "most_confused": {
+        "true": "truck",
+        "predicted": "automobile",
+        "count": 115
+      },
+      "row": 0,
+      "col": 0
+    },
+    {
+      "tag": "final_B_L5_resnet50_mnist",
+      "model": "resnet50",
+      "dataset": "mnist",
+      "level": 5,
+      "diag_acc": 0.28,
+      "most_confused": {
+        "true": "4",
+        "predicted": "7",
+        "count": 166
+      },
+      "row": 0,
+      "col": 1
+    },
+    {
+      "tag": "final_B_L5_densenet121_cifar10",
+      "model": "densenet121",
+      "dataset": "cifar10",
+      "level": 5,
+      "diag_acc": 0.1958,
+      "most_confused": {
+        "true": "bird",
+        "predicted": "deer",
+        "count": 163
+      },
+      "row": 1,
+      "col": 0
+    },
+    {
+      "tag": "final_B_L5_densenet121_mnist",
+      "model": "densenet121",
+      "dataset": "mnist",
+      "level": 5,
+      "diag_acc": 0.2776,
+      "most_confused": {
+        "true": "9",
+        "predicted": "1",
+        "count": 134
+      },
+      "row": 1,
+      "col": 1
+    },
+    {
+      "tag": "final_B_L5_transnext_tiny_cifar10",
+      "model": "transnext_tiny",
+      "dataset": "cifar10",
+      "level": 5,
+      "diag_acc": 0.201,
+      "most_confused": {
+        "true": "deer",
+        "predicted": "bird",
+        "count": 137
+      },
+      "row": 2,
+      "col": 0
+    },
+    {
+      "tag": "final_B_L5_transnext_tiny_mnist",
+      "model": "transnext_tiny",
+      "dataset": "mnist",
+      "level": 5,
+      "diag_acc": 0.2748,
+      "most_confused": {
+        "true": "4",
+        "predicted": "7",
+        "count": 217
+      },
+      "row": 2,
+      "col": 1
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{Per-axis accuracy attribution at L3: validation-accuracy drop (percentage points) relative to the Phase A clean baseline. "Combined" is the Phase B L3 cell (all five axes active simultaneously).}
+\label{tab:attribution}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrrr}
+\toprule
+Model & Dataset & Resolution & Blur & Noise & S\&P & Saturation & Combined (B L3) \\
+\midrule
+ResNet50 & CIFAR-10 & -26.72 & -8.40 & -17.12 & -8.66 & -2.62 & -59.32 \\
+ResNet50 & MNIST & -5.66 & +0.04 & -0.04 & -0.26 & +0.22 & -20.28 \\
+DenseNet121 & CIFAR-10 & -25.88 & -7.12 & -14.02 & -5.60 & -1.90 & -53.96 \\
+DenseNet121 & MNIST & -5.70 & -0.34 & -0.06 & -0.24 & -0.04 & -17.34 \\
+TransNeXt-tiny & CIFAR-10 & -18.00 & -2.68 & -8.24 & -2.16 & -0.10 & -58.64 \\
+TransNeXt-tiny & MNIST & -6.76 & -0.10 & +0.00 & -0.42 & -0.06 & -19.30 \\
+\bottomrule
+\end{tabular}
+\end{table}

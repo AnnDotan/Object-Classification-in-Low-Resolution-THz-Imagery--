@@ -1,0 +1,6 @@
+level,name,low_res,blur_kernel,blur_sigma,noise_std,salt_pepper,saturation
+1,Mild,18,13,2.5,0.04,0.03,0.95
+2,Light,12,25,5.0,0.08,0.06,0.65
+3,Moderate,8,41,8.0,0.12,0.1,0.4
+4,Severe,6,61,12.0,0.16,0.14,0.15
+5,Extreme,3,91,18.0,0.22,0.18,0.0

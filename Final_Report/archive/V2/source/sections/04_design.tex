@@ -1,0 +1,233 @@
+% Engineering design (BGU \S 10.7.2.6).
+\section{Engineering Design}
+\label{sec:design}
+
+This section documents the chosen approach in detail. The system block
+diagram is shown in Figure \ref{fig:system}; the degradation pipeline that
+drives the experimental program is shown in Figure \ref{fig:pipeline}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{\figpath{block_diagrams/system_overview.png}}
+  \caption{System block diagram. An input image from CIFAR-10 or MNIST passes through the THz-like degradation pipeline, is normalized to the ImageNet distribution, is fed to one of the three backbones, and is classified by a global-average-pooling head.}
+  \label{fig:system}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{\figpath{block_diagrams/pipeline_overview.png}}
+  \caption{Pipeline version 2. The saturation lerp runs first so the grayscale luminance is computed from the un-degraded source. Additive noise and salt-and-pepper operate at the pre-upsample resolution; bicubic upsample spreads each stochastic sample over the kernel footprint, producing sensor-grain noise structure rather than fine pixel-level grain.}
+  \label{fig:pipeline}
+\end{figure}
+
+\subsection{Mathematical model}
+\label{sec:design:math}
+
+\textbf{Degradation operator.}\quad
+Let $x \in [0, 1]^{3 \times H \times W}$ be a clean image and let
+$\phi = (s, r, \sigma_n, K_b, \sigma_b, p)$ denote the degradation
+parameters: saturation $s \in [0, 1]$, low-resolution target $r \in \mathbb{N}$,
+noise standard deviation $\sigma_n \geq 0$, blur kernel size $K_b$, blur
+sigma $\sigma_b$, and salt-and-pepper amount $p \in [0, 1]$. Define the
+composite operator
+\begin{equation}
+  \mathcal{D}_{\phi}(x) = \mathrm{Clip}_{[0,1]} \circ \mathrm{Blur}_{K_b, \sigma_b} \circ \mathrm{Up}_{224} \circ \mathrm{SP}_p \circ \mathrm{N}_{\sigma_n} \circ \mathrm{Down}_r \circ \mathrm{Sat}_s,
+  \label{eq:D}
+\end{equation}
+where $\mathrm{Sat}_s(x) = (1 - s)\, \mathrm{Gray}(x) + s \, x$ with
+$\mathrm{Gray}(x) = 0.2989\,x_R + 0.5870\,x_G + 0.1140\,x_B$ (BT.601 luma);
+$\mathrm{Down}_r$ is bilinear downsample to $r \times r$;
+$\mathrm{N}_{\sigma_n}$ adds independent Gaussian noise of standard
+deviation $\sigma_n$; $\mathrm{SP}_p$ flips a $p/2$ fraction of pixels to 1
+and another $p/2$ fraction to 0; $\mathrm{Up}_{224}$ is bicubic upsample
+to $224 \times 224$; and $\mathrm{Blur}_{K_b, \sigma_b}$ is a separable
+Gaussian blur with kernel size $K_b$ and standard deviation $\sigma_b$.
+
+\textbf{Classifier.}\quad
+A backbone $f_{\theta}(\cdot)$ produces a logit vector
+$z = f_{\theta}(\mathcal{D}_{\phi}(x))$. With label smoothing $\alpha = 0.1$,
+the training objective is the smoothed cross-entropy
+\begin{equation}
+  \mathcal{L}(\theta) = -\sum_{c=1}^{C} \tilde y_c \log \mathrm{softmax}(z)_c,
+  \qquad
+  \tilde y_c = (1 - \alpha)\, \mathbf{1}[c = y] + \frac{\alpha}{C}.
+  \label{eq:loss}
+\end{equation}
+
+\textbf{Backbones.}\quad The three architectures expose different inductive
+biases for the low-resolution regime.
+
+ResNet50 \cite{he2016resnet} combines features via additive identity skips:
+\begin{equation}
+  y_\ell = F_\ell(x_\ell; \theta_\ell) + x_\ell.
+  \label{eq:resnet}
+\end{equation}
+The summation reuses previous-layer features but collapses them into the
+running representation; subtle low-level cues can be washed out when the
+later residual blocks dominate.
+
+DenseNet121 \cite{huang2017densenet} concatenates the feature maps of every
+preceding layer in the same dense block:
+\begin{equation}
+  x_\ell = H_\ell([x_0, x_1, \ldots, x_{\ell-1}]),
+  \label{eq:densenet}
+\end{equation}
+where $H_\ell$ is a BatchNorm-ReLU-Conv$_{3 \times 3}$ composite. The
+collective knowledge of every preceding layer is explicitly preserved, which
+is the property the preliminary spec hypothesized would help under
+information loss.
+
+TransNeXt-tiny \cite{shi2024transnext} uses pixel-focused attention with
+foveal and peripheral kernels:
+\begin{equation}
+  \mathrm{Attn}(Q, K, V) = \mathrm{softmax}\!\left(\frac{Q K^{\top}}{\sqrt{d_k}} + M_{\text{focal}}\right) V,
+  \label{eq:transnext}
+\end{equation}
+where $M_{\text{focal}}$ is a window-shaped mask that down-weights all but
+the nearest neighbors of each query, while a parallel global pooling stream
+contributes a coarse-grained peripheral signal. The biomimetic prior is
+designed to retain accuracy when the global shape is corrupted but local
+texture is partially preserved.
+
+\subsection{Image-quality metrics}
+\label{sec:design:psnr}
+
+Each degradation pipeline is anchored to a $\mathrm{PSNR}$ and $\mathrm{SSIM}$
+probe so that cross-phase comparisons sit on a physical scale.
+
+\textbf{PSNR} \cite{huynh2008psnr} between a reference image $x$ and a
+degraded image $\tilde x = \mathcal{D}_{\phi}(x)$, both in $[0, 1]^{3 \times 224 \times 224}$, is
+\begin{equation}
+  \mathrm{PSNR}(x, \tilde x) = 10 \log_{10} \frac{1}{\mathrm{MSE}(x, \tilde x)},
+  \qquad
+  \mathrm{MSE}(x, \tilde x) = \frac{1}{3 \cdot 224^2} \sum_{c, i, j} (x_{c,i,j} - \tilde x_{c,i,j})^2.
+  \label{eq:psnr}
+\end{equation}
+
+\textbf{SSIM} \cite{wang2004ssim} is the structural similarity index. For
+two local patches $u, v$ with means $\mu_u, \mu_v$, variances
+$\sigma_u^2, \sigma_v^2$, and covariance $\sigma_{uv}$,
+\begin{equation}
+  \mathrm{SSIM}(u, v) = \frac{(2 \mu_u \mu_v + C_1)(2 \sigma_{uv} + C_2)}{(\mu_u^2 + \mu_v^2 + C_1)(\sigma_u^2 + \sigma_v^2 + C_2)},
+  \label{eq:ssim}
+\end{equation}
+with $C_1, C_2$ small stabilizers; the full-image score is the spatial mean
+over an $11 \times 11$ Gaussian window. The implementation uses
+\texttt{torchmetrics.image.StructuralSimilarityIndexMeasure} with
+\texttt{data\_range = 1}.
+
+\textbf{Reference construction.}\quad The PSNR / SSIM reference is the
+input image upsampled to $224 \times 224$ by bilinear interpolation. The
+choice matches what a hypothetical clean-image classifier would see if the
+degradation pipeline were short-circuited; it does not include the
+saturation lerp, so the measurements isolate the spatial loss from the
+color loss. Both choices are documented in the figure captions in
+Section \ref{sec:tests} so the reader can interpret the absolute scale
+correctly.
+
+\textbf{Probe protocol.}\quad For each pipeline the probe iterates over
+the first 256 validation indices, applies the pipeline with seed offset
+$2 \times 10^7$ (chosen disjoint from the training and validation streams),
+and aggregates the mean and standard deviation. The 256-sample size
+balances probe runtime against the standard error of the mean (below
+$0.1$ dB on the L3 pipelines).
+
+\subsection{Optimizer and learning-rate schedule}
+\label{sec:design:optim}
+
+All cells train with AdamW \cite{loshchilov2017adamw} under decoupled
+weight decay. With $g_t = \nabla_\theta \mathcal{L}(\theta_{t-1})$ the
+loss gradient at step $t$, the running first and second moment estimates
+are
+\begin{equation}
+  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t,
+  \qquad
+  v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^{2},
+  \label{eq:adamw_moments}
+\end{equation}
+and the parameter update is
+\begin{equation}
+  \theta_t = \theta_{t-1} - \eta_t \!\left(
+    \frac{m_t / (1 - \beta_1^{t})}{\sqrt{v_t / (1 - \beta_2^{t})} + \epsilon}
+    + \lambda \, \theta_{t-1}
+  \right),
+  \label{eq:adamw}
+\end{equation}
+with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$, and weight
+decay $\lambda \in \{10^{-4}, 5 \times 10^{-2}\}$ (CNN / TransNeXt).
+Gradient clipping caps the global norm at $1.0$.
+
+The learning rate $\eta_t$ follows a cosine annealing schedule
+\cite{loshchilov2017sgdr} between $\eta_{\max}$ and $\eta_{\min}$ over a
+total budget of $T$ training steps:
+\begin{equation}
+  \eta_t = \eta_{\min} + \tfrac{1}{2}\, (\eta_{\max} - \eta_{\min}) \!\left(
+    1 + \cos\!\left( \frac{t}{T}\, \pi \right)
+  \right).
+  \label{eq:cosine}
+\end{equation}
+Differential learning rates apply $\eta_{\max}$ separately to the
+classifier head ($10^{-3}$ on CNNs, $5 \times 10^{-4}$ on TransNeXt-tiny)
+and to the backbone parameters ($10^{-4}$ on CNNs, $5 \times 10^{-5}$ on
+TransNeXt-tiny). Training uses bf16-mixed precision on the RTX 5070 host
+and runs for at most 60 epochs with early stopping at patience 10 on
+validation accuracy.
+
+\subsection{Calibration metric}
+\label{sec:design:ece}
+
+Expected calibration error (ECE) \cite{naeini2015ece, guo2017oncalibration}
+bins the predicted probabilities into $M = 15$ equal-width bins and computes
+\begin{equation}
+  \mathrm{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{N} \left| \mathrm{acc}(B_m) - \mathrm{conf}(B_m) \right|,
+  \label{eq:ece}
+\end{equation}
+where $B_m$ is the set of predictions whose top-1 probability falls in bin
+$m$, $\mathrm{acc}(B_m)$ is the empirical accuracy of $B_m$, and
+$\mathrm{conf}(B_m)$ is the mean predicted probability in $B_m$. A
+well-calibrated model has $\mathrm{ECE} \to 0$.
+
+\subsection{Regularization treatments (Phase D)}
+\label{sec:design:phase_d}
+
+Phase D layers three regularization treatments on top of the frozen
+Phase B Optuna winners:
+
+\textbf{T1.}\quad Dropout (CNN, rate 0.2) or stochastic-depth drop-path
+\cite{huang2016stochastic} (TransNeXt, rate 0.2). Architectural regularization
+only; no label-side intervention.
+
+\textbf{T2.}\quad mixup \cite{zhang2018mixup} with $\alpha = 0.2$;
+label-mixing only.
+
+\textbf{T3.}\quad The combination: dropout (or drop-path)
+$+$ mixup $\alpha = 0.2$ $+$ CutMix \cite{yun2019cutmix} $\alpha = 1.0$.
+The kitchen-sink combination defines the upper bound of training-side
+recovery measurable inside the design space.
+
+\subsection{Software architecture}
+\label{sec:design:sw}
+
+The implementation is layered:
+
+\begin{itemize}
+  \item \texttt{src/data/} hosts the single source of truth for the
+        degradation curve (\texttt{degradation\_levels.py}) and the operator
+        (\texttt{degrade.py}). Both modules are imported verbatim into the
+        training and the image-quality probe paths, which is the property
+        that guarantees the measured PSNR / SSIM correspond to the pixels
+        the model actually sees.
+  \item \texttt{src/lightning/} hosts the training engine
+        (\texttt{THzClassifier}, \texttt{THzDataModule}) built on PyTorch
+        Lightning \cite{falcon2019lightning}.
+  \item \texttt{src/models/} hosts the backbone wrappers; the TransNeXt
+        weights are auto-downloaded from the public checkpoint and cached
+        under \texttt{artifacts/weights/}.
+  \item \texttt{scripts/} hosts the campaign drivers
+        (\texttt{run\_all\_phases.py}) and the diagnostics builders.
+  \item \texttt{Final\_Report/scripts/} hosts the figure / table / sample
+        generators that produce this report. Every artifact under
+        \texttt{Final\_Report/} is reproducible by running
+        \texttt{python Final\_Report/scripts/build\_*.py} from a clean
+        checkout.
+\end{itemize}

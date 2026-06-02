@@ -1,0 +1,56 @@
+% Abstract (English then Hebrew). Per BGU \S 10.7.2.3.
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+\noindent\textbf{Background.}\quad
+Terahertz (THz) imaging sensors produce frames that are simultaneously low
+resolution, low signal-to-noise, and colorless. ImageNet-pretrained classifiers,
+which rely on fine textures and saturated chroma, lose accuracy quickly under
+those conditions, but the magnitude and the mechanism of the loss are not
+documented quantitatively in the literature.
+
+\noindent\textbf{Aim.}\quad
+Measure how three representative deep architectures (a residual CNN, a densely
+connected CNN, and a foveal vision transformer) degrade under controlled
+synthetic THz-like degradation, decompose the loss into per-axis contributions,
+and quantify how much of it can be recovered by training-time regularization.
+
+\noindent\textbf{Methods.}\quad
+The 402-cell campaign trains ResNet50, DenseNet121 and TransNeXt-tiny on
+CIFAR-10 and MNIST under a five-level degradation curve (saturation,
+downsample, blur, additive noise, salt and pepper). Seven phases isolate the
+effects: A clean baseline, B combined, C single-axis, D regularization
+recovery, B2 / B2-nr THz protocol simplification, and C2 single-axis under the
+THz protocol. A 48-replicate multi-seed audit ($\{42, 43, 44\}$) on the 24 L3
+headline cells bounds reproducibility. Every degradation pipeline is anchored
+to a deterministic 256-image PSNR / SSIM probe so the cross-phase comparison
+sits on a physical scale.
+
+\noindent\textbf{Findings.}\quad
+On CIFAR-10 the combined L3 cell costs roughly 12.5 \Mpp{} of accuracy
+relative to the clean baseline; regularization (T3 in Phase D) recovers
+$\sim$0.77 \Mpp{} of that drop. Resolution dominates the per-axis attribution
+by a factor of $\sim$4 (mean L1 to L5 effect: $-27.45$ \Mpp{} vs $-6.58$ for
+blur and $-5.13$ for salt and pepper). The multi-seed audit confirms
+$\sigma < 1.5$ \Mpp{} on every L3 headline cell. Expected calibration error
+inflates from below 5 \Mpp{} at L3 to above 15 \Mpp{} at L5 on CIFAR-10:
+confidence is preserved even as the spatial signal collapses.
+
+\noindent\textbf{Conclusions.}\quad
+The Phase B accuracy collapse is best modeled as an information bottleneck,
+not as an overfit. The B2 / B2-nr decomposition shows that THz-protocol
+simplification recovers $\sim$3.24 \Mpp{} of pure-protocol headroom on top of
+the regularization recovery. Single-axis attribution implies that any THz
+deployment should invest in resolution restoration before denoising or
+deblurring.
+
+\noindent\textbf{Keywords.}\quad
+object classification, deep learning, low resolution, THz imaging, robustness,
+PSNR, SSIM, calibration, transformer, residual network, dense network.
+
+\bigskip
+
+\noindent\textbf{Hebrew abstract.}\quad
+The Hebrew translation required by regulation \S 10.7.2.3 is supplied
+inside the DOCX, in Appendix A. Right-to-left text is rendered by Word
+natively; the LaTeX reference PDF reproduces only the English version.

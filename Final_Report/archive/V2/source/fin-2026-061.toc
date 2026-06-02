@@ -1,0 +1,58 @@
+\xpg@aux {}{english}
+\contentsline {section}{Abstract}{i}{section*.1}%
+\xpg@aux {}{hebrew}
+\xpg@aux {}{english}
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Motivation}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Problem statement}{1}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Alternative approaches considered}{1}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Contributions}{2}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Roadmap}{2}{subsection.1.5}%
+\contentsline {section}{\numberline {2}Experimental phases at a glance}{3}{section.2}%
+\contentsline {section}{\numberline {3}Final Technical Specification}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Product overview}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Inputs, outputs, interfaces}{4}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Final specification of the system}{5}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Drift from the preliminary specification}{6}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Phases of the experimental program}{7}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Engineering Design}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Mathematical model}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Image-quality metrics}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Optimizer and learning-rate schedule}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Calibration metric}{10}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Regularization treatments (Phase D)}{10}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Software architecture}{11}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Final Acceptance Tests}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Test rig}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Per-pipeline image quality}{11}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Clean baseline accuracy (Phase A)}{12}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Combined-degradation accuracy (Phase B)}{15}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Accuracy versus image quality}{15}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Per-axis isolation (Phase C)}{17}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Regularization recovery (Phase D)}{20}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}THz protocol simplification (Phase B2 and B2-nr)}{22}{subsection.5.8}%
+\contentsline {subsection}{\numberline {5.9}Single-axis under the THz protocol (Phase C2)}{22}{subsection.5.9}%
+\contentsline {subsection}{\numberline {5.10}Multi-seed audit}{22}{subsection.5.10}%
+\contentsline {subsection}{\numberline {5.11}Calibration}{22}{subsection.5.11}%
+\contentsline {subsection}{\numberline {5.12}Confusion matrices at L5}{28}{subsection.5.12}%
+\contentsline {subsection}{\numberline {5.13}Inference throughput}{28}{subsection.5.13}%
+\contentsline {section}{\numberline {6}Problems and Solutions}{28}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Vision-transformer hardware bring-up}{28}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Vision-transformer parameter budget}{29}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Per-pixel blur invisibility at $224 \times 224$}{29}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Single-seed reproducibility exposure}{30}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Cross-model robustness comparison}{30}{section.7}%
+\contentsline {subsection}{\numberline {7.1}ResNet50 robustness profile}{30}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}DenseNet121 robustness profile}{31}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}TransNeXt-tiny robustness profile}{31}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Side-by-side reading}{31}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Conclusions and Recommendations}{32}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Work summary}{32}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Plan vs achieved}{32}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Success and failure analysis vs goals}{32}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}Strengths of the chosen approach}{35}{subsection.8.4}%
+\contentsline {subsection}{\numberline {8.5}Weaknesses of the chosen approach}{35}{subsection.8.5}%
+\contentsline {subsection}{\numberline {8.6}Recommendations for continuation}{35}{subsection.8.6}%
+\contentsline {subsection}{\numberline {8.7}Cost summary}{36}{subsection.8.7}%
+\contentsline {section}{\numberline {A}Source listings}{39}{appendix.A}%
+\contentsline {section}{\numberline {B}Honoring intellectual property rights}{39}{appendix.B}%

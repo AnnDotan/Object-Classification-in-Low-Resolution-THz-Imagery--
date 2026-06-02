@@ -1,0 +1,205 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\bibstyle{IEEEtran}
+\babel@aux{english}{}
+\@writefile{toc}{\contentsline {section}{Abstract}{i}{section*.1}\protected@file@percent }
+\citation{he2016resnet}
+\citation{huang2017densenet}
+\citation{shi2024transnext}
+\citation{huynh2008psnr,wang2004ssim}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Motivation}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Problem statement}{1}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Alternative approaches considered}{1}{subsection.1.3}\protected@file@percent }
+\citation{hendrycks2021naturaladv}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Contributions}{2}{subsection.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Roadmap}{2}{subsection.1.5}\protected@file@percent }
+\citation{shi2024transnext,huang2017densenet}
+\citation{krizhevsky2009cifar10}
+\citation{lecun1998mnist}
+\citation{loshchilov2019adamw}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Final Technical Specification}{3}{section.2}\protected@file@percent }
+\newlabel{sec:spec}{{2}{3}{Final Technical Specification}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Product overview}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Inputs, outputs, interfaces}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Final specification of the system}{4}{subsection.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Training hyperparameters (final).}}{4}{table.caption.5}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:hparams}{{1}{4}{Training hyperparameters (final)}{table.caption.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Five-level synthetic degradation schedule. Blur kernel and $\sigma $ are pixel-domain values at the $224 \times 224$ model input.}}{4}{table.caption.6}\protected@file@percent }
+\newlabel{tab:levels}{{2}{4}{Five-level synthetic degradation schedule. Blur kernel and $\sigma $ are pixel-domain values at the $224 \times 224$ model input}{table.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Drift from the preliminary specification}{5}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Phases of the experimental program}{5}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Engineering Design}{5}{section.3}\protected@file@percent }
+\newlabel{sec:design}{{3}{5}{Engineering Design}{section.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Experimental phases of the 402-cell campaign. Multi-seed audit replicates are layered on top of the 24 L3 headline cells.}}{6}{table.caption.7}\protected@file@percent }
+\newlabel{tab:phase_overview}{{3}{6}{Experimental phases of the 402-cell campaign. Multi-seed audit replicates are layered on top of the 24 L3 headline cells}{table.caption.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces System block diagram. An input image from CIFAR-10 or MNIST passes through the THz-like degradation pipeline, is normalized to the ImageNet distribution, is fed to one of the three backbones, and is classified by a global-average-pooling head.}}{6}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:system}{{1}{6}{System block diagram. An input image from CIFAR-10 or MNIST passes through the THz-like degradation pipeline, is normalized to the ImageNet distribution, is fed to one of the three backbones, and is classified by a global-average-pooling head}{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Pipeline version 2 (US-017). The saturation lerp runs first so the grayscale luminance is computed from the un-degraded source. Additive noise and salt-and-pepper operate at the pre-upsample resolution; bicubic upsample spreads each stochastic sample over the kernel footprint, producing sensor-grain noise structure rather than fine pixel-level grain.}}{6}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:pipeline}{{2}{6}{Pipeline version 2 (US-017). The saturation lerp runs first so the grayscale luminance is computed from the un-degraded source. Additive noise and salt-and-pepper operate at the pre-upsample resolution; bicubic upsample spreads each stochastic sample over the kernel footprint, producing sensor-grain noise structure rather than fine pixel-level grain}{figure.caption.9}{}}
+\citation{he2016resnet}
+\citation{huang2017densenet}
+\citation{shi2024transnext}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Mathematical model}{7}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:design:math}{{3.1}{7}{Mathematical model}{subsection.3.1}{}}
+\newlabel{eq:D}{{1}{7}{Mathematical model}{equation.1}{}}
+\newlabel{eq:loss}{{2}{7}{Mathematical model}{equation.2}{}}
+\newlabel{eq:resnet}{{3}{7}{Mathematical model}{equation.3}{}}
+\newlabel{eq:densenet}{{4}{7}{Mathematical model}{equation.4}{}}
+\newlabel{eq:transnext}{{5}{7}{Mathematical model}{equation.5}{}}
+\citation{huynh2008psnr}
+\citation{wang2004ssim}
+\citation{naeini2015ece,guo2017oncalibration}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Image-quality metrics}{8}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:design:psnr}{{3.2}{8}{Image-quality metrics}{subsection.3.2}{}}
+\newlabel{eq:psnr}{{6}{8}{Image-quality metrics}{equation.6}{}}
+\newlabel{eq:ssim}{{7}{8}{Image-quality metrics}{equation.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Calibration metric}{8}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:design:ece}{{3.3}{8}{Calibration metric}{subsection.3.3}{}}
+\newlabel{eq:ece}{{8}{8}{Calibration metric}{equation.8}{}}
+\citation{huang2016stochastic}
+\citation{zhang2018mixup}
+\citation{yun2019cutmix}
+\citation{falcon2019lightning}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Regularization treatments (Phase D)}{9}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:design:phase_d}{{3.4}{9}{Regularization treatments (Phase D)}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Software architecture}{9}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:design:sw}{{3.5}{9}{Software architecture}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Final Acceptance Tests}{9}{section.4}\protected@file@percent }
+\newlabel{sec:tests}{{4}{9}{Final Acceptance Tests}{section.4}{}}
+\citation{paszke2019pytorch}
+\citation{falcon2019lightning}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Test rig}{10}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Test rig and software stack.}}{10}{table.caption.10}\protected@file@percent }
+\newlabel{tab:rig}{{4}{10}{Test rig and software stack}{table.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Per-pipeline image quality}{10}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:tests:iq}{{4.2}{10}{Per-pipeline image quality}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Clean baseline accuracy (Phase A)}{10}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:tests:phase_a}{{4.3}{10}{Clean baseline accuracy (Phase A)}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Combined-degradation accuracy (Phase B)}{10}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:tests:phase_b}{{4.4}{10}{Combined-degradation accuracy (Phase B)}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Accuracy versus image quality}{10}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:tests:psnr}{{4.5}{10}{Accuracy versus image quality}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Mean PSNR and SSIM per degradation pipeline. Each value is computed over a fixed deterministic 256-sample validation subset using torchmetrics with data\_range=1, sample seed offset = $2 \times 10^{7}$, clean reference upsampled to $224 \times 224$ by bilinear interpolation.}}{11}{table.caption.11}\protected@file@percent }
+\newlabel{tab:pipelines}{{5}{11}{Mean PSNR and SSIM per degradation pipeline. Each value is computed over a fixed deterministic 256-sample validation subset using torchmetrics with data\_range=1, sample seed offset = $2 \times 10^{7}$, clean reference upsampled to $224 \times 224$ by bilinear interpolation}{table.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces CIFAR-10: six fixed validation examples (deterministic seed) at clean, L1 Mild, L3 Moderate, and L5 Extreme combined degradation. Class labels above each column. Rows from top to bottom: Clean, L1, L3, L5.}}{12}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:samples_B_cifar}{{3}{12}{CIFAR-10: six fixed validation examples (deterministic seed) at clean, L1 Mild, L3 Moderate, and L5 Extreme combined degradation. Class labels above each column. Rows from top to bottom: Clean, L1, L3, L5}{figure.caption.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Phase A clean-baseline accuracy (\%) on the held-out validation split. No degradation applied; values are upper bounds for every subsequent phase.}}{12}{table.caption.16}\protected@file@percent }
+\newlabel{tab:phase_a}{{6}{12}{Phase A clean-baseline accuracy (\%) on the held-out validation split. No degradation applied; values are upper bounds for every subsequent phase}{table.caption.16}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Phase B (combined degradation) validation accuracy (\%). All five axes active at the same level L. Cells with $\pm $ values are multi-seed audited (seeds $\{42, 43, 44\}$).}}{12}{table.caption.17}\protected@file@percent }
+\newlabel{tab:phase_b}{{7}{12}{Phase B (combined degradation) validation accuracy (\%). All five axes active at the same level L. Cells with $\pm $ values are multi-seed audited (seeds $\{42, 43, 44\}$)}{table.caption.17}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces CIFAR-10: per-axis isolation at L3 (Phase C). Each row shows the same six images with only the named axis active.}}{13}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:samples_C_cifar}{{4}{13}{CIFAR-10: per-axis isolation at L3 (Phase C). Each row shows the same six images with only the named axis active}{figure.caption.13}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces MNIST: combined degradation at L1, L3, L5 on six fixed validation examples.}}{14}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:samples_B_mnist}{{5}{14}{MNIST: combined degradation at L1, L3, L5 on six fixed validation examples}{figure.caption.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Per-axis isolation (Phase C)}{14}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:tests:phase_c}{{4.6}{14}{Per-axis isolation (Phase C)}{subsection.4.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Regularization recovery (Phase D)}{14}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:tests:phase_d}{{4.7}{14}{Regularization recovery (Phase D)}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}THz protocol simplification (Phase B2 and B2-nr)}{14}{subsection.4.8}\protected@file@percent }
+\newlabel{sec:tests:phase_b2}{{4.8}{14}{THz protocol simplification (Phase B2 and B2-nr)}{subsection.4.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces MNIST: per-axis isolation at L3 (Phase C).}}{15}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:samples_C_mnist}{{6}{15}{MNIST: per-axis isolation at L3 (Phase C)}{figure.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Validation accuracy vs combined degradation level. Solid curves: Phase B (no extra regularization). Dashed curves: Phase D-T3 (T3 regularization on the same pipeline). Dotted horizontal lines: Phase A clean baseline per model.}}{15}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:acc_vs_level}{{7}{15}{Validation accuracy vs combined degradation level. Solid curves: Phase B (no extra regularization). Dashed curves: Phase D-T3 (T3 regularization on the same pipeline). Dotted horizontal lines: Phase A clean baseline per model}{figure.caption.18}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Validation accuracy vs mean PSNR per pipeline. Each marker is one trained cell; color indicates the backbone. The strong negative monotone relationship justifies treating PSNR as a low-cost proxy for downstream accuracy at design time.}}{16}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:acc_vs_psnr}{{8}{16}{Validation accuracy vs mean PSNR per pipeline. Each marker is one trained cell; color indicates the backbone. The strong negative monotone relationship justifies treating PSNR as a low-cost proxy for downstream accuracy at design time}{figure.caption.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Validation accuracy vs mean SSIM per pipeline.}}{16}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:acc_vs_ssim}{{9}{16}{Validation accuracy vs mean SSIM per pipeline}{figure.caption.20}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Phase C single-axis isolation validation accuracy (\%). The named axis is at level L; every other axis is at its identity value.}}{17}{table.caption.21}\protected@file@percent }
+\newlabel{tab:phase_c}{{8}{17}{Phase C single-axis isolation validation accuracy (\%). The named axis is at level L; every other axis is at its identity value}{table.caption.21}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Per-axis attribution at L3: accuracy delta vs the Phase A clean baseline. Resolution dominates on CIFAR-10; on MNIST the spread between axes is smaller because the digit shapes are tolerant of color loss and moderate blur.}}{17}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:attribution}{{10}{17}{Per-axis attribution at L3: accuracy delta vs the Phase A clean baseline. Resolution dominates on CIFAR-10; on MNIST the spread between axes is smaller because the digit shapes are tolerant of color loss and moderate blur}{figure.caption.22}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Per-axis accuracy attribution at L3: validation-accuracy drop (percentage points) relative to the Phase A clean baseline. "Combined" is the Phase B L3 cell (all five axes active simultaneously).}}{18}{table.caption.23}\protected@file@percent }
+\newlabel{tab:attribution}{{9}{18}{Per-axis accuracy attribution at L3: validation-accuracy drop (percentage points) relative to the Phase A clean baseline. "Combined" is the Phase B L3 cell (all five axes active simultaneously)}{table.caption.23}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Phase D regularization-recovery validation accuracy (\%). T1 = architectural regularization only; T2 = label-mixing only; T3 = combination. Degradation pipeline matches Phase B at the same level.}}{18}{table.caption.24}\protected@file@percent }
+\newlabel{tab:phase_d}{{10}{18}{Phase D regularization-recovery validation accuracy (\%). T1 = architectural regularization only; T2 = label-mixing only; T3 = combination. Degradation pipeline matches Phase B at the same level}{table.caption.24}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Phase D recovery summary. Each bar reports the mean accuracy delta vs the Phase B v2 baseline at the same level, averaged across the five levels. T3 is the best treatment but the absolute recovery remains modest (mean $\sim 0.77$ percentage points{}) compared with the Phase B v2 collapse vs v1 ($-12.49$ percentage points{}).}}{19}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:phase_d_recovery}{{11}{19}{Phase D recovery summary. Each bar reports the mean accuracy delta vs the Phase B v2 baseline at the same level, averaged across the five levels. T3 is the best treatment but the absolute recovery remains modest (mean $\sim 0.77$ \Mpp {}) compared with the Phase B v2 collapse vs v1 ($-12.49$ \Mpp {})}{figure.caption.25}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Phase B2 (THz-protocol simplification, saturation $=0$, noise $=0$) and Phase B2-nr (L3 only, no regularization) validation accuracy (\%).}}{19}{table.caption.26}\protected@file@percent }
+\newlabel{tab:phase_b2}{{11}{19}{Phase B2 (THz-protocol simplification, saturation $=0$, noise $=0$) and Phase B2-nr (L3 only, no regularization) validation accuracy (\%)}{table.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Phase B2 protocol-simplification decomposition summary. The B1 to B2 accuracy gain ($\sim +4.01$ percentage points{} on average) decomposes as $\sim +3.24$ percentage points{} pure-protocol effect (saturation and noise off) and $\sim +0.77$ percentage points{} regularization effect.}}{20}{figure.caption.27}\protected@file@percent }
+\newlabel{fig:phase_b2_summary}{{12}{20}{Phase B2 protocol-simplification decomposition summary. The B1 to B2 accuracy gain ($\sim +4.01$ \Mpp {} on average) decomposes as $\sim +3.24$ \Mpp {} pure-protocol effect (saturation and noise off) and $\sim +0.77$ \Mpp {} regularization effect}{figure.caption.27}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9}Single-axis under the THz protocol (Phase C2)}{20}{subsection.4.9}\protected@file@percent }
+\newlabel{sec:tests:phase_c2}{{4.9}{20}{Single-axis under the THz protocol (Phase C2)}{subsection.4.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Phase C2 per-axis THz attribution summary. Mean accuracy delta from L1 to L5: resolution $-27.45$ percentage points{}, blur $-6.58$ percentage points{}, salt and pepper $-5.13$ percentage points{}. Resolution is the dominant axis by a factor of approximately four.}}{20}{figure.caption.29}\protected@file@percent }
+\newlabel{fig:phase_c2_summary}{{13}{20}{Phase C2 per-axis THz attribution summary. Mean accuracy delta from L1 to L5: resolution $-27.45$ \Mpp {}, blur $-6.58$ \Mpp {}, salt and pepper $-5.13$ \Mpp {}. Resolution is the dominant axis by a factor of approximately four}{figure.caption.29}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.10}Multi-seed audit}{20}{subsection.4.10}\protected@file@percent }
+\newlabel{sec:tests:multiseed}{{4.10}{20}{Multi-seed audit}{subsection.4.10}{}}
+\citation{guo2017oncalibration}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Phase C2 single-axis isolation under the THz protocol (saturation $=0$, noise $=0$, T3 regularization) validation accuracy (\%).}}{21}{table.caption.28}\protected@file@percent }
+\newlabel{tab:phase_c2}{{12}{21}{Phase C2 single-axis isolation under the THz protocol (saturation $=0$, noise $=0$, T3 regularization) validation accuracy (\%)}{table.caption.28}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.11}Calibration}{21}{subsection.4.11}\protected@file@percent }
+\newlabel{sec:tests:calibration}{{4.11}{21}{Calibration}{subsection.4.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.12}Confusion matrices at L5}{21}{subsection.4.12}\protected@file@percent }
+\newlabel{sec:tests:confusion}{{4.12}{21}{Confusion matrices at L5}{subsection.4.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.13}Inference throughput}{21}{subsection.4.13}\protected@file@percent }
+\newlabel{sec:tests:throughput}{{4.13}{21}{Inference throughput}{subsection.4.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Multi-seed audit: validation accuracy at L3 across seeds $\{42, 43, 44\}$, on the 24 L3 headline cells. Standard deviation is reported in percentage points.}}{22}{table.caption.30}\protected@file@percent }
+\newlabel{tab:multiseed}{{13}{22}{Multi-seed audit: validation accuracy at L3 across seeds $\{42, 43, 44\}$, on the 24 L3 headline cells. Standard deviation is reported in percentage points}{table.caption.30}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Multi-seed variance at L3: each bar reports the mean validation accuracy across seeds $\{42, 43, 44\}$ with the standard-deviation error bar. Color encodes the phase. The $\sigma $ bars are small relative to the cross-phase deltas, which validates the cross-phase comparisons.}}{22}{figure.caption.31}\protected@file@percent }
+\newlabel{fig:multiseed_variance}{{14}{22}{Multi-seed variance at L3: each bar reports the mean validation accuracy across seeds $\{42, 43, 44\}$ with the standard-deviation error bar. Color encodes the phase. The $\sigma $ bars are small relative to the cross-phase deltas, which validates the cross-phase comparisons}{figure.caption.31}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Reliability diagrams at Phase B L3. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}}{23}{figure.caption.32}\protected@file@percent }
+\newlabel{fig:reliability_L3}{{15}{23}{Reliability diagrams at Phase B L3. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny}{figure.caption.32}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Reliability diagrams at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}}{24}{figure.caption.33}\protected@file@percent }
+\newlabel{fig:reliability_L5}{{16}{24}{Reliability diagrams at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny}{figure.caption.33}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Confusion matrices at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny.}}{24}{figure.caption.34}\protected@file@percent }
+\newlabel{fig:confusion_L5}{{17}{24}{Confusion matrices at Phase B L5. Top row: CIFAR-10. Bottom row: MNIST. Columns: ResNet50, DenseNet121, TransNeXt-tiny}{figure.caption.34}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Inference latency per image at $224 \times 224$, batch size 1, \texttt  {bf16-mixed}, RTX 5070.}}{25}{figure.caption.35}\protected@file@percent }
+\newlabel{fig:throughput}{{18}{25}{Inference latency per image at $224 \times 224$, batch size 1, \texttt {bf16-mixed}, RTX 5070}{figure.caption.35}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Problems and Solutions}{25}{section.5}\protected@file@percent }
+\newlabel{sec:problems}{{5}{25}{Problems and Solutions}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Blackwell GPU compatibility (US-014)}{25}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}TransNeXt variant downsizing (US-016)}{25}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Windows DataLoader workers (memory feedback)}{26}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Fair-comparison invariant violation (V3 refactor rollback)}{26}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Blur kernel rescaling (2026-05-14)}{27}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Phase B v2 collapse explanation (Phase D)}{27}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Single-seed criticism (multi-seed audit, US-042)}{27}{subsection.5.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions and Recommendations}{28}{section.6}\protected@file@percent }
+\newlabel{sec:conclusions}{{6}{28}{Conclusions and Recommendations}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Work summary}{28}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Plan vs achieved}{28}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Success and failure analysis vs goals}{28}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Acceptance criteria from the preliminary specification vs the measured outcome.}}{29}{table.caption.36}\protected@file@percent }
+\newlabel{tab:plan_vs_actual}{{14}{29}{Acceptance criteria from the preliminary specification vs the measured outcome}{table.caption.36}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Planned (top) versus actual (bottom) project schedule. The actual schedule added three v4 expansion phases (Phase D regularization sweep, Phase B2 / B2-nr / C2 THz-protocol decomposition, and the US-042 multi-seed audit) on top of the original plan.}}{30}{figure.caption.37}\protected@file@percent }
+\newlabel{fig:gantt}{{19}{30}{Planned (top) versus actual (bottom) project schedule. The actual schedule added three v4 expansion phases (Phase D regularization sweep, Phase B2 / B2-nr / C2 THz-protocol decomposition, and the US-042 multi-seed audit) on top of the original plan}{figure.caption.37}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Strengths of the chosen approach}{31}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Weaknesses of the chosen approach}{31}{subsection.6.5}\protected@file@percent }
+\citation{hendrycks2021naturaladv}
+\bibdata{refs}
+\bibcite{he2016resnet}{{1}{}{{}}{{}}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Recommendations for continuation}{32}{subsection.6.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Cost summary}{32}{subsection.6.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Final cost summary (NIS-equivalent, supervisor signature required for submission).}}{32}{table.caption.38}\protected@file@percent }
+\newlabel{tab:cost}{{15}{32}{Final cost summary (NIS-equivalent, supervisor signature required for submission)}{table.caption.38}{}}
+\bibcite{huang2017densenet}{{2}{}{{}}{{}}}
+\bibcite{shi2024transnext}{{3}{}{{}}{{}}}
+\bibcite{huynh2008psnr}{{4}{}{{}}{{}}}
+\bibcite{wang2004ssim}{{5}{}{{}}{{}}}
+\bibcite{hendrycks2021naturaladv}{{6}{}{{}}{{}}}
+\bibcite{krizhevsky2009cifar10}{{7}{}{{}}{{}}}
+\bibcite{lecun1998mnist}{{8}{}{{}}{{}}}
+\bibcite{loshchilov2019adamw}{{9}{}{{}}{{}}}
+\bibcite{naeini2015ece}{{10}{}{{}}{{}}}
+\bibcite{guo2017oncalibration}{{11}{}{{}}{{}}}
+\bibcite{huang2016stochastic}{{12}{}{{}}{{}}}
+\bibcite{zhang2018mixup}{{13}{}{{}}{{}}}
+\bibcite{yun2019cutmix}{{14}{}{{}}{{}}}
+\bibcite{falcon2019lightning}{{15}{}{{}}{{}}}
+\bibcite{paszke2019pytorch}{{16}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\@writefile{toc}{\contentsline {section}{\numberline {A}Hebrew Abstract}{35}{appendix.A}\protected@file@percent }
+\newlabel{app:hebrew}{{A}{35}{Hebrew Abstract}{appendix.A}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Source listings}{35}{appendix.B}\protected@file@percent }
+\newlabel{app:listings}{{B}{35}{Source listings}{appendix.B}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Honoring intellectual property rights}{35}{appendix.C}\protected@file@percent }
+\newlabel{app:ip}{{C}{35}{Honoring intellectual property rights}{appendix.C}{}}
+\gdef \@abspage@last{42}
