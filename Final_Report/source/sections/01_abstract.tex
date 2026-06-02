@@ -64,18 +64,15 @@ dense network.
 % Hebrew abstract (PRD V2 \S 7.2 R5, Q5, FX-16). Inlined here so the
 % DOCX deliverable carries the Hebrew text in the body, not in an
 % appendix. Rendered by XeLaTeX + polyglossia; pdflatex falls back to
-% the literal Unicode (visible in editors but not typeset RTL).
+% a placeholder pointing at the XeLaTeX render. The DOCX build
+% (Pandoc + reference template) walks the source text directly and
+% renders Hebrew correctly regardless of the engine used here.
 % ====================================================================
-\IfFileExists{polyglossia.sty}{
+\ifdefined\XeTeXversion
   \begin{hebrew}
   \input{sections/hebrew_abstract_body.tex}
   \end{hebrew}
-}{
-  % pdflatex fallback: include the Unicode source verbatim. The DOCX
-  % build (Pandoc + reference template) still renders the Hebrew
-  % correctly because Pandoc walks the source text directly.
-  \begingroup
-  \fontencoding{T1}\selectfont
-  \input{sections/hebrew_abstract_body.tex}
-  \endgroup
-}
+\else
+  \noindent\emph{\small Hebrew abstract: see XeLaTeX render or
+  \texttt{sections/hebrew\_abstract\_body.tex} for the inline source.}
+\fi
