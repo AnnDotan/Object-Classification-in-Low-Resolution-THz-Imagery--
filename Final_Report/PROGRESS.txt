@@ -171,3 +171,52 @@
       confusion/` — those scripts just composite the existing per-cell
       PNGs into shared-axis grids.
 ---
+
+## Iteration 4 — Phase B reliability-diagram 3×2 grids (PRD V2 §4.5 figs 19/20, FX-05)
+
+- Implemented `Final_Report/scripts/combine_calibration_grids.py`: tiles the
+  6 existing Phase B reliability-diagram PNGs at each level (3 models ×
+  2 datasets) into one composite 3×2 grid PNG so the report embeds two
+  figures instead of twelve. Rows = models, cols = datasets. Layout
+  preserves each source panel's ECE annotation; row labels and column
+  titles are added by the composite.
+- Output: `Final_Report/figures/calibration/B_L{3,5}_grid.png` + a
+  `_grid_meta.json` recording panel sources for traceability.
+- Smoke check: B_L3_grid.png renders cleanly at 1440×1920 (figsize=(9, 12),
+  dpi=160); all six source panels present in the expected positions.
+
+- Files affected:
+  - Final_Report/scripts/combine_calibration_grids.py (new)
+  - Final_Report/figures/calibration/B_L3_grid.png (new)
+  - Final_Report/figures/calibration/B_L5_grid.png (new)
+  - Final_Report/figures/calibration/_grid_meta.json (new)
+  - Final_Report/PROGRESS.txt (this entry)
+
+- Learnings for next cycles:
+  - Patterns:
+    * Source panel naming is `final_B_L{level}_{model}_{dataset}_L{level}.png`
+      under `artifacts/figures/calibration/` — note the level appears TWICE
+      in the filename (once in the tag, once as a suffix). This double-L
+      pattern is set by `generate_calibration_diagrams.py` upstream.
+    * Tiling via `matplotlib.image.imread` + `ax.imshow` + `set_xticks([])`
+      + `set_yticks([])` + spine-off gives clean borders with no padding
+      artifacts. Use `fig.suptitle(..., y=0.995)` and `tight_layout(rect=[0,
+      0, 1, 0.985])` to reserve room for the top title.
+  - Traps:
+    * FX-05's "sharex='all', sharey='all', single shared colorbar" language
+      doesn't apply to reliability diagrams (bar charts, no colormap). The
+      same FX-05 language was probably copy-pasted into the PRD from the
+      FX-06 confusion-grid spec. Honored the *intent* (one figure embed
+      per level, uniform borders) without forcing the technical mechanism.
+    * `set_ylabel(..., rotation=90, labelpad=6)` is the cleanest way to
+      label rows on an imshow grid; using a separate fig.text() places
+      the label outside the subplot's bounding box and overlaps the panel
+      below.
+  - Helpful context:
+    * Next D1 sub-task: combine_confusion_grid.py (FX-06; B_L5_grid.png).
+      Source PNGs under `artifacts/figures/confusion/` already share the
+      level naming pattern. FX-06's "shared vmin=0, vmax=1, single
+      colorbar" DOES apply (confusion matrices are heatmaps); use
+      matplotlib imshow with explicit vmin / vmax and a single fig
+      colorbar.
+---
