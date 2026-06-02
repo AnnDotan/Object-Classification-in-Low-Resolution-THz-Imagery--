@@ -208,8 +208,14 @@ def fig_axis_attribution(rows: list[dict]) -> None:
         ax.set_xticklabels([AXIS_LABELS[a] for a in AXES], rotation=0)
         ax.set_ylabel("Accuracy delta vs clean (pp)")
         ax.set_title(f"{DATASET_LABELS[d]} - per-axis attribution at L3")
-        ax.legend(fontsize=8, loc="lower left", frameon=False)
+        # FX-02: ylim caps the resolution bar above the bottom edge; legend
+        # moved outside the data box (was lower-left covering the Resolution
+        # group). axes.unicode_minus is already off via rcParams.
+        ax.set_ylim(bottom=-32, top=2)
+        ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.02, 1.0),
+                  framealpha=0.85)
         ax.grid(True, linestyle=":", alpha=0.4, axis="y")
+        fig.tight_layout()
         _save(fig, f"attribution/axis_attribution_L3_{d}")
 
 
