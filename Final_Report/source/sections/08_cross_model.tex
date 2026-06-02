@@ -1,0 +1,84 @@
+% Cross-model robustness comparison (NEW per PRD V2 \S 7.8 Q1).
+% Dedicated chapter inserted between Problems (\S \ref{sec:problems}) and
+% Conclusions (\S \ref{sec:conclusions}). The cross-model comparison is the
+% headline scientific contribution of the report.
+\section{Cross-model robustness comparison}
+\label{sec:crossmodel}
+
+This chapter reads the campaign vertically by model rather than by phase.
+Sections \ref{sec:cm:resnet}--\ref{sec:cm:transnext} synthesize each
+architecture's behaviour across Phases B1, C, D, B2, and C2; the
+side-by-side reading in \S \ref{sec:cm:sidebyside} compares the three at
+matched image-quality operating points and quantifies the convergence at
+extreme degradation.
+
+\subsection{ResNet50 robustness profile}
+\label{sec:cm:resnet}
+
+ResNet50 anchors the clean accuracy band at $95.18\,\%$ on CIFAR-10 and
+$99.14\,\%$ on MNIST (Table \ref{tab:phase_a}). Under the combined
+degradation curve its accuracy declines monotonically from $76.46\,\%$
+at L1 to $19.06\,\%$ at L5 on CIFAR-10. The per-axis decomposition in
+Figures \ref{fig:acc_vs_psnr_phaseC_cifar10}--\ref{fig:acc_vs_ssim_phaseC2_mnist}
+attributes the dominant share of the drop to the resolution axis
+(Spearman $\rho = +0.93$ versus PSNR). Phase D-T3 recovers
+$+0.77\,$\Mpp{} on average over the Phase B1 baseline; the recovery is
+largest at L3 ($+1.4\,$\Mpp{}) and disappears at L5. The model retains
+its smallest L5 PSNR / accuracy margin on CIFAR-10 ($\sim 19$\,\Mpp{}),
+which is statistically indistinguishable from the DenseNet121 and
+TransNeXt-tiny L5 cells.
+
+\subsection{DenseNet121 robustness profile}
+\label{sec:cm:densenet}
+
+DenseNet121 sits slightly below ResNet50 at the clean baseline
+($93.56\,\%$ on CIFAR-10) but matches its accuracy on MNIST
+($99.30\,\%$). Under combined degradation it tracks ResNet50 closely
+($78.48\,\%$ at L1, $19.58\,\%$ at L5 on CIFAR-10); at L3 the dense
+backbone holds a small lead over ResNet50 ($39.60\,\%$ vs $35.86\,\%$).
+The per-axis attribution is qualitatively identical to ResNet50: the
+resolution axis carries the strongest accuracy-PSNR association and the
+salt-and-pepper / saturation axes are essentially flat (Figure
+\ref{fig:attribution_l3_cifar10}). The Phase B2 protocol simplification
+yields the largest pure-protocol gain on DenseNet121 ($+5.6\,$\Mpp{} at
+L3 on CIFAR-10), consistent with the dense-feature reuse making the
+network more sensitive to chroma noise.
+
+\subsection{TransNeXt-tiny robustness profile}
+\label{sec:cm:transnext}
+
+TransNeXt-tiny posts the highest clean baselines ($97.64\,\%$ on
+CIFAR-10, $99.24\,\%$ on MNIST). Under combined degradation it holds the
+largest accuracy advantage at the mild and moderate end of the curve
+($87.58\,\%$ at L1, $64.22\,\%$ at L2 on CIFAR-10), and the advantage
+collapses into the CNN band at L3 onward. Phase D-T3 has the strongest
+effect on TransNeXt-tiny ($+2.20\,$\Mpp{} mean over L1--L5 on CIFAR-10),
+consistent with the foveal-attention mechanism benefiting from the
+stochastic-depth regularization. At L5 ($20.10\,\%$) the model lands
+within the same $[19, 21]\,$\Mpp{} band as ResNet50 and DenseNet121.
+
+\subsection{Side-by-side reading}
+\label{sec:cm:sidebyside}
+
+At matched image-quality operating points
+(Figures \ref{fig:acc_vs_psnr_phaseC_cifar10},
+\ref{fig:acc_vs_ssim_phaseC_cifar10}, etc.), the three architectures
+order consistently: TransNeXt-tiny on top at mild and moderate
+degradation, the two CNNs essentially overlapping. The CIFAR-10
+TransNeXt advantage over the CNN mean is $+10.1\,$\Mpp{} at L1,
+$+10.4\,$\Mpp{} at L2, $+1.3\,$\Mpp{} at L3, $+0.8\,$\Mpp{} at L4,
+and $+0.8\,$\Mpp{} at L5. The advantage thus holds at the mild and
+moderate end and narrows to under $1.5\,$\Mpp{} by L3; from L3 onward
+the three architectures are indistinguishable to within the multi-seed
+$\sigma < 1.5\,$\Mpp{} noise floor.
+
+Convergence at extreme degradation deserves separate emphasis. At mean
+PSNR $\approx 11\,$dB on CIFAR-10 (the L5 operating point), all three
+models land in the $[19, 21]\,$\Mpp{} accuracy band. The implication
+for THz deployment is that, at the extreme end of the degradation
+curve, the architectural choice is irrelevant: the spatial information
+has been removed, and every architecture studied here recovers only
+random-guessing accuracy from what remains. Future work that wants to
+shift the L5 accuracy band must therefore invest in front-end signal
+restoration (super-resolution, denoising) rather than in larger or
+deeper classifiers.
