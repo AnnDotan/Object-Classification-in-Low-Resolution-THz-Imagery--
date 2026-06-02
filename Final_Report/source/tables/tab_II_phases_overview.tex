@@ -1,0 +1,30 @@
+% Table II: Phases at a glance (NEW per PRD V2 \S 7.4 R4).
+% Columns: phase, cells, axes active at level L, levels swept, regularization,
+% primary research question. One row per phase + one row for the multi-seed
+% audit.
+\begin{table}[htbp]
+  \centering
+  \caption{Experimental phases at a glance. The campaign comprises 402
+    canonical training cells at seed 42 plus 48 multi-seed audit replicates
+    at seeds 43 and 44. Each phase isolates a different facet of the
+    accuracy collapse under the five-level THz-like degradation curve.}
+  \label{tab:phases_overview}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{l c p{2.6cm} p{1.6cm} p{1.4cm} p{5.3cm}}
+    \toprule
+    \textbf{Phase} & \textbf{Cells} & \textbf{Axes active at L} & \textbf{Levels swept} & \textbf{Reg.} & \textbf{Primary research question} \\
+    \midrule
+    A      & 6   & none (identity) & none & none & Upper-bound clean accuracy per (model, dataset). \\
+    B1     & 30  & all 5 axes      & L1--L5 & none & Magnitude of the realistic combined-degradation collapse. \\
+    C      & 150 & one axis (4 idle) & L1--L5 & none & Per-axis decomposition of the Phase B1 collapse. \\
+    D      & 90  & all 5 axes      & L1--L5 & T1 / T2 / T3 & Is the Phase B1 collapse overfit or information bottleneck? \\
+    B2     & 30  & 3 axes (sat $=0$, noise $=0$) & L1--L5 & T3 & Effect of the realistic THz protocol on the combined curve. \\
+    B2-nr  & 6   & same as B2        & L3 only & none & Decomposition of B1$\to$B2 into protocol versus regularization. \\
+    C2     & 90  & one of \{res, blur, S\&P\} & L1--L5 & T3 & Per-axis attribution under the THz protocol. \\
+    \midrule
+    Multi-seed audit & 48 & all 24 L3 headline cells & L3 only & inherits cell & Run-to-run variance bound on every headline cell. \\
+    \bottomrule
+  \end{tabular}
+\end{table}

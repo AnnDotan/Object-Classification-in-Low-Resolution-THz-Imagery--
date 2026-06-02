@@ -1,0 +1,90 @@
+% =====================================================================
+%  fin-2026-061.tex - Final Summary Report (Fourth Year Engineering Project)
+%  Project: Classification of Objects at a Very Low Resolution (THz-like)
+%  Project number: s-2026-045 / p-2026-061
+%  Students: Bahat Itamar (205805856), Dotan Ann Hanna (211542311)
+%  Supervisors: Yitzhaky Yitzhak, Lerner Rinat
+%  Submission: 26/07/2026
+%
+%  Build (TeX -> DOCX via Pandoc):
+%    cd Final_Report/build && make all
+%
+%  This source compiles to a reference PDF via pdflatex+bibtex. The
+%  authoritative deliverable is the DOCX produced by Pandoc with the
+%  BGU reference.docx style template.
+% =====================================================================
+\documentclass[a4paper,11pt]{article}
+
+% --- Geometry: BGU rule = 2.5 cm margins on every side --------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+
+% --- Fonts / language ----------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}        % Times New Roman text + matching math
+\usepackage[english]{babel}
+
+% --- Layout ---------------------------------------------------------
+\usepackage{setspace}
+\setstretch{1.5}                         % BGU rule = 1.5 line spacing
+\usepackage[justification=justified,format=plain,labelfont=bf,font=small]{caption}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\let\Bbbk\relax % newtxmath defines \Bbbk; avoid amssymb redefinition error
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+
+% --- Bibliography (IEEE) -------------------------------------------
+\usepackage[numbers,square,sort&compress]{natbib}
+\bibliographystyle{IEEEtran}
+
+% --- Helpers --------------------------------------------------------
+\newcommand{\sectheading}[1]{\vspace{0.8em}\noindent\textbf{#1}\par\noindent}
+\newcommand{\Mpp}{percentage points}
+\newcommand{\figpath}[1]{../figures/#1}
+\newcommand{\tabpath}[1]{tables/#1}
+
+% --- Document -------------------------------------------------------
+\begin{document}
+
+% =========================== Cover page ============================
+\input{sections/00_cover.tex}
+
+% =========================== Front matter ==========================
+\pagenumbering{roman}
+
+\input{sections/01_abstract.tex}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\listoftables
+\listoffigures
+\clearpage
+
+% =========================== Body ==================================
+\pagenumbering{arabic}
+
+\input{sections/02_introduction.tex}
+\input{sections/04_phases_overview.tex}   % PRD V2 R4: phases overview between Intro and Spec
+\input{sections/03_spec.tex}
+\input{sections/04_design.tex}
+\input{sections/05_tests.tex}
+\input{sections/06_problems.tex}
+\input{sections/08_cross_model.tex}        % PRD V2 Q1: cross-model chapter before Conclusions
+\input{sections/07_conclusions.tex}
+
+% =========================== Back matter ===========================
+\bibliography{refs}
+
+\clearpage
+\appendix
+\input{sections/99_appendix.tex}
+
+\end{document}
