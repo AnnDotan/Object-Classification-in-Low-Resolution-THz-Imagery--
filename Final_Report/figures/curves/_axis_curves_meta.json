@@ -1,0 +1,146 @@
+{
+  "phaseC_cifar10_psnr": {
+    "phase": "C",
+    "dataset": "cifar10",
+    "metric": "psnr",
+    "y_range_pct": [
+      40.35000041127205,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9274260335029676,
+      "blur": 0.774673510337773,
+      "noise": 0.7637626158259734,
+      "saturation": 0.4146139914483855,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.93).",
+    "png": "Final_Report/figures/curves/acc_vs_psnr_phaseC_cifar10.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_psnr_phaseC_cifar10.pdf"
+  },
+  "phaseC_mnist_psnr": {
+    "phase": "C",
+    "dataset": "mnist",
+    "metric": "psnr",
+    "y_range_pct": [
+      40.35000041127205,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.38325251989360254,
+      "noise": 0.19835388147218588,
+      "saturation": -0.25230585225203506,
+      "salt_pepper": 0.8081280591884582
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_psnr_phaseC_mnist.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_psnr_phaseC_mnist.pdf"
+  },
+  "phaseC_cifar10_ssim": {
+    "phase": "C",
+    "dataset": "cifar10",
+    "metric": "ssim",
+    "y_range_pct": [
+      40.35000041127205,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9274260335029676,
+      "blur": 0.774673510337773,
+      "noise": 0.7637626158259734,
+      "saturation": 0.4146139914483855,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.93).",
+    "png": "Final_Report/figures/curves/acc_vs_ssim_phaseC_cifar10.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_ssim_phaseC_cifar10.pdf"
+  },
+  "phaseC_mnist_ssim": {
+    "phase": "C",
+    "dataset": "mnist",
+    "metric": "ssim",
+    "y_range_pct": [
+      40.35000041127205,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.38325251989360254,
+      "noise": 0.19835388147218588,
+      "saturation": -0.25230585225203506,
+      "salt_pepper": 0.8081280591884582
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_ssim_phaseC_mnist.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_ssim_phaseC_mnist.pdf"
+  },
+  "phaseC2_cifar10_psnr": {
+    "phase": "C2",
+    "dataset": "cifar10",
+    "metric": "psnr",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.8401388774085707,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_psnr_phaseC2_cifar10.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_psnr_phaseC2_cifar10.pdf"
+  },
+  "phaseC2_mnist_psnr": {
+    "phase": "C2",
+    "dataset": "mnist",
+    "metric": "psnr",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.982858450364341,
+      "blur": 0.4219574007504171,
+      "salt_pepper": 0.6997484151935447
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_psnr_phaseC2_mnist.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_psnr_phaseC2_mnist.pdf"
+  },
+  "phaseC2_cifar10_ssim": {
+    "phase": "C2",
+    "dataset": "cifar10",
+    "metric": "ssim",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.8401388774085707,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_ssim_phaseC2_cifar10.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_ssim_phaseC2_cifar10.pdf"
+  },
+  "phaseC2_mnist_ssim": {
+    "phase": "C2",
+    "dataset": "mnist",
+    "metric": "ssim",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.982858450364341,
+      "blur": 0.4219574007504171,
+      "salt_pepper": 0.6997484151935447
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.98).",
+    "png": "Final_Report/figures/curves/acc_vs_ssim_phaseC2_mnist.png",
+    "pdf": "Final_Report/figures/curves/acc_vs_ssim_phaseC2_mnist.pdf"
+  }
+}

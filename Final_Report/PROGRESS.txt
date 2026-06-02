@@ -51,3 +51,53 @@
           `B_L5_grid.png`
         - `scripts/combine_confusion_grid.py` → `B_L5_grid.png`
 ---
+
+## Iteration 2 — Per-axis acc vs PSNR / SSIM curves (PRD V2 §4.2, FX-15, §6.2 step 1)
+
+- Implemented `Final_Report/scripts/build_psnr_axis_curves.py`: reads
+  `per_cell_with_iq.csv` from Iteration 1 and emits 8 figure pairs (PNG + PDF)
+  under `Final_Report/figures/curves/` plus a `_axis_curves_meta.json` for
+  LaTeX caption injection (per-axis Spearman ρ + a one-sentence ranking note).
+- Figure spec per FX-15: figsize=(8, 5), dpi=160, three model markers
+  (circle / square / triangle), five axis line-styles (solid / dashed /
+  dotted / dash-dot / long-dash). Shared y-range across CIFAR-10 vs MNIST
+  within (phase, metric) per PRD §4.2.
+- Smoke result: TransNeXt-tiny (red triangle) traces dominate every curve at
+  matched PSNR / SSIM, consistent with the operator-locked +5 / +7 / <1 pp
+  margins. Resolution axis Spearman ρ = +0.93 (Phase C CIFAR-10) and +0.98
+  (Phase C2 CIFAR-10 + both MNIST) — dominates the per-axis association in
+  every plot, matching the PRD §4.6 finding (resolution dominates by ~4×).
+
+- Files affected:
+  - Final_Report/scripts/build_psnr_axis_curves.py (new)
+  - Final_Report/figures/curves/acc_vs_{psnr,ssim}_phase{C,C2}_{cifar10,mnist}.{png,pdf} (16 new)
+  - Final_Report/figures/curves/_axis_curves_meta.json (new)
+  - Final_Report/PROGRESS.txt (this entry)
+
+- Learnings for next cycles:
+  - Patterns:
+    * Per-axis Spearman ρ between accuracy↔PSNR and accuracy↔SSIM is
+      mathematically identical within an axis whenever PSNR and SSIM are
+      monotonically related across the 5 levels (they always are — both
+      degrade monotonically with level). The metadata JSON keeps both
+      explicitly for caption symmetry, but the LaTeX captions can flag
+      "ρ identical by monotonicity" if desired.
+    * matplotlib Line2D needs the call `linestyle=(0, (5, 1))` for the
+      5th axis "long-dash" — `:` / `-.` / `--` exhaust the named styles.
+    * Each plot needs a two-part legend: model (color + marker) and axis
+      (linestyle). Use `ax.add_artist(leg1)` to keep both visible.
+  - Traps:
+    * `per_cell_with_iq.csv` writes empty strings for null IQ (Phase A).
+      Filter `row["psnr_mean"] != ""` before float-casting. Phase C / C2
+      rows are guaranteed non-null per Iteration 1's invariant.
+    * y-range computed across both datasets per (phase, metric) prevents
+      MNIST's near-100% saturation from squashing the CIFAR-10 dynamic
+      range visually. Confirmed: Phase C / cifar10 ranges 40.4 → 100 pct,
+      MNIST plot uses the same y-axis.
+  - Helpful context:
+    * Next D1 sub-tasks: build_ece_vs_level.py, combine_calibration_grids.py,
+      combine_confusion_grid.py. The diagnostics CSV / JSON inputs sit
+      under `artifacts/validation/` per CLAUDE.md.
+    * scipy 1.17.1 + matplotlib 3.10.9 confirmed available on the host;
+      no `Agg` install needed (`matplotlib.use("Agg")` is set at module top).
+---
