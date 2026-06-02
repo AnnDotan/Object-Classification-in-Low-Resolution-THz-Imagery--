@@ -1,0 +1,45 @@
+% Appendices (BGU \S 10.7.2.11).
+% Hebrew abstract is now inlined directly in \S \ref{sec:abstract} (the
+% English + Hebrew bilingual abstract). No separate appendix needed.
+
+\section{Source listings}
+\label{app:listings}
+
+The single source of truth for the five-level degradation schedule is the
+following Python module (excerpt). The full file is at
+\texttt{src/data/degradation\_levels.py}.
+
+\begin{small}\begin{verbatim}
+DEGRADATION_LEVELS = {
+    1: {"low_res": 18, "blur_kernel": 13, "blur_sigma":  2.50,
+        "noise_std": 0.04, "salt_pepper": 0.03, "saturation": 0.95},
+    2: {"low_res": 12, "blur_kernel": 25, "blur_sigma":  5.00,
+        "noise_std": 0.08, "salt_pepper": 0.06, "saturation": 0.65},
+    3: {"low_res":  8, "blur_kernel": 41, "blur_sigma":  8.00,
+        "noise_std": 0.12, "salt_pepper": 0.10, "saturation": 0.40},
+    4: {"low_res":  6, "blur_kernel": 61, "blur_sigma": 12.00,
+        "noise_std": 0.16, "salt_pepper": 0.14, "saturation": 0.15},
+    5: {"low_res":  3, "blur_kernel": 91, "blur_sigma": 18.00,
+        "noise_std": 0.22, "salt_pepper": 0.18, "saturation": 0.00},
+}
+\end{verbatim}\end{small}
+
+The full pipeline source code is in \texttt{src/data/degrade.py}; the
+training engine is under \texttt{src/lightning/}; the campaign drivers are
+under \texttt{scripts/}.
+
+\section{Honoring intellectual property rights}
+\label{app:ip}
+
+Per BGU regulation Appendix 12.2, the project team affirms that this work
+does not incorporate copyrighted material (text, images, audio, video,
+software, hardware, or circuit designs) without explicit prior
+authorization from the copyright holder. Every figure, table, and
+equation in this report is either original work produced by the project
+team from the campaign data, or is reproduced from a cited source with
+the source listed in the references.
+
+\vspace{1em}
+\noindent
+\textit{Signed.\quad Bahat Itamar\quad\dotfill\quad Date.\quad\dotfill}\\
+\textit{Signed.\quad Dotan Ann Hanna\quad\dotfill\quad Date.\quad\dotfill}

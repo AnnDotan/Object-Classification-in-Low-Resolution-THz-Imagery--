@@ -61,18 +61,22 @@ dense network.
 \bigskip
 
 % ====================================================================
-% Hebrew abstract (PRD V2 \S 7.2 R5, Q5, FX-16). Inlined here so the
-% DOCX deliverable carries the Hebrew text in the body, not in an
-% appendix. Rendered by XeLaTeX + polyglossia; pdflatex falls back to
-% a placeholder pointing at the XeLaTeX render. The DOCX build
-% (Pandoc + reference template) walks the source text directly and
-% renders Hebrew correctly regardless of the engine used here.
+% Hebrew abstract (PRD V2 \S 7.2 R5, Q5, FX-16). Inlined here so both the
+% XeLaTeX-rendered PDF and the Pandoc-rendered DOCX carry the Hebrew text
+% inline with the English abstract (not as a separate appendix).
+%
+% XeLaTeX + polyglossia: \begin{hebrew}...\end{hebrew} sets RTL with the
+% David system font (set in fin-2026-061.tex preamble).
+% Pandoc DOCX: reads the body text UTF-8 directly; the LaTeX env wrapper
+% becomes a no-op span, but the Hebrew characters render with the
+% reference template's default font.
+% pdflatex: cannot render Hebrew script; build switches to XeLaTeX as the
+% canonical PDF engine per PRD V2 §6.1.
 % ====================================================================
 \ifdefined\XeTeXversion
   \begin{hebrew}
   \input{sections/hebrew_abstract_body.tex}
   \end{hebrew}
 \else
-  \noindent\emph{\small Hebrew abstract: see XeLaTeX render or
-  \texttt{sections/hebrew\_abstract\_body.tex} for the inline source.}
+  \input{sections/hebrew_abstract_body.tex}
 \fi

@@ -19,10 +19,23 @@
 \usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 
 % --- Fonts / language ----------------------------------------------
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{newtxtext,newtxmath}        % Times New Roman text + matching math
-\usepackage[english]{babel}
+% Engine-aware preamble: XeLaTeX uses fontspec + polyglossia (Hebrew RTL
+% rendering with the David Windows-system Hebrew font); pdflatex falls back
+% to T1 fontenc + utf8 inputenc with babel English (Hebrew not renderable
+% but PDF still compiles).
+\ifdefined\XeTeXversion
+  \usepackage{fontspec}
+  \setmainfont{Times New Roman}
+  \usepackage{polyglossia}
+  \setdefaultlanguage{english}
+  \setotherlanguage{hebrew}
+  \newfontfamily\hebrewfont[Script=Hebrew]{David}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{newtxtext,newtxmath}      % Times New Roman text + matching math
+  \usepackage[english]{babel}
+\fi
 
 % --- Layout ---------------------------------------------------------
 \usepackage{setspace}
