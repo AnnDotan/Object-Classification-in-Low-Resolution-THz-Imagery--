@@ -88,7 +88,21 @@ def _strip_latex_comment(line: str) -> str:
             break
         out_chars.append(line[i])
         i += 1
-    return "".join(out_chars)
+    line = "".join(out_chars)
+    # Strip the arguments of structural commands that do not render to body
+    # text: labels, references, file paths, includes. The token inside their
+    # braces is part of the build wiring, not reader-facing prose.
+    return _strip_structural_args(line)
+
+
+_STRUCT_CMDS = re.compile(
+    r"\\(label|ref|eqref|autoref|cref|Cref|input|include|includegraphics"
+    r"|figpath)\{[^}]*\}"
+)
+
+
+def _strip_structural_args(line: str) -> str:
+    return _STRUCT_CMDS.sub("", line)
 
 
 def _scan_tex_dir(d: Path) -> dict[Path, list[tuple[int, str, str]]]:

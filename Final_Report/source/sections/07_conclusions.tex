@@ -1,0 +1,205 @@
+% Conclusions and recommendations (BGU \S 10.7.2.9).
+\section{Conclusions and Recommendations}
+\label{sec:conclusions}
+
+This section summarizes the project, compares the achieved performance to
+the preliminary specification, discusses the strengths and weaknesses of
+the chosen approach, and lists the recommendations for any continuation.
+
+\subsection{Work summary}
+The project delivered a reproducible 402-cell training campaign across
+three architectures (ResNet50, DenseNet121, TransNeXt-tiny), two datasets
+(CIFAR-10, MNIST), five degradation levels, six experimental phases, and
+a 48-replicate multi-seed audit. The campaign is anchored to a
+deterministic 256-image PSNR / SSIM probe per pipeline, so the cross-phase
+comparison sits on a physical scale. Every value reported in this report
+is reproducible from a clean checkout using the scripts under
+\texttt{Final\_Report/scripts/}.
+
+\subsection{Plan vs achieved}
+Table \ref{tab:plan_vs_actual} compares the preliminary specification
+acceptance criteria against the measured outcome. Figure
+\ref{fig:gantt} compares the planned schedule against the actual schedule.
+
+\begin{table}[htbp]
+\centering
+\caption{Acceptance criteria from the preliminary specification vs the measured outcome.}
+\label{tab:plan_vs_actual}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{p{0.30\textwidth}p{0.30\textwidth}p{0.30\textwidth}}
+\toprule
+Criterion & Plan & Actual \\
+\midrule
+Top-1 accuracy on the moderate-degradation operating point
+& $\geq 80\%$ on CIFAR-10 L3
+& Met at L3 on MNIST (every backbone). Met at L1 and L2 on CIFAR-10. Not met at L3 on CIFAR-10 (best $\sim 74\%$); not met at L4 / L5 on either dataset. \\
+\midrule
+Accuracy drop ceiling
+& $\leq 15$ \Mpp{} drop relative to clean
+& Met up to L2 on CIFAR-10 and up to L3 on MNIST. Not met at L4 / L5 on either dataset. \\
+\midrule
+Architectural winner
+& A specific model beats ResNet50 by $\geq 5$ \Mpp{}
+& Partially met. DenseNet121 wins on most CIFAR-10 L3 to L5 cells; TransNeXt-tiny wins on most MNIST cells; the per-cell margin is $\leq 5$ \Mpp{} in most cases, so no single architecture is unambiguously dominant. \\
+\midrule
+Inference latency
+& $\leq 50$ ms per image on a standard GPU
+& Met for ResNet50 and DenseNet121; close to the boundary for TransNeXt-tiny ($\sim 30$ ms with \texttt{torch.compile} disabled). \\
+\midrule
+Reproducibility
+& Deterministic per-sample degradation
+& Met. Byte-identity gate passes across seeds $\{42, 43, 44\}$. Multi-seed audit confirms $\sigma < 1.5$ \Mpp{} on every L3 headline cell. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{gantt/gantt_planned_vs_actual.png}}
+  \caption{Planned (top) versus actual (bottom) project schedule. The actual schedule added three late-stage expansion phases (Phase D regularization sweep, Phase B2 / B2-nr / C2 THz-protocol decomposition, and the multi-seed audit) on top of the original plan.}
+  \label{fig:gantt}
+\end{figure}
+
+\subsection{Success and failure analysis vs goals}
+Of the four original goals from the preliminary specification:
+
+\textbf{Goal 1 (high accuracy on degraded data, target 80\%).}\quad
+\emph{Partially met.} The 80\% threshold is achieved on MNIST at every
+level up to L3 and on CIFAR-10 at L1 and L2. At L3 on CIFAR-10 the best
+cell ($\sim 74\%$) falls $\sim 6$ \Mpp{} short, and at L4 / L5 the
+accuracy collapses on every backbone (the L5 ceiling on CIFAR-10 is
+$\sim 40\%$). The shortfall is consistent with the per-axis attribution:
+resolution alone costs $-27$ \Mpp{} at L3 to L5, which exceeds the
+remaining headroom against the 80\% target.
+
+\textbf{Goal 2 (minimize the accuracy drop, target $\leq 15$ \Mpp{}).}\quad
+\emph{Partially met.} The drop is bounded by 15 \Mpp{} up to L2 on
+CIFAR-10 and up to L3 on MNIST. Beyond those operating points the drop
+grows monotonically with the degradation level, reaching $\sim 50$
+\Mpp{} at L5 on CIFAR-10.
+
+\textbf{Goal 3 (identify the optimal architecture).}\quad
+\emph{Partially met.} A statistically clear $\geq 5$ \Mpp{} win for a
+single architecture was not observed. DenseNet121 leads on most
+CIFAR-10 L3 cells by 1 to 4 \Mpp{}; TransNeXt-tiny leads on most MNIST
+cells by 1 to 3 \Mpp{}; the inter-architecture spread is comparable to
+the multi-seed $\sigma$ in several cells. The honest reading of the
+data is that the three architectures are within run-to-run noise of
+each other at the operating points that matter, and that the choice of
+architecture is secondary to the choice of degradation pipeline.
+
+\textbf{Goal 4 (feasibility for edge implementation).}\quad
+\emph{Met for the CNN backbones, marginal for TransNeXt-tiny.} Both
+ResNet50 and DenseNet121 sit comfortably under the 50 ms per image
+budget at \texttt{bf16-mixed} precision. TransNeXt-tiny is $\sim 30$ ms
+per image with \texttt{torch.compile} disabled; enabling the graph
+compiler (currently blocked by the foveal-attention path) would
+likely halve the figure.
+
+\subsection{Strengths of the chosen approach}
+\begin{itemize}
+  \item \textbf{Fair-comparison invariant.}\quad All three backbones see
+        the same tensor shape ($224 \times 224$) and the same training
+        recipe (modulo the per-paper LR convention), so the cross-backbone
+        deltas are interpretable.
+  \item \textbf{Deterministic degradation.}\quad The byte-identity gate
+        across seeds $\{42, 43, 44\}$ means that the cross-phase deltas
+        are not contaminated by data-side stochasticity.
+  \item \textbf{Per-pipeline image-quality anchor.}\quad PSNR / SSIM
+        per pipeline grounds the comparison in a physical scale; the
+        Spearman rank correlations against accuracy (Figures
+        \ref{fig:acc_vs_psnr}, \ref{fig:acc_vs_ssim}) are strong.
+  \item \textbf{Multi-seed audit.}\quad The $\sigma < 1.5$ \Mpp{}
+        bound on every L3 headline cell makes the cross-phase
+        deltas interpretable.
+\end{itemize}
+
+\subsection{Weaknesses of the chosen approach}
+\begin{itemize}
+  \item \textbf{Synthetic degradation is not real THz.}\quad The
+        five-axis pipeline is a mathematical model. Real THz physics
+        includes wavelength-dependent diffraction, mixing-element
+        nonlinearity, and detector-array dead pixels that the model
+        does not capture. The conclusions transfer only to the extent
+        that those secondary effects are dominated by the modeled
+        axes.
+  \item \textbf{Two small datasets.}\quad CIFAR-10 and MNIST are
+        small-scale benchmarks. The generalization of the per-axis
+        attribution to ImageNet-scale or to THz-domain object
+        categories was not tested.
+  \item \textbf{No real super-resolution baseline.}\quad The project
+        evaluated training-time degradation exposure exclusively. A
+        super-resolution baseline (a hypothetical Phase E) was scoped
+        out at PDR for cost reasons. Without it the
+        attribution-driven recommendation (invest in resolution
+        restoration first) cannot be quantitatively compared
+        against a real restoration pipeline.
+  \item \textbf{No human-perception baseline.}\quad The acceptance
+        criteria are model-side; a human upper bound (the percentage
+        of L5 images a human reader can classify correctly) would
+        contextualize the $\sim 40\%$ CIFAR-10 L5 ceiling.
+\end{itemize}
+
+\subsection{Recommendations for continuation}
+\begin{enumerate}
+  \item \textbf{Acquire real THz data.}\quad The synthetic pipeline is
+        a proxy; a small real-world dataset (even 1000 images) at the
+        target deployment frequency would let the next iteration
+        calibrate the synthetic model against ground truth and
+        renormalize the per-axis attribution.
+  \item \textbf{Add a super-resolution pre-stage.}\quad Given that
+        resolution dominates the per-axis attribution by $\sim 4 \times$
+        (Phase C2), the next ablation should add a learned upsampler
+        in front of each backbone and re-run Phase B2 / C2 with the
+        new front end.
+  \item \textbf{Enable graph compilation for TransNeXt.}\quad The
+        foveal-attention path is currently not
+        Inductor-graph-capturable; rewriting it as a compiled custom
+        op would likely halve the inference latency and bring the
+        TransNeXt backbone inside the 25 ms per image budget.
+  \item \textbf{Robustness benchmark reproduction.}\quad Reproduce
+        the per-axis attribution on the ImageNet-A robustness
+        benchmark \cite{hendrycks2021naturaladv} to test whether the
+        resolution-dominant finding holds at full ImageNet scale.
+  \item \textbf{Calibration intervention.}\quad The ECE growth from
+        $< 5$ \Mpp{} at L3 to $> 15$ \Mpp{} at L5 indicates that a
+        post-hoc calibration step (temperature scaling) would
+        improve the operational usefulness of the predictions
+        without affecting top-1 accuracy.
+\end{enumerate}
+
+\subsection{Cost summary}
+The actual operating cost of the campaign was dominated by GPU-hours
+rather than by hardware or licensing. Table \ref{tab:cost} reports the
+final budget. Operator-side hours are theoretical (NIS-equivalent of the
+student-engineer market rate); they do not appear in the cash budget for
+this project.
+
+\begin{table}[htbp]
+\centering
+\caption{Final cost summary (NIS-equivalent, supervisor signature required for submission).}
+\label{tab:cost}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lr}
+\toprule
+Item & Cost (NIS) \\
+\midrule
+Student engineer hours (2 students $\times$ 300 h $\times$ 60 NIS/h, theoretical) & 36\,000 \\
+Supervisor hours (2 $\times$ 30 h $\times$ 250 NIS/h, theoretical) & 15\,000 \\
+GPU compute (local RTX 5070, $\sim$ 56.5 + $\sim$ 48 + $\sim$ 24 GPU-hours)        & 0 (local) \\
+Cloud GPU fallback budget (Colab Pro+, 8 months) & 400 \\
+Office supplies and storage media & 500 \\
+Subtotal & 51\,900 \\
+Overhead (25\%) & 12\,975 \\
+Contingency (10\%) & 5\,190 \\
+\midrule
+\textbf{Grand total} & \textbf{70\,065} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{1em}
+\noindent
+\textit{Supervisor signature.\quad\dotfill\quad Date.\quad\dotfill}
