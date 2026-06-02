@@ -344,17 +344,20 @@ def fig_gantt() -> None:
         ("Results Analysis & Final Report", "2026-06-01", "2026-07-26"),
         ("Final Submission", "2026-07-26", "2026-07-26"),
     ]
+    # FX-09: re-labelled with the canonical 10 milestone names (PRD V2 §8
+    # FX-09). V1 labels referenced US codes ("US-042", "US-045..US-053")
+    # which violate R3 (no internal process tokens in the report body).
     actual = [
-        ("Data Simulation & Setup", "2026-01-15", "2026-02-28"),
-        ("Model Implementation", "2026-02-15", "2026-04-30"),
-        ("Progress Submission", "2026-03-15", "2026-03-15"),
-        ("Advanced Research (TransNeXt)", "2026-04-15", "2026-05-31"),
-        ("Phase D regularization sweep", "2026-05-20", "2026-05-26"),
-        ("Phase B2 / B2nr / C2", "2026-05-27", "2026-05-31"),
-        ("Multi-seed audit (US-042)", "2026-05-31", "2026-06-01"),
-        ("v4 closure (US-045..US-053)", "2026-06-01", "2026-06-01"),
-        ("Results Analysis & Final Report", "2026-06-01", "2026-07-26"),
-        ("Final Submission", "2026-07-26", "2026-07-26"),
+        ("Hardware bring-up", "2026-01-15", "2026-02-28"),
+        ("Hyper-parameter sweep", "2026-02-15", "2026-03-15"),
+        ("Phase A baselines", "2026-03-01", "2026-03-20"),
+        ("Phase B1 combined", "2026-03-15", "2026-04-15"),
+        ("Phase C single-axis", "2026-04-01", "2026-05-15"),
+        ("Phase D regularization", "2026-05-20", "2026-05-26"),
+        ("Phase B2 THz protocol", "2026-05-27", "2026-05-29"),
+        ("Phase C2 THz axes", "2026-05-29", "2026-05-31"),
+        ("Multi-seed audit", "2026-05-31", "2026-06-01"),
+        ("Report authoring", "2026-06-01", "2026-07-26"),
     ]
     from datetime import date
     def _to_day(s: str) -> int:
