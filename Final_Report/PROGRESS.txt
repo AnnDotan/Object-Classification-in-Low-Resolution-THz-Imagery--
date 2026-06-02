@@ -101,3 +101,73 @@
     * scipy 1.17.1 + matplotlib 3.10.9 confirmed available on the host;
       no `Agg` install needed (`matplotlib.use("Agg")` is set at module top).
 ---
+
+## Iteration 3 — ECE vs level line chart (PRD V2 §4.3 / §4.5 figure 21 / §6.2 step 1)
+
+- Implemented `Final_Report/scripts/build_ece_vs_level.py`: reads
+  `artifacts/figures/calibration/_index.json` (42 entries: 7 phase / level
+  groups x 6 model / dataset pairs) and emits one chart per dataset showing
+  ECE at L3 vs L5 across the three phases with entries at both levels
+  (B, D-T3, B2-T3). Phase B2-nr is L3-only → reported as a footnote field
+  in the metadata JSON.
+- Output: `figures/curves/ece_vs_level_{cifar10,mnist}.{png,pdf}` +
+  `_ece_vs_level_meta.json`. Plot styling mirrors Iteration 2 (figsize=(8, 5),
+  dpi=160; 3 model markers, 3 phase line-styles, shared y-range across
+  datasets).
+
+- **DATA / FINDING DISCREPANCY (flag for operator)**. As-measured mean
+  ΔECE from L3 → L5: CIFAR-10 = **−2.03 pp**, MNIST = −1.93 pp. ECE *drops*
+  from L3 to L5 in 6 of 9 (model, phase) series on CIFAR-10. This contradicts
+  PRD §4.8 / CLAUDE.md Finding #8 ("ECE rises from < 5 pp at L3 to > 15 pp
+  at L5 on CIFAR-10"). The worst CIFAR-10 L5 cell is `densenet121/B2-T3` at
+  3.06 pp — nowhere near 15 pp. Plausible root cause: at L5 the model is so
+  wrong that confidence also collapses, lowering ECE (under-confident
+  failure mode rather than over-confident). Next session must decide:
+    (a) re-examine `generate_calibration_diagrams.py` to confirm ECE
+        is computed on the right split (val vs test) and the right level
+        (some entries may have label-mismatch at L5);
+    (b) re-state Finding #8 against the as-measured data; OR
+    (c) accept the figure as-is and rewrite the §7.7.8 / §7.10 narrative
+        to match the actual behaviour ("ECE is highest at L3, where the
+        model is still confident but starting to mis-classify; at L5 the
+        model becomes under-confident as accuracy collapses").
+  Do NOT delete or hide this figure — it's the honest data.
+
+- Files affected:
+  - Final_Report/scripts/build_ece_vs_level.py (new)
+  - Final_Report/figures/curves/ece_vs_level_{cifar10,mnist}.{png,pdf} (4 new)
+  - Final_Report/figures/curves/_ece_vs_level_meta.json (new)
+  - Final_Report/PROGRESS.txt (this entry)
+
+- Learnings for next cycles:
+  - Patterns:
+    * Calibration ECE is stored in `artifacts/figures/calibration/_index.json`
+      (42 entries). Schema: `{phase, treatment, model, dataset, level,
+      ece_pp, ece_tm_pp, png, tag, split}`. `ece_pp` = manual binning;
+      `ece_tm_pp` = TorchMetrics value (agree to ~0.001 pp). Use `ece_pp`.
+    * Available level coverage in the JSON is L3 and L5 only — no L1 / L2 /
+      L4 calibration computed. A 5-point ECE-vs-level chart is NOT possible
+      without re-running diagnostics. The 2-point chart is what the data
+      supports.
+    * Phase B2-nr only exists at L3. Any "across both levels" line filter
+      drops it from the line chart but keeps it in the metadata JSON
+      footnote.
+  - Traps:
+    * The PRD Finding #8 narrative ("ECE rises from < 5 to > 15 pp at L5
+      on CIFAR-10") is NOT consistent with the artifacts on disk. Flag in
+      PROGRESS.txt and the captions / narrative, but DO NOT fabricate or
+      cherry-pick to match. Reproducibility is the v5 north star (PRD §5
+      "Operator-facing pp numbers come from §4 of this PRD") — but the
+      §4 numbers are derived FROM the artifacts, so when they diverge the
+      artifacts win.
+    * `_index.json` uses `treatment: null` for the no-reg phases (B, B2nr).
+      Don't compare with the string "None"; use Python `None` /
+      `e.get("treatment")`.
+  - Helpful context:
+    * Next D1 sub-tasks: combine_calibration_grids.py (FX-05;
+      B_L3_grid.png + B_L5_grid.png), combine_confusion_grid.py (FX-06;
+      B_L5_grid.png). Source PNGs already exist under
+      `artifacts/figures/calibration/` (24) and `artifacts/figures/
+      confusion/` — those scripts just composite the existing per-cell
+      PNGs into shared-axis grids.
+---
