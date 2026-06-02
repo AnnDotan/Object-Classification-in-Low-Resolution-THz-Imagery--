@@ -132,6 +132,47 @@ and aggregates the mean and standard deviation. The 256-sample size
 balances probe runtime against the standard error of the mean (below
 $0.1$ dB on the L3 pipelines).
 
+\subsection{Optimizer and learning-rate schedule}
+\label{sec:design:optim}
+
+All cells train with AdamW \cite{loshchilov2017adamw} under decoupled
+weight decay. With $g_t = \nabla_\theta \mathcal{L}(\theta_{t-1})$ the
+loss gradient at step $t$, the running first and second moment estimates
+are
+\begin{equation}
+  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t,
+  \qquad
+  v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^{2},
+  \label{eq:adamw_moments}
+\end{equation}
+and the parameter update is
+\begin{equation}
+  \theta_t = \theta_{t-1} - \eta_t \!\left(
+    \frac{m_t / (1 - \beta_1^{t})}{\sqrt{v_t / (1 - \beta_2^{t})} + \epsilon}
+    + \lambda \, \theta_{t-1}
+  \right),
+  \label{eq:adamw}
+\end{equation}
+with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$, and weight
+decay $\lambda \in \{10^{-4}, 5 \times 10^{-2}\}$ (CNN / TransNeXt).
+Gradient clipping caps the global norm at $1.0$.
+
+The learning rate $\eta_t$ follows a cosine annealing schedule
+\cite{loshchilov2017sgdr} between $\eta_{\max}$ and $\eta_{\min}$ over a
+total budget of $T$ training steps:
+\begin{equation}
+  \eta_t = \eta_{\min} + \tfrac{1}{2}\, (\eta_{\max} - \eta_{\min}) \!\left(
+    1 + \cos\!\left( \frac{t}{T}\, \pi \right)
+  \right).
+  \label{eq:cosine}
+\end{equation}
+Differential learning rates apply $\eta_{\max}$ separately to the
+classifier head ($10^{-3}$ on CNNs, $5 \times 10^{-4}$ on TransNeXt-tiny)
+and to the backbone parameters ($10^{-4}$ on CNNs, $5 \times 10^{-5}$ on
+TransNeXt-tiny). Training uses bf16-mixed precision on the RTX 5070 host
+and runs for at most 60 epochs with early stopping at patience 10 on
+validation accuracy.
+
 \subsection{Calibration metric}
 \label{sec:design:ece}
 
