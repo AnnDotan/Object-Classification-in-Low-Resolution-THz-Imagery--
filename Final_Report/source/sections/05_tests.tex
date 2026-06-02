@@ -149,6 +149,26 @@ accuracy delta vs the Phase A clean baseline.
   \label{fig:attribution}
 \end{figure}
 
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC_cifar10.png}}
+  \caption{Phase C per-axis accuracy versus image-quality on CIFAR-10. Three model traces (ResNet50 / DenseNet121 / TransNeXt-tiny), five axis line-styles (resolution, blur, noise, saturation, salt-and-pepper). Resolution carries the strongest accuracy-PSNR association (Spearman $\rho = +0.93$); saturation and salt-and-pepper are largely flat.}
+  \label{fig:acc_vs_psnr_phaseC_cifar10}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC_cifar10}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC_mnist.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC_mnist.png}}
+  \caption{Phase C per-axis accuracy versus image-quality on MNIST. The resolution axis dominates (Spearman $\rho = +0.98$ vs PSNR); MNIST's near-saturation accuracy at moderate PSNR explains the smaller dynamic range visible here.}
+  \label{fig:acc_vs_psnr_phaseC_mnist}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC_mnist}
+
 Table \ref{tab:attribution} reports the L3 attribution numerically together
 with the combined Phase B L3 cell so the reader can verify that the
 per-axis drops sum to less than the combined drop (the axes are not
@@ -204,9 +224,29 @@ attribution summary.
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.85\textwidth]{\figpath{phase_c2/attribution_summary.png}}
-  \caption{Phase C2 per-axis THz attribution summary. Mean accuracy delta from L1 to L5: resolution $-27.45$ \Mpp{}, blur $-6.58$ \Mpp{}, salt and pepper $-5.13$ \Mpp{}. Resolution is the dominant axis by a factor of approximately four.}
+  \caption{Phase C2 per-axis THz attribution summary. Mean accuracy delta from L1 to L5: resolution $-27.45$~\Mpp{}, blur $-6.58$~\Mpp{}, salt and pepper $-5.13$~\Mpp{}. Resolution is the dominant axis by a factor of approximately four.}
   \label{fig:phase_c2_summary}
 \end{figure}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC2_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC2_cifar10.png}}
+  \caption{Phase C2 per-axis accuracy versus image-quality on CIFAR-10. Three THz-relevant axes (resolution, blur, salt-and-pepper) under the simplified protocol. Resolution dominates (Spearman $\rho = +0.98$ vs PSNR).}
+  \label{fig:acc_vs_psnr_phaseC2_cifar10}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC2_cifar10}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_psnr_phaseC2_mnist.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{curves/acc_vs_ssim_phaseC2_mnist.png}}
+  \caption{Phase C2 per-axis accuracy versus image-quality on MNIST. Same THz subset; resolution Spearman $\rho = +0.98$ versus PSNR.}
+  \label{fig:acc_vs_psnr_phaseC2_mnist}
+\end{figure}
+\addtocounter{figure}{-1}
+\refstepcounter{figure}\label{fig:acc_vs_ssim_phaseC2_mnist}
 
 \subsection{Multi-seed audit}
 \label{sec:tests:multiseed}
