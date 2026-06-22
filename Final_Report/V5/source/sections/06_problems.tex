@@ -1,0 +1,99 @@
+% Problems and Solutions (BGU \S 10.7.2.8).
+% V5: leads with the three campaign-defining methodological problems the
+% supervisors flagged (native-resolution rollback, frozen Optuna winners,
+% blur rescaling), then the hardware bring-up and the reproducibility audit.
+% Each entry pairs the observed symptom with the corrective action that
+% closed it and the guard that prevents regression.
+\section{Problems and Solutions}
+\label{sec:problems}
+
+This section enumerates the substantive engineering and scientific problems
+encountered during the 402-cell campaign and how each was resolved. Each entry
+pairs the observed symptom with the corrective action and, where relevant, the
+automated guard that prevents the problem from recurring.
+
+\subsection{Native-resolution refactor and its rollback}
+\textbf{Symptom.}\quad An intermediate design (the ``V3'' refactor) trained each
+backbone at its dataset-native resolution --- $32 \times 32$ for the CIFAR-10
+inputs to TransNeXt and a $28 \rightarrow 32$ pad for MNIST --- on the argument
+that upsampling to $224 \times 224$ wastes computation and introduces
+interpolation artifacts. In practice the change broke the central
+fair-comparison invariant of the study: the three backbones no longer saw the
+same tensor shape, so any measured cross-model accuracy gap conflated the
+architecture with the input size it happened to receive. It also discarded the
+ImageNet-pretrained receptive-field hierarchy of the two CNNs, which is
+calibrated for $224 \times 224$ inputs, and it placed TransNeXt off the
+$224$-pretrained distribution its checkpoint was trained on.
+
+\textbf{Fix.}\quad The refactor was rolled back to a single uniform
+$224 \times 224$ protocol for all three models: CIFAR-10 ($32$) and MNIST
+($28$) inputs are upsampled to $224$ by the data pipeline before any model
+sees them. This restores the ``same tensor shape, same pipeline'' invariant so
+the cross-backbone deltas are attributable to architecture alone. The decision
+is recorded as a frozen invariant in the technical specification
+(Section~\ref{sec:spec}), and the data module asserts the $224 \times 224$
+output shape at construction time so the native-resolution path cannot be
+silently reintroduced.
+
+\subsection{Hyperparameter tuning at campaign scale: frozen Optuna winners}
+\textbf{Symptom.}\quad Tuning hyperparameters independently for every one of the
+402 cells was computationally infeasible and, worse, scientifically unsound:
+per-level tuning would let the optimizer compensate for each degradation level
+separately, confounding the architectural robustness signal with per-cell
+hyperparameter search noise. A blind, wide search also risked overfitting the
+validation split and inflating the apparent accuracy of whichever cell happened
+to draw a lucky configuration.
+
+\textbf{Fix.}\quad The search was constrained on two axes. First, the search
+space was narrowed to the paper-derived priors for each architecture, bounded to
+at most one decade around the published value (no blind exploration). Second,
+each \texttt{(model, dataset)} pair was tuned \emph{once}, at the L3 moderate
+operating point, and the winning hyperparameters were \emph{frozen} for the
+entire degradation sweep. Phases that layer regularization (Phase~D) or simplify
+the protocol (Phase~B2) build on these frozen winners rather than re-tuning, so
+every comparison is made at a fixed, documented configuration. The frozen
+winners are stored per pair under \texttt{artifacts/best\_hparams/} and round-trip
+through each cell's \texttt{metrics.json}, making the configuration auditable.
+
+\subsection{Per-pixel blur invisibility at \texorpdfstring{$224 \times 224$}{224x224}}
+\textbf{Symptom.}\quad The single-axis blur sweep at L5 produced accuracy almost
+indistinguishable from L1 on DenseNet121 (a drop below $1$~\Mpp{}). The blur
+kernels $K = 3 \ldots 13$ with $\sigma = 0.8 \ldots 2.3$ had been calibrated for
+native $32 \times 32$ imagery; applied to the $224 \times 224$ upsampled tensor
+they covered only $\sim 1$ to $6\%$ of the image width and produced essentially
+imperceptible smoothing, so the ``blur'' axis was not actually testing blur.
+
+\textbf{Fix.}\quad The kernel and sigma schedule were rescaled to pixel-domain
+values at $224 \times 224$ ($K = 13 \ldots 91$, $\sigma = 2.5 \ldots 18$), tied
+together by the rule $K = 2\lceil 2.5\sigma \rceil + 1$ so the kernel always
+captures the $2.5\sigma$ Gaussian footprint. A unit test now asserts that the L5
+blur configuration produces at least a $5$~dB PSNR drop versus L1, which guards
+against any future schedule that fails to scale with the input size.
+
+\subsection{Vision-transformer bring-up on Blackwell hardware}
+\textbf{Symptom.}\quad TransNeXt training crashed on the RTX~5070 (Blackwell,
+sm\_120) with an opaque CUDA kernel-launch error in the first attention block.
+The PyTorch~2.x stack at project start shipped kernels for sm\_75 through sm\_90,
+and the TransNeXt \texttt{swattention} extension carried no sm\_120 prebuilt
+binary.
+
+\textbf{Fix.}\quad TransNeXt was temporarily quarantined until the upstream
+\texttt{swattention} package was rebuilt with sm\_120 support in the PyTorch~2.x
+Blackwell release; the quarantine predicate is now a permanent no-op but is kept
+in code so future GPU substitutions can reuse the path. A startup self-test in
+the data module runs a one-iteration forward pass on the configured GPU before
+the campaign driver dispatches the first cell, surfacing compute-capability
+mismatches with a structured error rather than a raw CUDA stack trace.
+
+\subsection{Single-seed reproducibility exposure}
+\textbf{Symptom.}\quad The L3 headline cells were originally reported as
+single-seed point estimates at seed $42$. The load-bearing cross-model
+magnitudes had no explicit run-to-run variance bound, so a reviewer could not
+tell whether a small inter-model gap was real or seed noise.
+
+\textbf{Fix.}\quad A 48-replicate multi-seed audit was added at seeds $43$ and
+$44$ across all $24$ L3 headline cells. Every audited cell shows
+$\sigma < 1.5$~\Mpp{}, with the largest variance on the TransNeXt-tiny CIFAR-10
+Phase~B L3 cell. Schema version~3 of \texttt{Final\_Exp.json} carries the
+$\langle\mathrm{val\_acc}\rangle \pm \sigma$ pair on every multi-seed cell, so
+the reproducibility floor is visible without re-running the audit.

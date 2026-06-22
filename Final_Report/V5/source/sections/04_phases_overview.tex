@@ -1,0 +1,60 @@
+% Experimental phases at a glance (NEW per PRD V2 \S 7.4 R4).
+% Inserted between Introduction (\S \ref{sec:intro}) and the Final
+% technical spec sheet (\S \ref{sec:spec}). Every later section refers
+% back here for pipeline definitions and does NOT re-explain them
+% (PRD V2 \S 7.4 Q6 compression).
+\section{Experimental phases at a glance}
+\label{sec:phases}
+
+The campaign decomposes the THz-like robustness question into seven
+phases. Each phase opens with the pipeline it uses and closes with the
+research question that motivates it.
+
+\textbf{Phase A (Clean baseline).}\quad Pipeline: identity. Six cells
+(three models $\times$ two datasets). Establishes the upper-bound
+clean accuracy that every later phase is measured against.
+
+\textbf{Phase B1 (Combined degradation).}\quad Pipeline: saturation lerp
+$\rightarrow$ downsample $\rightarrow$ upsample to $224 \times 224$
+$\rightarrow$ blur $\rightarrow$ additive noise $\rightarrow$
+salt-and-pepper, with all five axes active at the same level. Thirty
+cells (three models $\times$ two datasets $\times$ five levels).
+Quantifies the realistic worst-case combined-degradation curve.
+
+\textbf{Phase C (Single-axis isolation).}\quad Pipeline: exactly one
+axis is active at level $L$ while the other four are held at identity.
+One hundred fifty cells (three models $\times$ two datasets $\times$
+five levels $\times$ five axes). Decomposes the Phase B1 collapse into
+per-axis contributions.
+
+\textbf{Phase D (Regularization-recovery sweep).}\quad Pipeline:
+identical to Phase B1, plus one of three training-time regularization
+treatments T1, T2, T3 (architectural dropout, label mixing, kitchen
+sink). Ninety cells (three models $\times$ two datasets $\times$ three
+treatments $\times$ five levels). Asks whether the Phase B1 collapse
+is an overfit (regularization should recover it) or an information
+bottleneck (recovery should be marginal).
+
+\textbf{Phase B2 (THz-protocol simplification).}\quad Pipeline: Phase
+B1 minus the saturation and additive-noise axes; T3 regularization
+active. Thirty cells. Models the realistic THz acquisition (a
+single-channel low-resolution blurry frame with no chroma noise).
+
+\textbf{Phase B2-nr (No-regularization arm).}\quad Same pipeline as
+Phase B2, at L3 only, T3 off. Six cells. Decomposes the
+Phase B1$\to$B2 accuracy gain into a pure-protocol component and a
+regularization component.
+
+\textbf{Phase C2 (Single-axis isolation under the THz protocol).}\quad
+Same identity-elsewhere logic as Phase C, restricted to the three
+THz-relevant axes (resolution, blur, salt-and-pepper). Ninety cells.
+Per-axis attribution under deployment-realistic conditions; the
+\S\ref{sec:tests} plots use PSNR and SSIM on the $x$-axis to compare the
+axes on a common image-quality scale rather than the predetermined level
+index.
+
+\input{tables/tab_II_phases_overview.tex}
+
+Subsequent sections refer back to this overview for pipeline
+definitions and do not re-explain them. Table \ref{tab:phases_overview}
+is the single point of reference.

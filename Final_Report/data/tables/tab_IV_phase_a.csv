@@ -1,0 +1,7 @@
+phase,model,dataset,val_acc,val_acc_mean,val_acc_std
+A,resnet50,cifar10,0.9517999887466431,,
+A,resnet50,mnist,0.9914000034332275,,
+A,densenet121,cifar10,0.9355999827384949,,
+A,densenet121,mnist,0.9929999709129333,,
+A,transnext_tiny,cifar10,0.9764000177383423,,
+A,transnext_tiny,mnist,0.9923999905586243,,

@@ -1,0 +1,61 @@
+% =====================================================================
+%  Official BGU title page (Appendix 12.1 format).
+%  Bilingual (English + Hebrew) fields. The Hebrew is rendered RTL under
+%  XeLaTeX (polyglossia hebrew env, David font) and as plain UTF-8 under
+%  the Pandoc/DOCX path. This page is a structured placeholder: the signed
+%  institutional cover sheet replaces it at submission.
+% =====================================================================
+\providecommand{\heb}[1]{\ifdefined\XeTeXversion\begin{hebrew}#1\end{hebrew}\else#1\fi}
+
+\begin{titlepage}
+\begin{center}
+
+% --- Institution (EN + HE) ----------------------------------------
+{\large Ben-Gurion University of the Negev}\par
+{\large Faculty of Engineering Sciences}\par
+{\large Department of Electrical and Computer Engineering}\par
+\vspace{0.4em}
+\heb{{\large אוניברסיטת בן-גוריון בנגב}\par
+     {\large הפקולטה למדעי ההנדסה}\par
+     {\large המחלקה להנדסת חשמל ומחשבים}\par}
+
+\vfill
+
+% --- Project title (EN + HE) --------------------------------------
+{\LARGE\bfseries Classification of Objects at a Very Low Resolution}\par
+\vspace{0.4em}
+{\Large Robustness of Deep Visual Models under THz-like Degradation}\par
+\vspace{0.8em}
+\heb{{\LARGE\bfseries סיווג עצמים ברזולוציה נמוכה מאוד}\par}
+
+\vspace{1.2em}
+{\large Final Engineering Project --- Summary Report}\par
+\vspace{0.3em}
+{\normalsize Project No. s-2026-045 / p-2026-061}\par
+
+\vfill
+
+% --- People and date ----------------------------------------------
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{r l}
+\textbf{Submitted by:}      & Itamar Bahat \quad (ID 205805856) \\
+                            & Ann Hanna Dotan \quad (ID 211542311) \\
+\textbf{Supervisors:}       & Prof.~Yitzhak Yitzhaky \\
+                            & Dr.~Rinat Lerner \\
+\textbf{Submission date:}   & 26 July 2026 \\
+\end{tabular}\par
+
+\vspace{0.8em}
+\heb{\begin{tabular}{r l}
+\textbf{מגישים:}   & איתמר בהט, אן חנה דותן \\
+\textbf{מנחים:}    & פרופ' יצחק יצחקי, ד"ר רינת לרנר \\
+\textbf{תאריך הגשה:} & 26 ביולי 2026 \\
+\end{tabular}}\par
+
+\vfill
+{\small\itshape [Official BGU title page placeholder --- to be replaced at
+submission by the signed institutional cover sheet in the bilingual format
+of Appendix 12.1 of the Engineering Project Guidelines.]}\par
+
+\end{center}
+\end{titlepage}

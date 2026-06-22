@@ -1,0 +1,110 @@
+% Introduction (BGU \S 10.7.2.4).
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Motivation}
+Terahertz (THz) imaging is increasingly used in security screening, biomedical
+diagnostics, and through-fabric inspection because the millimeter-wave band
+penetrates clothing, paper, plastics, and other low-permittivity materials
+that block visible light. The physics of the band exacts a price: diffraction
+caps the achievable spatial resolution near the wavelength of the source,
+single-pixel detectors integrate the field over a comparatively large area,
+and the available noise figure is dominated by thermal background. The output
+is an image that is simultaneously low resolution, low signal-to-noise, and
+free of color information.
+
+Standard deep-vision classifiers, almost all of which inherit ImageNet
+pretraining, are tuned for the opposite distribution. They depend on fine
+textures, sharp edges, and saturated chroma to populate the receptive fields
+of the early convolutional layers. When those signals are removed the accuracy
+of an off-the-shelf model collapses, and the failure mode is opaque: it is
+not obvious how much of the loss is caused by reduced resolution alone, how
+much by additive noise, and how much by the loss of color, nor whether
+training-time interventions (regularization, augmentation, architectural
+substitution) can recover any of the lost performance.
+
+\subsection{Problem statement}
+This project quantifies the accuracy degradation of three representative deep
+architectures under a controlled synthetic THz-like degradation, decomposes
+the loss into per-axis contributions, audits the reproducibility of the
+measurements across random seeds, and documents which training-side
+interventions recover lost accuracy. The architectures span the three families
+that currently anchor the image-classification literature: a residual
+convolutional network (ResNet50 [1]), a densely connected
+convolutional network with explicit feature reuse (DenseNet121
+[2]), and a vision transformer with foveal attention
+(TransNeXt-tiny [3]).
+
+The success criteria taken from the preliminary report are: at least 80
+percent top-1 accuracy on the moderate-degradation operating point, an
+identifiable architectural winner that beats the baseline by a statistically
+meaningful margin, and inference latency compatible with sensor-side
+deployment. Those targets are revisited in Section \ref{sec:conclusions}
+against the actual measurements.
+
+\subsection{Alternative approaches considered}
+Three alternative families were reviewed during the preliminary design and
+rejected in favor of synthetic-degradation training.
+
+\textbf{(i) Denoise then classify.}\quad
+A pipeline that restores the image before invoking a clean-image classifier.
+The approach decouples the two problems and reuses an existing pretrained
+classifier verbatim, but it requires a high-quality reference image at train
+time, which a real THz sensor never produces. Restoration networks trained on
+mismatched degradation distributions tend to hallucinate detail
+[4], [5], which inflates PSNR / SSIM scores without
+improving downstream classification.
+
+\textbf{(ii) Super-resolution then classify.}\quad
+A specialization of (i) that targets the resolution axis only. It assumes
+that the dominant failure mode is spatial sampling. As Section
+\ref{sec:tests} will show, resolution does dominate the per-axis attribution,
+but additive noise and blur still cost between five and seven \Mpp{} each at
+the moderate operating point, so a resolution-only restoration cannot recover
+the full loss.
+
+\textbf{(iii) Train-time degradation exposure.}\quad
+The model is trained directly on synthetically degraded images so that the
+representation adapts to the degraded distribution. This is the approach used
+in modern robustness benchmarks [6] and the one
+adopted here. It is sample-efficient (no separate restoration network), it
+keeps the test-time pipeline minimal (single forward pass), and it surfaces
+the architectural sensitivities directly because every backbone sees the
+same degraded distribution.
+
+\subsection{Contributions}
+This work contributes:
+
+\begin{itemize}
+  \item a 402-cell training campaign across three architectures, two
+        datasets, five degradation levels, and six experimental phases, all
+        trained to convergence under a single fair-comparison invariant
+        ($224 \times 224$ uniform input, frozen Optuna L3 hyperparameters,
+        identical data pipeline);
+  \item a 48-replicate multi-seed audit on the 24 L3 headline cells that
+        bounds run-to-run variance below 1.5 \Mpp{};
+  \item a deterministic 256-image PSNR / SSIM probe per pipeline so that
+        accuracy can be compared against the physical image-quality scale,
+        not only against the discrete level index;
+  \item a per-axis attribution decomposition at L3 that shows resolution is
+        the dominant cost ($\sim 4 \times$ blur or salt and pepper);
+  \item a regularization-recovery sweep (Phase D) and a protocol simplification
+        sweep (Phase B2 / B2-nr) that, together, quantify the fraction of the
+        accuracy collapse that is information-bottleneck versus training noise.
+\end{itemize}
+
+\subsection{Roadmap}
+The remainder of this report is organized as follows. Section
+\ref{sec:phases} defines the experimental phases at a glance. Section
+\ref{sec:spec} reports the as-built technical specification and lists every
+drift from the preliminary specification. Section \ref{sec:design} documents
+the engineering approach and the mathematical model. Section \ref{sec:tests}
+reports the experimental results: the two phases that carry the headline
+science --- Phase B1 and Phase C2 --- are analysed in full with tables,
+figures, and the per-model cross-comparison of Section \ref{sec:crossmodel},
+while the remaining phases are summarized qualitatively. Section
+\ref{sec:problems} enumerates the engineering and scientific problems
+encountered during the 402-cell campaign and how each was resolved. Section
+\ref{sec:conclusions} states the scientific conclusions, evaluates the project
+against its preliminary goals, and compares the planned schedule and budget
+with the actual execution. Section \ref{sec:references} lists the references.

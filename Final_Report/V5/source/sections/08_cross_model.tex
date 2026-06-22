@@ -1,0 +1,60 @@
+% Cross-model robustness comparison (V5 refocused revision).
+% Slim chapter: synthesizes the three architectures across the two focus phases
+% (B1, C2) only. All Phase C / D synthesis and every reference to removed
+% Phase C / D figures have been dropped. The figures themselves live in the
+% Phase B1 and C2 results subsections (Section \ref{sec:tests}).
+\subsection{Cross-model robustness comparison}
+\label{sec:crossmodel}
+
+This subsection reads the two focus phases vertically by model rather than by
+phase. The combined-degradation behaviour is taken from Phase B1
+(Table~\ref{tab:phase_b}, Figure~\ref{fig:b1_curves}) and the single-axis
+behaviour from Phase C2 (Table~\ref{tab:phase_c2},
+Figures~\ref{fig:c2_type}--\ref{fig:c2_model_ssim}).
+
+\subsubsection{Per-model profiles}
+\label{sec:cm:profiles}
+
+\sectheading{ResNet50.} ResNet50 anchors the clean accuracy band at $95.18\,\%$
+on CIFAR-10 and $99.14\,\%$ on MNIST. Under the combined Phase B1 curve its
+CIFAR-10 accuracy declines monotonically from $76.46\,\%$ at L1 to $19.06\,\%$
+at L5. Its Phase C2 profile is dominated by the resolution axis: on CIFAR-10
+the resolution cell falls from $80.18\,\%$ to $30.16\,\%$ across the quality
+range, while the salt-and-pepper cell never drops below $74.68\,\%$.
+
+\sectheading{DenseNet121.} DenseNet121 sits slightly below ResNet50 at the
+clean baseline ($93.56\,\%$ on CIFAR-10) but matches it on MNIST
+($99.30\,\%$). Under combined degradation it tracks ResNet50 closely
+($78.48\,\%$ at L1, $19.58\,\%$ at L5 on CIFAR-10), with a small lead at the
+moderate level. Its Phase C2 axis ordering is identical to ResNet50's:
+resolution carries the strongest accuracy--quality association and
+salt-and-pepper is nearly flat.
+
+\sectheading{TransNeXt-tiny.} TransNeXt-tiny posts the highest clean baselines
+($97.64\,\%$ on CIFAR-10, $99.24\,\%$ on MNIST) and holds the largest accuracy
+advantage at the mild and moderate end of the Phase B1 curve ($87.58\,\%$ at
+L1, $64.22\,\%$ at L2 on CIFAR-10). It is also the most robust backbone on
+every Phase C2 axis at matched image quality. The advantage collapses into the
+CNN band from L3 onward.
+
+\subsubsection{Side-by-side reading}
+\label{sec:cm:sidebyside}
+
+At matched image-quality operating points the three architectures order
+consistently: TransNeXt-tiny on top at mild and moderate degradation, the two
+CNNs essentially overlapping (Figures~\ref{fig:c2_model}
+and~\ref{fig:c2_model_ssim}). On CIFAR-10 the TransNeXt advantage over the CNN
+mean is $+10.1\,$\Mpp{} at L1 and $+10.4\,$\Mpp{} at L2, then narrows to under
+$1.5\,$\Mpp{} by L3; from L3 onward the three architectures are
+indistinguishable to within the multi-seed $\sigma < 1.5\,$\Mpp{} noise floor.
+
+Convergence at extreme degradation deserves separate emphasis. At the Phase B1
+L5 operating point on CIFAR-10 all three models land in the $[19, 21]\,\%$
+accuracy band. The implication for THz deployment is that, at the extreme end
+of the degradation curve, the architectural choice is irrelevant: the spatial
+information has been removed, and every architecture studied here recovers only
+near-random accuracy from what remains. The Phase C2 attribution shows where
+that information goes --- the resolution axis dominates the loss --- so future
+work that wants to shift the L5 accuracy band must invest in front-end signal
+restoration (super-resolution, denoising) rather than in larger or deeper
+classifiers.

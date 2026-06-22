@@ -1,0 +1,58 @@
+{
+  "c2_cifar10_psnr": {
+    "dataset": "cifar10",
+    "metric": "psnr",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.8401388774085707,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.98)."
+  },
+  "c2_mnist_psnr": {
+    "dataset": "mnist",
+    "metric": "psnr",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.982858450364341,
+      "blur": 0.4219574007504171,
+      "salt_pepper": 0.6997484151935447
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-PSNR association (Spearman rho = +0.98)."
+  },
+  "c2_cifar10_ssim": {
+    "dataset": "cifar10",
+    "metric": "ssim",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.9819805060619657,
+      "blur": 0.8401388774085707,
+      "salt_pepper": 0.5346338310781813
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.98)."
+  },
+  "c2_mnist_ssim": {
+    "dataset": "mnist",
+    "metric": "ssim",
+    "y_range_pct": [
+      26.694001108407974,
+      100.0
+    ],
+    "spearman_rho_by_axis": {
+      "resolution": 0.982858450364341,
+      "blur": 0.4219574007504171,
+      "salt_pepper": 0.6997484151935447
+    },
+    "ranking_sentence": "Resolution carries the strongest accuracy-SSIM association (Spearman rho = +0.98)."
+  }
+}
