@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering
+\caption{Five-level synthetic degradation schedule. Blur kernel and $\sigma$ are pixel-domain values at the $224 \times 224$ model input.}
+\label{tab:levels}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrrr}
+\toprule
+Level & Name & low\_res & Blur K & Blur $\sigma$ & Noise std & S\&P & Saturation \\
+\midrule
+L1 & Mild & 18 & 13 & 2.50 & 0.04 & 0.03 & 0.95 \\
+L2 & Light & 12 & 25 & 5.00 & 0.08 & 0.06 & 0.65 \\
+L3 & Moderate & 8 & 41 & 8.00 & 0.12 & 0.10 & 0.40 \\
+L4 & Severe & 6 & 61 & 12.00 & 0.16 & 0.14 & 0.15 \\
+L5 & Extreme & 3 & 91 & 18.00 & 0.22 & 0.18 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}

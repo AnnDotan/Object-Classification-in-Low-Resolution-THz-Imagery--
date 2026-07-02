@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering
+\caption{TransNeXt-tiny accuracy margin over the two CNNs on the Phase B1 curve (percentage points); L3 uses the multi-seed mean (seed noise $\sigma < 1.2$).}
+\label{tab:b1_gap}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrr}
+\toprule
+Dataset & Margin & L1 & L2 & L3 & L4 & L5 \\
+\midrule
+CIFAR-10 & vs CNN mean & +10.11 & +10.41 & +2.05 & +0.82 & +0.78 \\
+CIFAR-10 & vs best CNN & +9.10 & +10.28 & +0.94 & -0.02 & +0.52 \\
+MNIST & vs CNN mean & +0.00 & -0.45 & +0.07 & -0.02 & -0.40 \\
+MNIST & vs best CNN & -0.22 & -0.54 & -0.75 & -0.84 & -0.52 \\
+\bottomrule
+\end{tabular}
+\end{table}

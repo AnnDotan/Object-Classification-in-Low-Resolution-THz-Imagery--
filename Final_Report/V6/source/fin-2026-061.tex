@@ -1,0 +1,131 @@
+% =====================================================================
+%  fin-2026-061.tex - Final Summary Report (Fourth Year Engineering Project)
+%  Project: Classification of Objects at a Very Low Resolution (THz-like)
+%  Project number: s-2026-045 / p-2026-061
+%  Students: Bahat Itamar (205805856), Dotan Ann Hanna (211542311)
+%  Supervisors: Yitzhaky Yitzhak, Lerner Rinat
+%  Submission: 26/07/2026
+%
+%  V6 revision (2026-07-02). Deltas over V5:
+%   * Abstracts (EN + HE) rewritten: labelled structure kept, language
+%     simplified, load-bearing numbers cut to four. Hebrew abstract is a
+%     native rewrite with no embedded math (fixes the V5 bidi garbling).
+%   * Front matter: Table of Contents + List of Figures + List of Tables
+%     restored (BGU guideline). In the DOCX they are native Word fields
+%     (docx_lists.lua); the XeLaTeX PDF proof renders native lists.
+%   * Phase B1 / C2 analysis deepened: drop-vs-clean table, per-level
+%     TransNeXt-margin table, L1-L5 sample strip, full Spearman table.
+%   * All figures rebuilt readable under Final_Report/figures/v6/
+%     (block diagrams no longer overflow; sample-grid labels print-size;
+%     single-image panels instead of LaTeX tabular assemblies).
+%   * Stale V5 claims corrected against the frozen data: TransNeXt
+%     latency is ~6.5x ResNet50 (not 1.5x); ECE does NOT explode at L5
+%     (mean 5.6% at L3 vs 2.9% at L5); plan-vs-execution GPU ledger
+%     rebuilt from the PRD v5 numbers.
+%   * Plain-language interpretation woven into the results prose.
+%
+%  Build (TeX -> DOCX via Pandoc; DOCX is the ONLY deliverable):
+%    python Final_Report/V6/scripts/build_v6_docx.py
+%  A XeLaTeX PDF may be compiled locally as a layout/Hebrew proof only.
+% =====================================================================
+\documentclass[a4paper,11pt]{article}
+
+% --- Geometry: BGU rule = 2.5 cm margins on every side --------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+
+% --- Fonts / language ----------------------------------------------
+% Engine-aware preamble: XeLaTeX uses fontspec + polyglossia (Hebrew RTL
+% rendering with the David Windows-system Hebrew font); pdflatex falls back
+% to T1 fontenc + utf8 inputenc with babel English (Hebrew not renderable
+% but PDF still compiles).
+\ifdefined\XeTeXversion
+  \usepackage{fontspec}
+  \setmainfont{Times New Roman}
+  \usepackage{polyglossia}
+  \setdefaultlanguage{english}
+  \setotherlanguage{hebrew}
+  \newfontfamily\hebrewfont[Script=Hebrew]{David}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{newtxtext,newtxmath}      % Times New Roman text + matching math
+  \usepackage[english]{babel}
+\fi
+
+% --- Layout ---------------------------------------------------------
+\usepackage{setspace}
+\setstretch{1.5}                         % BGU rule = 1.5 line spacing
+\usepackage[justification=justified,format=plain,labelfont=bf,font=small]{caption}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\let\Bbbk\relax % newtxmath defines \Bbbk; avoid amssymb redefinition error
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+
+% --- Bibliography (IEEE) -------------------------------------------
+\usepackage[numbers,square,sort&compress]{natbib}
+\bibliographystyle{IEEEtran}
+
+% --- Helpers --------------------------------------------------------
+\newcommand{\sectheading}[1]{\vspace{0.8em}\noindent\textbf{#1}\par\noindent}
+\newcommand{\Mpp}{percentage points}
+% All V6 report figures live under the V6-specific tree
+% Final_Report/figures/v6/ (the shared Final_Report/figures/ tree keeps the
+% V4/V5 originals untouched). \figpath steps two levels up
+% (V6/source -> V6 -> Final_Report) to reach it.
+\newcommand{\figpath}[1]{../../figures/v6/#1}
+\newcommand{\tabpath}[1]{tables/#1}
+
+% --- Document -------------------------------------------------------
+\begin{document}
+
+% =========================== Cover page ============================
+\input{sections/00_cover.tex}
+
+% =========================== Front matter ==========================
+\pagenumbering{arabic}
+
+\input{sections/01_abstract.tex}
+
+% Table of contents + lists (BGU guideline, restored in V6).
+% DOCX path: docx_lists.lua converts each heading below into a TOCHeading
+% paragraph followed by the corresponding native Word field; the LaTeX
+% list commands are silently dropped by Pandoc.
+% XeLaTeX QA path: the native lists render after each heading.
+\clearpage
+\setcounter{tocdepth}{2}
+\section*{Table of Contents}
+\ifdefined\XeTeXversion\renewcommand{\contentsname}{}\tableofcontents\fi
+
+\section*{List of Figures}
+\ifdefined\XeTeXversion\renewcommand{\listfigurename}{}\listoffigures\fi
+
+\section*{List of Tables}
+\ifdefined\XeTeXversion\renewcommand{\listtablename}{}\listoftables\fi
+\clearpage
+
+% =========================== Body ==================================
+
+\input{sections/02_introduction.tex}        % Section 1
+\input{sections/04_phases_overview.tex}     % Section 2
+\input{sections/03_spec.tex}                % Section 3
+\input{sections/04_design.tex}             % Section 4
+\input{sections/05_tests.tex}              % Section 5 (Results)
+\input{sections/08_cross_model.tex}         % folded into Section 5 as subsections (5.x)
+\input{sections/06_problems.tex}            % Section 6
+\input{sections/07_conclusions.tex}         % Section 7
+\input{sections/08_references.tex}          % Section 8 (References, manual IEEE list)
+
+% =========================== Back matter ===========================
+% Appendices use explicit, unnumbered "Appendix A/B/C:" headings (see
+% 99_appendix.tex) so they read identically in the XeLaTeX PDF and the
+% Pandoc/DOCX deliverable; \appendix lettering is therefore not used.
+\clearpage
+\input{sections/99_appendix.tex}
+
+\end{document}

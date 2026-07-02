@@ -1,0 +1,63 @@
+% Appendices / Supplementary Material (V5 refocused revision).
+% The raw per-cell tables for the non-focus phases (A, C, D, B2, B2-nr,
+% multi-seed) are NOT reproduced here: V5 keeps only the Phase B1 and Phase C2
+% blocks, and those are tabulated inline in the results section. This appendix
+% retains a data-availability pointer and the degradation-schedule source
+% listing.
+
+\section*{Appendix A: Copyright and Confidentiality Agreement (Signed Form 12.2)}
+\label{app:copyright}
+
+This appendix (Appendix~A) holds the signed Copyright and Confidentiality
+Agreement required by the Engineering Project Guidelines.
+
+\begin{center}
+\fbox{\parbox{0.9\linewidth}{\centering\vspace{1.5em}
+\textit{[Placeholder --- the signed BGU Form 12.2 (Copyright and
+Confidentiality Agreement), bearing the signatures of both students and both
+supervisors, is bound here in the submitted copy.]}
+\vspace{1.5em}}}
+\end{center}
+
+\section*{Appendix B: Supplementary Material --- Data Availability}
+\label{app:tables}
+
+The complete per-cell accuracy blocks for every phase (Phase A clean baselines,
+Phase B1 combined degradation, the full Phase C single-axis sweep, Phase C2,
+the Phase D regularization sweep, Phase B2 / B2-nr, and the multi-seed audit)
+are recorded in machine-readable form and are not reproduced here. They are
+available in the campaign artifacts: the aggregated
+\texttt{artifacts/Final\_Exp.json} (schema version 3) and the per-phase CSV
+tables under \texttt{Final\_Report/data/tables/}. The two phases analysed in
+detail in Section~\ref{sec:tests} --- Phase B1 and Phase C2 --- are tabulated
+inline there (Tables~\ref{tab:phase_b} and~\ref{tab:phase_c2}); the derived
+analysis tables (drop versus clean baseline, per-level margins, Spearman
+correlations) are regenerated from those CSVs by
+\texttt{Final\_Report/V6/scripts/build\_v6\_assets.py}, which also
+cross-checks them against the PRD reference numbers at build time.
+
+\section*{Appendix C: Source Listings}
+\label{app:listings}
+
+The single source of truth for the five-level degradation schedule is the
+following Python module (excerpt). The full file is at
+\texttt{src/data/degradation\_levels.py}.
+
+\begin{small}\begin{verbatim}
+DEGRADATION_LEVELS = {
+    1: {"low_res": 18, "blur_kernel": 13, "blur_sigma":  2.50,
+        "noise_std": 0.04, "salt_pepper": 0.03, "saturation": 0.95},
+    2: {"low_res": 12, "blur_kernel": 25, "blur_sigma":  5.00,
+        "noise_std": 0.08, "salt_pepper": 0.06, "saturation": 0.65},
+    3: {"low_res":  8, "blur_kernel": 41, "blur_sigma":  8.00,
+        "noise_std": 0.12, "salt_pepper": 0.10, "saturation": 0.40},
+    4: {"low_res":  6, "blur_kernel": 61, "blur_sigma": 12.00,
+        "noise_std": 0.16, "salt_pepper": 0.14, "saturation": 0.15},
+    5: {"low_res":  3, "blur_kernel": 91, "blur_sigma": 18.00,
+        "noise_std": 0.22, "salt_pepper": 0.18, "saturation": 0.00},
+}
+\end{verbatim}\end{small}
+
+The full pipeline source code is in \texttt{src/data/degrade.py}; the
+training engine is under \texttt{src/lightning/}; the campaign drivers are
+under \texttt{scripts/}.

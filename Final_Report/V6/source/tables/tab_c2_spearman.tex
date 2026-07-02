@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase C2: Spearman rank correlation $\rho$ between accuracy and measured image quality, pooled over the three backbones ($n = 15$ per entry).}
+\label{tab:c2_spearman}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{CIFAR-10} & \multicolumn{2}{c}{MNIST} \\
+Axis & $\rho$ vs PSNR & $\rho$ vs SSIM & $\rho$ vs PSNR & $\rho$ vs SSIM \\
+\midrule
+Resolution & +0.98 & +0.98 & +0.98 & +0.98 \\
+Blur & +0.84 & +0.84 & +0.42 & +0.42 \\
+Salt \& pepper & +0.53 & +0.53 & +0.70 & +0.70 \\
+\bottomrule
+\end{tabular}
+\end{table}

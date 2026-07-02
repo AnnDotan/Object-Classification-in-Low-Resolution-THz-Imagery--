@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase B (combined degradation) validation accuracy (\%). All five axes active at the same level L. Cells with $\pm$ values are multi-seed audited (seeds $\{42, 43, 44\}$).}
+\label{tab:phase_b}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrr}
+\toprule
+Model & Dataset & L1 & L2 & L3 & L4 & L5 \\
+\midrule
+ResNet50 & CIFAR-10 & 76.46 & 53.94 & 36.31 $\pm$ 0.83 & 26.84 & 19.06 \\
+ResNet50 & MNIST & 99.18 & 96.36 & 79.17 $\pm$ 0.80 & 56.44 & 28.00 \\
+DenseNet121 & CIFAR-10 & 78.48 & 53.68 & 38.54 $\pm$ 0.78 & 28.52 & 19.58 \\
+DenseNet121 & MNIST & 98.74 & 96.54 & 80.79 $\pm$ 0.84 & 58.08 & 27.76 \\
+TransNeXt-tiny & CIFAR-10 & 87.58 & 64.22 & 39.48 $\pm$ 0.62 & 28.50 & 20.10 \\
+TransNeXt-tiny & MNIST & 98.96 & 96.00 & 80.05 $\pm$ 0.11 & 57.24 & 27.48 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,106 @@
+% Introduction (BGU \S 10.7.2.4).
+% V6 readability pass: shorter sentences, plain-language framing woven in,
+% structure unchanged (Motivation / Problem / Alternatives / Contributions /
+% Roadmap).
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Motivation}
+Terahertz (THz) imaging is increasingly used in security screening, biomedical
+diagnostics, and through-fabric inspection, because radiation in this band
+passes through clothing, paper, plastics, and other materials that block
+visible light. The same physics that makes THz attractive also limits it:
+diffraction caps the spatial resolution near the wavelength of the source,
+the detector integrates each measurement over a comparatively large area, and
+thermal background dominates the noise floor. The practical result is easy to
+state: a THz frame is simultaneously very low resolution, noisy, and
+colorless.
+
+Standard deep-vision classifiers are built for the opposite kind of picture.
+Almost all of them inherit ImageNet pretraining and rely on fine textures,
+sharp edges, and saturated color. When those cues are removed, accuracy
+collapses --- and, importantly, the collapse is opaque. Before this project it
+was not obvious how much of the loss comes from the low resolution alone, how
+much from noise or from the missing color, and whether anything on the
+training side (regularization, augmentation, or simply choosing a different
+architecture) can win part of the loss back. Answering those questions in a
+controlled, reproducible way is the purpose of this work.
+
+\subsection{Problem statement}
+This project quantifies the accuracy degradation of three representative deep
+architectures under controlled synthetic THz-like degradation, decomposes the
+loss into per-axis contributions, audits the reproducibility of the
+measurements across random seeds, and documents which training-side
+interventions recover lost accuracy. The three architectures span the
+families that anchor the image-classification literature: a residual
+convolutional network (ResNet50 [1]), a densely connected convolutional
+network with explicit feature reuse (DenseNet121 [2]), and a vision
+transformer with foveal attention (TransNeXt-tiny [3]).
+
+The success criteria carried over from the preliminary report are: at least
+80 percent top-1 accuracy at the moderate-degradation operating point, an
+identifiable architectural winner that beats the baseline by a statistically
+meaningful margin, and inference latency compatible with sensor-side
+deployment. These targets are revisited in Section~\ref{sec:conclusions}
+against the actual measurements --- including the one target the measurements
+show to be physically out of reach, which is itself an informative result.
+
+\subsection{Alternative approaches considered}
+Three alternative families were reviewed during the preliminary design and
+rejected in favor of training directly on degraded images.
+
+\textbf{(i) Denoise, then classify.}\quad
+Restore the image first, then hand it to a clean-image classifier. The appeal
+is modularity: the pretrained classifier is reused as-is. The problem is that
+restoration models need matched clean/degraded training pairs, which a real
+THz sensor never produces, and restoration networks trained on mismatched
+degradations tend to hallucinate detail [4], [5] --- the output looks better
+and scores a higher PSNR without actually helping classification.
+
+\textbf{(ii) Super-resolve, then classify.}\quad
+A special case of (i) that fixes only the resolution. As
+Section~\ref{sec:tests} will show, resolution is indeed the dominant axis, so
+this is the most promising restoration target; but blur and noise still cost
+several \Mpp{} each at the moderate operating point, so a resolution-only
+fix cannot recover the full loss on its own.
+
+\textbf{(iii) Train-time degradation exposure (adopted).}\quad
+Train the classifier directly on synthetically degraded images, so the
+representation adapts to the degraded distribution. This is the approach used
+by modern robustness benchmarks [6]. It needs no separate restoration
+network, keeps inference to a single forward pass, and --- most important for
+this study --- it exposes the architectural differences directly, because
+every backbone sees exactly the same degraded distribution.
+
+\subsection{Contributions}
+This work contributes:
+
+\begin{itemize}
+  \item a 402-cell training campaign across three architectures, two
+        datasets, five degradation levels, and seven experimental phases, all
+        trained to convergence under a single fair-comparison invariant
+        ($224 \times 224$ uniform input, frozen Optuna hyperparameters,
+        identical data pipeline);
+  \item a 48-replicate multi-seed audit of the 24 headline cells that bounds
+        run-to-run variance below 1.2~\Mpp{};
+  \item a deterministic 256-image PSNR / SSIM probe per pipeline, so that
+        accuracy can be compared against measured image quality rather than
+        only against the preset severity index;
+  \item a per-axis attribution showing that resolution is the dominant cost
+        --- roughly $4\times$ blur or salt-and-pepper at matched severity;
+  \item a regularization-recovery sweep (Phase~D) and a protocol
+        simplification sweep (Phase~B2 / B2-nr) that together separate the
+        part of the collapse caused by destroyed information from the part
+        training can recover.
+\end{itemize}
+
+\subsection{Roadmap}
+Section~\ref{sec:phases} defines the seven experimental phases, which every
+later section refers back to. Sections~\ref{sec:spec} and~\ref{sec:design}
+give the as-built specification (with its drifts from the preliminary one)
+and the engineering design. Section~\ref{sec:tests} reports the results ---
+Phases B1 and C2 in full, the rest in brief, closing with the per-model
+synthesis. Sections~\ref{sec:problems} and~\ref{sec:conclusions} cover the
+problems encountered and the conclusions, goal evaluation, and
+plan-versus-execution comparison; Section~\ref{sec:references} lists the
+references.

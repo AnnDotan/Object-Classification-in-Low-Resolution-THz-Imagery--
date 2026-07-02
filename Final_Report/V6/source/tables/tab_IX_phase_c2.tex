@@ -1,0 +1,31 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase C2 single-axis isolation under the THz protocol (saturation $=0$, noise $=0$, T3 regularization) validation accuracy (\%).}
+\label{tab:phase_c2}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lllrrrrr}
+\toprule
+Model & Dataset & Axis & L1 & L2 & L3 & L4 & L5 \\
+\midrule
+ResNet50 & CIFAR-10 & Resolution & 80.18 & 66.36 & 51.32 & 42.96 & 30.16 \\
+ResNet50 & CIFAR-10 & Blur & 90.62 & 89.58 & 83.36 & 71.68 & 58.76 \\
+ResNet50 & CIFAR-10 & S\&P & 86.24 & 85.18 & 83.48 & 77.86 & 74.68 \\
+ResNet50 & MNIST & Resolution & 99.06 & 98.64 & 94.12 & 81.24 & 45.54 \\
+ResNet50 & MNIST & Blur & 99.24 & 99.26 & 99.32 & 99.32 & 98.86 \\
+ResNet50 & MNIST & S\&P & 99.14 & 99.16 & 99.18 & 99.00 & 99.00 \\
+DenseNet121 & CIFAR-10 & Resolution & 76.82 & 64.04 & 51.34 & 44.44 & 30.80 \\
+DenseNet121 & CIFAR-10 & Blur & 88.24 & 85.66 & 81.66 & 74.90 & 64.60 \\
+DenseNet121 & CIFAR-10 & S\&P & 86.38 & 83.26 & 80.54 & 79.30 & 77.78 \\
+DenseNet121 & MNIST & Resolution & 99.38 & 98.64 & 94.30 & 82.28 & 45.02 \\
+DenseNet121 & MNIST & Blur & 99.42 & 99.34 & 99.22 & 99.38 & 99.16 \\
+DenseNet121 & MNIST & S\&P & 99.16 & 99.20 & 99.20 & 99.08 & 99.06 \\
+TransNeXt-tiny & CIFAR-10 & Resolution & 89.34 & 76.08 & 58.24 & 46.58 & 30.54 \\
+TransNeXt-tiny & CIFAR-10 & Blur & 96.52 & 95.96 & 93.00 & 88.02 & 71.04 \\
+TransNeXt-tiny & CIFAR-10 & S\&P & 95.20 & 94.78 & 93.52 & 91.56 & 89.58 \\
+TransNeXt-tiny & MNIST & Resolution & 99.32 & 98.76 & 93.94 & 81.74 & 45.60 \\
+TransNeXt-tiny & MNIST & Blur & 99.38 & 99.38 & 99.46 & 99.48 & 99.06 \\
+TransNeXt-tiny & MNIST & S\&P & 99.28 & 99.14 & 99.20 & 99.08 & 99.08 \\
+\bottomrule
+\end{tabular}
+\end{table}

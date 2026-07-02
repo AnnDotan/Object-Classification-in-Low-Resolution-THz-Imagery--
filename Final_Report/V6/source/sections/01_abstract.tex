@@ -1,0 +1,77 @@
+% Abstract (English then Hebrew). Per BGU \S 10.7.2.3.
+% V6 rewrite: labelled structure retained, language simplified, the number
+% count cut to the four load-bearing results. Plain-text quantities (no math
+% mode) so the DOCX carries no equation objects inside the abstract, and the
+% Hebrew abstract renders inside a single RTL block (hebrew_rtl.lua).
+% The 80% acceptance criterion is deliberately NOT quoted here; it is
+% evaluated once, in the Conclusions, against the as-measured numbers.
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+\noindent\textbf{Background.}\quad
+Terahertz (THz) cameras can see through clothing, paper, and plastic, which
+makes them attractive for security screening and medical imaging. The physics
+of the band, however, exacts a price: the images come out at very low
+resolution, noisy, and without color. Deep-learning classifiers are pretrained
+on sharp, colorful photographs, and it has not been documented quantitatively
+how much accuracy they lose under THz-like conditions, which kind of image
+degradation causes most of the damage, or whether smarter training can win the
+loss back.
+
+\noindent\textbf{Aim.}\quad
+Measure the robustness of three representative deep architectures --- a
+residual CNN (ResNet50), a densely connected CNN (DenseNet121), and a vision
+transformer (TransNeXt-tiny) --- under controlled synthetic THz-like
+degradation; attribute the accuracy loss to the individual degradation types;
+and quantify how much of it training-time regularization recovers.
+
+\noindent\textbf{Methods.}\quad
+A 402-run training campaign covers the three models on CIFAR-10 and MNIST
+across five severity levels (L1 mild to L5 extreme) and seven experimental
+phases: clean baselines, all degradations combined (Phase B1), one degradation
+at a time, a regularization-recovery sweep, and a simplified THz protocol
+(grayscale, no additive noise) with its own single-axis sweep (Phase C2).
+This report analyses Phases B1 and C2 in full and summarizes the remaining
+phases briefly. Every degradation pipeline is anchored to measured PSNR and
+SSIM values, so degradation types are compared on the image quality they
+actually produce rather than on the preset severity index; a 48-run
+multi-seed audit bounds the run-to-run noise.
+
+\noindent\textbf{Findings.}\quad
+Four results carry the campaign. (1)~The transformer is the most robust model
+in the mild-to-moderate range: on CIFAR-10 it leads the two CNNs by roughly
+10~\Mpp{} at levels L1--L2. (2)~At extreme degradation the architecture stops
+mattering --- all three models converge into a 19--21\% accuracy band on
+CIFAR-10. (3)~Resolution loss is by far the most damaging degradation type:
+at matched image quality it costs about four times more accuracy than blur or
+salt-and-pepper noise. (4)~Regularization recovers less than one percentage
+point of the roughly 12.5-point combined-degradation collapse, so the loss
+reflects information that was destroyed, not a model that over-fitted.
+
+\noindent\textbf{Conclusions.}\quad
+For THz-like systems operating at mild-to-moderate degradation, the vision
+transformer is the recommended backbone. At extreme degradation no classifier
+choice helps, because the discriminative detail is no longer in the image; the
+practical leverage there is restoring spatial resolution ahead of the
+classifier, before any denoising or deblurring.
+
+\noindent\textbf{Keywords.}\quad
+object classification, deep learning, low resolution, THz imaging,
+robustness, PSNR, SSIM, calibration, transformer, residual network,
+dense network.
+
+\bigskip
+\hrule
+\bigskip
+
+% ====================================================================
+% Hebrew abstract. V6: a native Hebrew rewrite (not a word-for-word
+% translation), no math mode and no English macro expansions inside the
+% RTL block -- these are what garbled the V5 rendering. The polyglossia
+% environment is used unconditionally: XeLaTeX renders it RTL directly,
+% and Pandoc maps it to a lang="he" Div that hebrew_rtl.lua marks
+% dir="rtl" so Word lays the paragraphs out right-to-left.
+% ====================================================================
+\begin{hebrew}
+\input{sections/hebrew_abstract_body.tex}
+\end{hebrew}

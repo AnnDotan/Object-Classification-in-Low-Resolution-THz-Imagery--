@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{Phase B1 accuracy drop versus the Phase A clean baseline (percentage points); the Clean column is the Phase A accuracy (\%). L3 uses the multi-seed mean.}
+\label{tab:b1_delta}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrrr}
+\toprule
+Model & Dataset & Clean & $\Delta$L1 & $\Delta$L2 & $\Delta$L3 & $\Delta$L4 & $\Delta$L5 \\
+\midrule
+ResNet50 & CIFAR-10 & 95.18 & -18.72 & -41.24 & -58.87 & -68.34 & -76.12 \\
+ResNet50 & MNIST & 99.14 & +0.04 & -2.78 & -19.97 & -42.70 & -71.14 \\
+DenseNet121 & CIFAR-10 & 93.56 & -15.08 & -39.88 & -55.02 & -65.04 & -73.98 \\
+DenseNet121 & MNIST & 99.30 & -0.56 & -2.76 & -18.51 & -41.22 & -71.54 \\
+TransNeXt-tiny & CIFAR-10 & 97.64 & -10.06 & -33.42 & -58.16 & -69.14 & -77.54 \\
+TransNeXt-tiny & MNIST & 99.24 & -0.28 & -3.24 & -19.19 & -42.00 & -71.76 \\
+\bottomrule
+\end{tabular}
+\end{table}

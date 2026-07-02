@@ -1,0 +1,91 @@
+% Problems and Solutions (BGU \S 10.7.2.8).
+% V6: readability pass over the V5 entries (same five problems, same
+% symptom / fix / guard structure, simpler sentences). Leads with the three
+% campaign-defining methodological problems, then hardware bring-up and the
+% reproducibility exposure.
+\section{Problems and Solutions}
+\label{sec:problems}
+
+This section describes the substantive engineering and scientific problems
+met during the 402-cell campaign. Each entry pairs the observed symptom with
+the corrective action and, where relevant, the automated guard that keeps the
+problem from coming back.
+
+\subsection{Native-resolution refactor and its rollback}
+\textbf{Symptom.}\quad An intermediate design (the ``V3'' refactor) trained
+each backbone at its dataset-native resolution --- $32 \times 32$ for the
+CIFAR-10 inputs to TransNeXt, $28 \rightarrow 32$ for MNIST --- on the
+argument that upsampling to $224 \times 224$ wastes computation and adds
+interpolation artifacts. The argument sounds efficient but breaks the one
+invariant the study depends on: with different tensor shapes per backbone,
+any measured cross-model gap mixes the architecture with the input size it
+happened to receive. It also threw away the ImageNet-pretrained
+receptive-field hierarchy of the two CNNs (calibrated for $224 \times 224$)
+and moved TransNeXt off the 224-pretrained distribution of its checkpoint.
+
+\textbf{Fix.}\quad Rolled back to a single uniform $224 \times 224$ protocol:
+every input is upsampled by the data pipeline before any model sees it, so
+cross-backbone deltas are attributable to architecture alone. The decision is
+recorded as a frozen invariant in the technical specification
+(Section~\ref{sec:spec}), and the data module asserts the $224 \times 224$
+output shape at construction time, so the native-resolution path cannot be
+reintroduced silently.
+
+\subsection{Hyperparameter tuning at campaign scale: frozen Optuna winners}
+\textbf{Symptom.}\quad Tuning each of the 402 cells separately was both
+computationally infeasible and scientifically wrong: per-level tuning would
+let the optimizer compensate for each degradation level individually,
+confounding the robustness signal with search noise, and a blind wide search
+risked overfitting the validation split.
+
+\textbf{Fix.}\quad The search was constrained twice. The space was narrowed
+to the paper-derived priors per architecture (at most one decade around the
+published value), and each (model, dataset) pair was tuned \emph{once}, at
+the L3 operating point, with the winner \emph{frozen} for the entire sweep.
+Phases that add regularization (D) or simplify the protocol (B2) layer on
+top of the frozen winners rather than re-tuning, so every comparison happens
+at one documented configuration. The winners live under
+\texttt{artifacts/best\_hparams/} and round-trip through each cell's
+\texttt{metrics.json}, making every run auditable.
+
+\subsection{Blur that was invisible at \texorpdfstring{$224 \times 224$}{224x224}}
+\textbf{Symptom.}\quad The single-axis blur sweep produced almost no accuracy
+drop between L1 and L5 (under 1~\Mpp{} on DenseNet121) --- suspicious for the
+supposedly second-worst degradation. The cause: the blur kernels
+(K $= 3 \ldots 13$, $\sigma = 0.8 \ldots 2.3$) had been calibrated for native
+$32 \times 32$ imagery. On the upsampled $224 \times 224$ tensor they covered
+only 1--6\% of the image width --- the ``blur'' axis was not actually
+blurring.
+
+\textbf{Fix.}\quad The schedule was rescaled to pixel-domain values at
+$224 \times 224$ (K $= 13 \ldots 91$, $\sigma = 2.5 \ldots 18$), tied by the
+rule $K = 2\lceil 2.5\sigma \rceil + 1$ so the kernel always captures the
+$2.5\sigma$ Gaussian footprint. A unit test asserts that L5 blur costs at
+least 5~dB of PSNR against L1, guarding any future schedule against the same
+scale mistake.
+
+\subsection{Vision-transformer bring-up on Blackwell hardware}
+\textbf{Symptom.}\quad TransNeXt training crashed on the RTX 5070 (Blackwell,
+sm\_120) with an opaque CUDA kernel-launch error in the first attention
+block: the PyTorch stack at project start shipped kernels only up to sm\_90,
+and the TransNeXt \texttt{swattention} extension had no sm\_120 binary.
+
+\textbf{Fix.}\quad TransNeXt was quarantined until the upstream package was
+rebuilt with sm\_120 support in the PyTorch Blackwell release; the quarantine
+predicate is now a permanent no-op but stays in code for future GPU
+substitutions. A startup self-test runs a one-iteration forward pass on the
+configured GPU before the campaign driver dispatches its first cell, so a
+compute-capability mismatch surfaces as a structured error instead of a raw
+CUDA stack trace mid-campaign.
+
+\subsection{Single-seed reproducibility exposure}
+\textbf{Symptom.}\quad The L3 headline cells were originally single-seed
+point estimates at seed 42. Without a variance bound, a reviewer could not
+tell whether a small inter-model gap was a real effect or a lucky seed.
+
+\textbf{Fix.}\quad A 48-replicate audit re-trained all 24 L3 headline cells
+at seeds 43 and 44. Every audited cell shows $\sigma < 1.2$~\Mpp{} (worst:
+the TransNeXt-tiny CIFAR-10 Phase~D T3 cell at 1.18), and no cross-model
+conclusion reverses under any seed. Schema version 3 of
+\texttt{Final\_Exp.json} carries the mean-$\pm\sigma$ pair on every audited
+cell, so the reproducibility floor is visible without re-running the audit.

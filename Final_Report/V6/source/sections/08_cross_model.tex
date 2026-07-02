@@ -1,0 +1,66 @@
+% Cross-model robustness comparison (V6).
+% Reads the two focus phases vertically by model. V6 deltas: margins restated
+% from tab_b1_gap (the V5 "under 1.5 pp from L3 onward" claim was wrong for
+% the CNN-mean comparison: the L3 gap is +2.05 pp vs the mean and +0.94 vs
+% the better CNN); MNIST explicitly stated as no-advantage territory; plain
+% language reading woven in.
+\subsection{Cross-model robustness comparison}
+\label{sec:crossmodel}
+
+This subsection reads the two focus phases vertically, by model. The
+combined-degradation behaviour comes from Phase~B1
+(Tables~\ref{tab:phase_b}--\ref{tab:b1_gap}, Figure~\ref{fig:b1_curves}), the
+single-axis behaviour from Phase~C2 (Table~\ref{tab:phase_c2},
+Figures~\ref{fig:c2_type_psnr}--\ref{fig:c2_model_ssim}).
+
+\subsubsection{Per-model profiles}
+\label{sec:cm:profiles}
+
+\sectheading{ResNet50 --- the fast, ordinary baseline.} ResNet50 opens at
+95.18\% clean on CIFAR-10 and 99.14\% on MNIST, and declines monotonically
+under the combined recipe to 19.06\% at L5 on CIFAR-10. Its Phase~C2 profile
+is dominated by the resolution axis (80.18\% down to 30.16\% across the
+quality range) while its salt-and-pepper accuracy never drops below 74.68\%.
+It carries no robustness advantage anywhere --- but it is also the fastest
+backbone by a factor of $2.5\times$ over DenseNet121 and $6.5\times$ over
+TransNeXt-tiny, which matters at deployment.
+
+\sectheading{DenseNet121 --- feature reuse buys little here.} DenseNet121
+starts lower on CIFAR-10 (93.56\%) and tracks ResNet50 closely all the way
+down (19.58\% at L5), with a small edge at the moderate level (38.54 vs
+36.31 at L3, about $2\sigma$ of seed noise). The preliminary hypothesis that
+dense feature reuse would help under information loss is not supported: its
+Phase~C2 axis ordering and magnitudes are essentially ResNet50's. In plain
+terms, keeping copies of earlier features does not help when the features
+were destroyed before the first layer ever saw them.
+
+\sectheading{TransNeXt-tiny --- the winner, where winning is possible.}
+TransNeXt-tiny posts the best clean baseline on CIFAR-10 (97.64\%), the
+largest mild-range margins on the combined curve (+10.11 and +10.41~\Mpp{}
+over the CNN mean at L1--L2), and is the most robust backbone on every
+Phase~C2 axis at matched image quality --- its blur advantage at L5 is
+about 6--12~\Mpp{} over the CNNs. The advantage has a boundary: it shrinks
+to +2.05~\Mpp{} at L3 (+0.94 over the better CNN, comparable to the seed
+noise) and disappears at L4--L5. On MNIST it never has an advantage at all;
+the CNNs are already at ceiling wherever the digits are readable.
+
+\subsubsection{Side-by-side reading}
+\label{sec:cm:sidebyside}
+
+Put together, the three profiles say something simple: architecture is a
+mild-degradation lever. Where the degraded image still contains texture
+(L1--L2 on CIFAR-10, every readable MNIST level), the foveal transformer
+converts that texture into up to ten extra accuracy points; where the
+texture is gone (L3 and beyond on the combined recipe), all three
+architectures converge --- into the 19--21\% band at L5 on CIFAR-10 and the
+27--28\% band on MNIST --- and no backbone choice moves the number by more
+than the seed noise.
+
+The Phase~C2 attribution explains where the accuracy goes: the resolution
+axis carries roughly four times the cost of blur or salt-and-pepper at
+matched measured quality. The deployment implication, developed in
+Section~\ref{sec:conclusions}, follows directly: pick the transformer when
+the operating point is mild and the latency budget allows it, but expect no
+classifier --- present or future --- to fix the extreme operating points.
+Those need the resolution restored in front of the classifier, not a bigger
+classifier behind the sensor.

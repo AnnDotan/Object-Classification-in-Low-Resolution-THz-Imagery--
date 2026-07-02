@@ -1,0 +1,56 @@
+% Experimental phases at a glance.
+% V6: wording pass; the Phase B2 / C2 protocol is now described precisely
+% (saturation FIXED at 0 = full grayscale, additive noise off) -- the V5
+% phrase "minus the saturation axis" wrongly suggested color was kept.
+\section{Experimental phases at a glance}
+\label{sec:phases}
+
+The campaign breaks the THz robustness question into seven phases. Each phase
+answers one question, and every later section refers back to this overview
+for the pipeline definitions instead of re-explaining them.
+Table~\ref{tab:phases_overview} is the single point of reference.
+
+\textbf{Phase A (Clean baseline).}\quad Pipeline: identity (upsample only).
+Six cells (three models $\times$ two datasets). Establishes the upper-bound
+accuracy that every later phase is measured against.
+
+\textbf{Phase B1 (Combined degradation).}\quad Pipeline: saturation lerp
+$\rightarrow$ downsample $\rightarrow$ noise and salt-and-pepper at the low
+resolution $\rightarrow$ upsample to $224 \times 224$ $\rightarrow$ blur,
+with all five axes active at the same level. Thirty cells (three models
+$\times$ two datasets $\times$ five levels). Question: how bad is the
+realistic worst case, where everything degrades at once?
+
+\textbf{Phase C (Single-axis isolation).}\quad Pipeline: exactly one axis
+active at level $L$, the other four held at identity. One hundred fifty cells
+(three models $\times$ two datasets $\times$ five levels $\times$ five axes).
+Question: which individual degradation drives the Phase~B1 collapse?
+
+\textbf{Phase D (Regularization-recovery sweep).}\quad Pipeline: identical to
+Phase~B1, plus one of three training-time regularization treatments T1 / T2 /
+T3 (architectural dropout, label mixing, and their combination). Ninety cells.
+Question: is the Phase~B1 collapse over-fitting --- which regularization
+should fix --- or lost information, which it cannot fix?
+
+\textbf{Phase B2 (THz-protocol simplification).}\quad Pipeline: Phase~B1 with
+the image held at full grayscale (saturation fixed at 0) and the additive
+Gaussian noise turned off; T3 regularization active. Thirty cells. This is
+the deployment-realistic protocol: a real THz frame is a single-channel
+image, so the color axis is not a variable, and the dominant sensor noise is
+impulsive rather than Gaussian. Question: how much easier is the realistic
+protocol than the worst-case one?
+
+\textbf{Phase B2-nr (No-regularization arm).}\quad Same pipeline as
+Phase~B2, at L3 only, with T3 off. Six cells. Question: of the Phase
+B1$\rightarrow$B2 improvement, how much comes from the simpler protocol
+itself and how much from the regularization?
+
+\textbf{Phase C2 (Single-axis isolation under the THz protocol).}\quad Same
+identity-elsewhere logic as Phase~C, restricted to the three THz-relevant
+axes (resolution, blur, salt-and-pepper), with grayscale and zero Gaussian
+noise forced throughout. Ninety cells. Question: under realistic conditions,
+which degradation axis should a THz system engineer fight first? The
+Section~\ref{sec:tests} plots answer this on the measured PSNR / SSIM scales,
+never on the preset L1--L5 index.
+
+\input{tables/tab_II_phases_overview.tex}

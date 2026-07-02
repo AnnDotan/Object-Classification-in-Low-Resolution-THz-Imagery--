@@ -1,0 +1,302 @@
+% Experimental results (V6 revision).
+% Directive unchanged from V5: FULL graphical + tabular treatment for Phase B1
+% and Phase C2 ONLY; every other phase is a short focused paragraph with no
+% tables and no figures. V6 deepens the two focus phases (drop-vs-clean table,
+% per-level margin table, L1-L5 sample strip, full Spearman table), weaves the
+% plain-language reading into the prose, and corrects the V5 claims that
+% contradicted the frozen data (ECE at L5, TransNeXt latency, the "under
+% 1.5 pp from L3" margin). Phase C2 axis comparisons are plotted against
+% measured PSNR and SSIM -- never the preset L1-L5 index.
+\section{Experimental Results}
+\label{sec:tests}
+
+This section reports the measured performance. Every value comes from a
+frozen training run recorded under \texttt{runs/final/} and aggregated by
+\texttt{artifacts/Final\_Exp.json} (schema version 3); no values are
+synthesized or interpolated. The two phases that carry the headline science
+--- Phase~B1 (combined degradation) and Phase~C2 (single-axis isolation under
+the THz protocol) --- are reported in full, with tables, figures, and a
+model-by-model reading. The remaining phases are summarized in
+Section~\ref{sec:tests:brief}; their complete per-cell numbers live in the
+machine-readable artifacts referenced in the Appendix.
+
+\subsection{Test rig}
+\label{sec:tests:rig}
+The campaign ran on a single workstation with the configuration in
+Table~\ref{tab:rig}. Determinism is guarded by
+\texttt{pl.seed\_everything(42, workers=True)} for the canonical seed and by
+the per-sample seed offset for the validation split, so any cell can be
+reproduced bit-exactly.
+
+\begin{table}[htbp]
+\centering
+\caption{Test rig and software stack.}
+\label{tab:rig}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{ll}
+\toprule
+Component & Value \\
+\midrule
+GPU                & NVIDIA RTX 5070 (Blackwell, sm\_120, 12 GB) \\
+Precision          & \texttt{bf16-mixed} \\
+CPU dataloader workers & 0 (Windows) \\
+Framework          & PyTorch 2.11 [17] + Lightning 2.x [16] \\
+Image quality      & \texttt{torchmetrics} PSNR / SSIM, \texttt{data\_range = 1} \\
+Determinism gate   & \texttt{src/tests/test\_degradation\_determinism.py} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{What the degradations look like}
+\label{sec:tests:samples}
+Figure~\ref{fig:samples} grounds the numbers visually. Each grid shows the
+same six fixed validation images under the clean pipeline, the combined
+Phase~B1 recipe at the moderate level, the grayscale Phase~B2 protocol, and
+each of the three Phase~C2 single-axis pipelines. Two things are worth
+noticing before any accuracy number. First, the combined B1~L3 image is
+already hard for a human: the object outline survives, but texture and color
+are essentially gone. Second, the three C2 rows differ far less in
+\emph{appearance} than in what they destroy --- the salt-and-pepper row looks
+the most damaged but keeps the underlying shape intact, while the resolution
+row looks smooth but has permanently discarded the fine structure. The
+accuracy results below follow this asymmetry exactly.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{samples/grid_THz_L3_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{samples/grid_THz_L3_mnist.png}}
+  \caption{Degradation pipelines at the moderate level (L3) on six fixed validation images. Left: CIFAR-10; right: MNIST. Rows: clean; combined Phase B1; grayscale Phase B2; the three Phase C2 single axes.}
+  \label{fig:samples}
+\end{figure}
+
+\subsection{The remaining phases in brief}
+\label{sec:tests:brief}
+The five phases outside the B1 / C2 focus are summarized here; each paragraph
+states what was run, the one or two numbers that matter, and what they mean.
+
+\sectheading{Clean baselines (Phase A, 6 cells).} All three backbones
+classify the undegraded validation sets at near-ceiling accuracy: 95.18\%
+(ResNet50), 93.56\% (DenseNet121), and 97.64\% (TransNeXt-tiny) on CIFAR-10,
+and 99.1--99.3\% on MNIST. These six numbers are the reference points every
+drop in this section is measured against.
+
+\sectheading{Full single-axis isolation (Phase C, 150 cells).} Sweeping all
+five degradation axes one at a time, over the full color pipeline, produces a
+clear severity ordering: resolution loss dominates, blur and additive noise
+are intermediate, and desaturation and salt-and-pepper are comparatively
+benign in isolation. In plain terms: taking away the pixels hurts far more
+than taking away the color. This ordering is what motivated the three-axis
+THz-relevant subset studied in depth as Phase~C2.
+
+\sectheading{Regularization recovery (Phase D, 90 cells).} Layering dropout,
+mixup, and CutMix on top of the combined-degradation pipeline recovers very
+little: the best treatment (T3, the combination) recovers +0.77~\Mpp{} on
+average against a collapse roughly sixteen times larger, with the best single
+segment (TransNeXt-tiny on CIFAR-10) at +2.20~\Mpp{}. The conclusion is
+important precisely because the effect is small: if the accuracy loss were
+over-fitting, regularization would have clawed a large part of it back. It
+does not, so the loss is an information bottleneck --- the detail the models
+need is no longer in the pixels.
+
+\sectheading{THz protocol simplification (Phase B2 / B2-nr, 36 cells).}
+Re-running the combined sweep under the deployment-realistic protocol
+(grayscale fixed, additive Gaussian noise off, T3 active) lifts accuracy by
++4.01~\Mpp{} on average over Phase~B1, and by +5.58~\Mpp{} at the moderate
+level. The six-cell no-regularization arm (B2-nr) decomposes the L3 gain:
++4.19~\Mpp{} comes from the simpler protocol itself and only +1.39~\Mpp{}
+from T3. In other words, about three quarters of the improvement is the
+physics of the protocol, not the training trick --- consistent with the
+Phase~D reading. A secondary observation: T3 helps roughly twice as much
+under the simpler protocol (+1.39) as under the full one (+0.77), so
+regularization becomes more useful as the degradation becomes less severe.
+
+\sectheading{Multi-seed audit (48 replicates).} Re-training all 24 L3
+headline cells at seeds 43 and 44 leaves every conclusion intact: the largest
+per-cell standard deviation is 1.18~\Mpp{} and no cross-model ordering
+reverses under any seed. Every margin quoted in this section is therefore
+either comfortably above the seed noise or explicitly flagged as within it.
+
+\sectheading{Calibration.} Expected calibration error stays moderate across
+the campaign: the mean over the 24 audited cells is 5.6\% at L3 and 2.9\% at
+L5 (L3 measured on the held-out test split, L5 on the validation split).
+Two useful readings: the networks do not become wildly over-confident as the
+input degrades --- confidence broadly tracks the collapsing accuracy --- and
+the single worst miscalibration (12.7\%) occurs on the unregularized B2-nr
+arm, hinting that the Phase~D regularization also buys calibration, not only
+accuracy.
+
+\sectheading{Inference throughput.} On the RTX 5070 at batch size 1, mean
+per-image latency is 4.2~ms for ResNet50 (238 images/s), 10.7~ms for
+DenseNet121 (94 images/s), and 27.5~ms for TransNeXt-tiny (36 images/s).
+The transformer is thus roughly $6.5\times$ slower than ResNet50 --- its
+foveal-attention path is not graph-compiled on the current stack --- but at
+36 frames per second it still clears the acquisition rate of practical THz
+scanners, which is the budget that matters for deployment.
+
+\sectheading{Confusion structure.} At the extreme level the residual errors
+concentrate among visually similar classes: cat--dog and bird--deer on
+CIFAR-10, 4--7 and 8--3 on MNIST. Even after the fine detail is destroyed,
+the networks keep a coarse notion of category; what they lose is the ability
+to separate lookalikes.
+
+\subsection{Phase B1: combined degradation}
+\label{sec:tests:phase_b1}
+Phase B1 applies all five degradation axes simultaneously at a common level
+and asks the deployment-shaped question: how much accuracy survives when
+everything degrades at once? Here the L1--L5 index is a legitimate $x$-axis,
+because Phase~B1 sweeps a single fixed recipe and each level is one
+well-defined operating point. Figure~\ref{fig:b1_samples} shows what the
+sweep does to the images; Table~\ref{tab:phase_b} reports the full
+$3 \times 2 \times 5$ accuracy block; Figure~\ref{fig:b1_curves} plots the
+curves against the per-model clean baselines; and
+Tables~\ref{tab:b1_delta}--\ref{tab:b1_gap} quantify the two readings the
+curves suggest --- how far each model falls, and who leads by how much.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.49\textwidth]{\figpath{samples/grid_B1_levels_cifar10.png}}\hfill
+  \includegraphics[width=0.49\textwidth]{\figpath{samples/grid_B1_levels_mnist.png}}
+  \caption{The combined Phase B1 recipe at L1--L5 on six fixed validation images. Left: CIFAR-10; right: MNIST.}
+  \label{fig:b1_samples}
+\end{figure}
+
+\input{tables/tab_V_phase_b.tex}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/b1_acc_vs_level.png}}
+  \caption{Phase B1 validation accuracy versus combined level; dotted lines mark the per-model clean baselines. Left: CIFAR-10; right: MNIST.}
+  \label{fig:b1_curves}
+\end{figure}
+
+\input{tables/tab_b1_delta.tex}
+
+\input{tables/tab_b1_gap.tex}
+
+Three observations organize the block.
+
+\textbf{The collapse is monotonic and severe on CIFAR-10.}\quad Accuracy
+falls with every level step for every model
+(Table~\ref{tab:b1_delta}): even the mild level already costs 10--19~\Mpp{},
+the moderate level costs 54--59, and by L5 all three models have lost about
+three quarters of their clean accuracy and sit at 19--21\% --- better than
+the 10\% random-guess floor, but not by much. Nothing in the design space
+escapes this fall; the question the later phases answer is \emph{why} (it is
+the information, not the training --- Phases~D and C2).
+
+\textbf{The transformer leads exactly where the images are still
+readable.}\quad Table~\ref{tab:b1_gap} makes the margin structure explicit.
+TransNeXt-tiny leads the CNN mean by +10.11~\Mpp{} at L1 and +10.41 at L2 ---
+an advantage far above the seed noise --- but the lead collapses to
++2.05~\Mpp{} at L3 (only +0.94 over the better CNN, within about one
+combined seed-$\sigma$), and to under 1~\Mpp{} at L4--L5. Comparing with
+Figure~\ref{fig:b1_samples}: the transformer's foveal attention pays off
+while local texture still exists (L1--L2), and stops paying the moment the
+degradation has destroyed the texture it attends to. From L3 onward the
+three architectures are practically interchangeable.
+
+\textbf{MNIST resists four levels, then falls off the same cliff.}\quad The
+digit task barely notices the first two levels (drops under 3.3~\Mpp{};
+TransNeXt has no advantage there --- the CNNs are already at ceiling), stays
+usable at L3 (about 79--81\%), and then collapses to 27--28\% at L5, a loss
+of about 71~\Mpp{} for every model. High-contrast shapes on a black
+background simply survive the pipeline longer than natural images; but once
+downsampling to $3 \times 3$ pixels removes the stroke structure, MNIST
+converges to the same information floor as CIFAR-10. The per-model reading
+of both datasets continues in Section~\ref{sec:crossmodel}.
+
+\subsection{Phase C2: single-axis attribution under the THz protocol}
+\label{sec:tests:phase_c2}
+Phase C2 answers the engineering question behind the whole campaign: of the
+degradations a real THz sensor produces, which one should be fought first?
+Each cell isolates one of the three THz-relevant axes --- resolution, blur,
+or salt-and-pepper --- at one level, with the other two held at identity,
+under the THz protocol (image fixed at full grayscale, additive Gaussian
+noise off, T3 regularization). Table~\ref{tab:phase_c2} reports the full
+accuracy block.
+
+\input{tables/tab_IX_phase_c2.tex}
+
+\textbf{Why the plots use PSNR and SSIM, not the level index.}\quad A given
+nominal level does not do equal damage on different axes: L3 blur removes far
+less information than L3 resolution, so comparing axes at matched
+\emph{level} would compare unmatched images. The level is a knob we set; PSNR
+and SSIM are what the images actually measure. Every Phase~C2 comparison is
+therefore drawn against the measured image quality --- PSNR
+(Figure~\ref{fig:c2_type_psnr}) and SSIM (Figure~\ref{fig:c2_type_ssim})
+separately --- computed against the clean upsampled reference, with the
+L1/L5 endpoints of the resolution curve annotated for orientation.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/c2_type_psnr.png}}
+  \caption{Phase C2 axis comparison versus measured PSNR, one curve per axis averaged over the backbones; L1/L5 mark the resolution-axis endpoints. Left: CIFAR-10; right: MNIST.}
+  \label{fig:c2_type_psnr}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/c2_type_ssim.png}}
+  \caption{Phase C2 axis comparison versus measured SSIM; same construction as Figure~\ref{fig:c2_type_psnr}.}
+  \label{fig:c2_type_ssim}
+\end{figure}
+
+\textbf{Resolution is the axis that matters.}\quad At every matched PSNR and
+SSIM value, the resolution curve sits far below blur, and blur below
+salt-and-pepper; the ordering is identical under both quality metrics. Averaged
+over the six (model, dataset) pairs, the L1--L5 mean accuracy cost is
+$-27.45$~\Mpp{} for resolution against $-6.58$ for blur and $-5.13$ for
+salt-and-pepper --- a factor of roughly four. The plain-language version of
+Figure~\ref{fig:c2_type_psnr} is: an image that \emph{measures} equally
+degraded is much more dangerous when the damage came from lost pixels than
+when it came from smoothing or speckle, because only the former removes
+information the classifier cannot re-learn its way around.
+
+\input{tables/tab_c2_spearman.tex}
+
+\textbf{The quality metrics rank the axes but do not explain them.}\quad
+Table~\ref{tab:c2_spearman} quantifies how tightly accuracy follows measured
+quality. Pooled across models, resolution shows an almost perfect
+association ($\rho = +0.98$ on both datasets and both metrics); blur and
+salt-and-pepper are markedly weaker ($+0.84$ and $+0.53$ on CIFAR-10). Two
+nuances make this table honest rather than decorative. First, within any
+single model on CIFAR-10 the association is perfectly monotone ($\rho = 1.0$)
+on every axis --- the pooled values drop below 1 only because the three
+models sit at different accuracy offsets at the same quality. Second, on
+MNIST the blur and salt-and-pepper correlations are weak for the opposite
+reason: those axes barely move MNIST accuracy at all (the curves are flat
+near 99\%), so there is almost no signal for a rank correlation to find. A
+low $\rho$ here means ``harmless axis,'' not ``unpredictable axis.''
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/c2_model_psnr.png}}
+  \caption{Phase C2 model comparison versus PSNR: one panel per axis (columns) and dataset (rows), one curve per backbone.}
+  \label{fig:c2_model_psnr}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{\figpath{curves/c2_model_ssim.png}}
+  \caption{Phase C2 model comparison versus SSIM; same construction as Figure~\ref{fig:c2_model_psnr}.}
+  \label{fig:c2_model_ssim}
+\end{figure}
+
+\textbf{Model ordering under the THz protocol.}\quad
+Figures~\ref{fig:c2_model_psnr} and \ref{fig:c2_model_ssim} repeat the
+comparison with one curve per model. On CIFAR-10, TransNeXt-tiny is the most
+robust backbone on every axis across the entire quality range --- most
+visibly on blur, where at L5 it holds 71.0\% against 58.8\% (ResNet50) and
+64.6\% (DenseNet121) --- and the two CNNs essentially overlap. On MNIST only
+the resolution axis produces a meaningful fall (to about 45\% at L5, for all
+three backbones identically); blur and salt-and-pepper leave the digits
+readable at every level, confirming that stroke shape, not texture, is what
+MNIST classification runs on.
+
+\textbf{Levels versus quality, in one sentence.}\quad Reading
+Table~\ref{tab:phase_c2} down the level columns and
+Figure~\ref{fig:c2_type_psnr} along the quality axis says the same thing two
+ways: severity level is a poor common currency across degradation types,
+and once converted into measured image quality, resolution is where the
+accuracy actually goes.

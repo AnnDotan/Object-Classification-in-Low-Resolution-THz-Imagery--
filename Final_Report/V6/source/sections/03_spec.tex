@@ -1,0 +1,168 @@
+% Final technical spec sheet (BGU \S 10.7.2.5).
+\section{Final Technical Specification}
+\label{sec:spec}
+
+This section reports the as-built specification of the delivered software
+product, and documents every drift from the preliminary specification.
+
+\subsection{Product overview}
+The delivered product is a research-grade Python package that:
+\begin{enumerate}
+  \item synthetically degrades a clean image dataset using a deterministic
+        five-axis pipeline (saturation, downsample, blur, additive noise,
+        salt and pepper);
+  \item fine-tunes one of three pretrained deep backbones (ResNet50,
+        DenseNet121, TransNeXt-tiny) on the degraded distribution under a
+        unified training recipe;
+  \item evaluates the trained model on a held-out validation split and
+        records validation accuracy, calibration, inference throughput, and
+        per-pipeline PSNR / SSIM metrics;
+  \item aggregates results across the 402-cell campaign and the 48-replicate
+        multi-seed audit into a single canonical JSON artifact and a 7-tab
+        interactive dashboard.
+\end{enumerate}
+
+\subsection{Inputs, outputs, interfaces}
+\textbf{Inputs.}\quad Standard image datasets (CIFAR-10 [7]
+and MNIST [8]), automatically downloaded by torchvision on
+first invocation. A YAML / dictionary configuration object selects the
+backbone, the degradation phase, the level, the axis (for single-axis
+phases), the treatment (for Phase D), and the random seed.
+
+\textbf{Outputs.}\quad Per-cell training logs, validation metrics, best
+checkpoint, image-quality probe JSON. The canonical aggregator
+(\texttt{Final\_Exp.json}, schema version 3) joins the 402 canonical cells
+with the 48 multi-seed replicates and exposes
+$\langle\mathrm{val\_acc}\rangle \pm \sigma$ pairs.
+
+\textbf{Hardware interface.}\quad The training stack runs on a single NVIDIA
+RTX 5070 (sm\_120, Blackwell architecture) at \texttt{bf16-mixed} precision.
+A CPU-only fallback (\texttt{32-true} precision) is available for portability
+but is too slow to be useful at the campaign scale. There is no specialized
+hardware development; the system targets commodity GPU servers.
+
+\subsection{Final specification of the system}
+\textbf{Models.}\quad Three backbones are supported. Table \ref{tab:hparams}
+summarizes the training recipe; the differential learning-rate convention
+(head $\times 10$ over backbone) is taken from the source papers.
+
+\begin{table}[htbp]
+\centering
+\caption{Training hyperparameters (final).}
+\label{tab:hparams}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lll}
+\toprule
+Parameter & CNNs (ResNet50, DenseNet121) & TransNeXt-tiny \\
+\midrule
+Input resolution        & $224 \times 224$        & $224 \times 224$ \\
+Optimizer               & AdamW [9] & AdamW \\
+Schedule                & Cosine annealing        & Cosine annealing \\
+Head learning rate      & $10^{-3}$               & $5 \times 10^{-4}$ \\
+Backbone learning rate  & $10^{-4}$               & $5 \times 10^{-5}$ \\
+Weight decay            & $10^{-4}$               & $5 \times 10^{-2}$ \\
+Label smoothing         & 0.1                     & 0.1 \\
+Stochastic depth        & 0.0                     & 0.1 \\
+Gradient clip           & $\|\nabla\|_2 \leq 1.0$ & $\|\nabla\|_2 \leq 1.0$ \\
+Batch size              & 32                      & 32 \\
+Max epochs              & 60                      & 60 \\
+Early stopping          & patience 10             & patience 10 \\
+Precision               & \texttt{bf16-mixed}     & \texttt{bf16-mixed} \\
+Seed                    & 42 (canonical)          & 42 (canonical) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Degradation pipeline.}\quad The five-level schedule (Table
+\ref{tab:levels}) is the single source of truth for L1 through L5; it is
+imported from \texttt{src/data/degradation\_levels.py} into both the training
+and the evaluation paths.
+
+\input{tables/tab_II_levels.tex}
+
+\textbf{Data pipeline.}\quad Pipeline version 2 (finalized 2026-05-20):
+the saturation lerp is applied first, then the bilinear
+downsample to \texttt{low\_res}, then additive Gaussian noise and salt and
+pepper at the low resolution, then bicubic upsample to $224 \times 224$,
+then Gaussian blur (kernel calibrated for $224 \times 224$), then a final
+clip to $[0, 1]$ and ImageNet normalization.
+
+\textbf{Determinism.}\quad The per-sample degradation seed is
+$\text{idx} + 10^7$ on the validation split and \texttt{idx} on the training
+split. The byte-identity gate in
+\texttt{src/tests/test\_degradation\_determinism.py} asserts that two
+independent reads of the same validation index yield bit-identical pixels
+across freshly built datasets; this is also verified across seeds 42, 43,
+and 44 by the multi-seed audit test.
+
+\subsection{Drift from the preliminary specification}
+
+The Preliminary Design Review (PDR, \texttt{Pre-2026-061.pdf}) defined the
+project scope. Five drifts occurred during implementation:
+
+\begin{enumerate}
+  \item \textbf{TransNeXt variant: small to tiny.} The preliminary spec
+        proposed \texttt{transnext\_small} ($\sim 50$M parameters); the
+        2026-05-14 revision substituted \texttt{transnext\_tiny}
+        ($\sim 28$M parameters) to keep the parameter count comparable to ResNet50
+        ($\sim 25$M) and to recover $\sim 310$ GPU-hours across the
+        TransNeXt rows. The change preserves the foveal-attention
+        mechanism, which was the architectural property of interest, and it
+        matches the published TransNeXt $224 \times 224$ checkpoint exactly.
+  \item \textbf{Uniform $224 \times 224$ protocol.} A short-lived V3
+        refactor (2026-05-08 through 2026-05-13) attempted native-resolution
+        training ($32 \times 32$ for TransNeXt on CIFAR-10, $28 \rightarrow 32$
+        for MNIST). The refactor violated the fair-comparison invariant
+        (different backbones saw different tensor shapes), so it was rolled
+        back. Every cell now trains at $224 \times 224$.
+  \item \textbf{Blur kernel rescaling.} The 2026-05-12 degradation curve
+        used blur kernels designed for native $32 \times 32$ imagery
+        (K $= 3 \ldots 13$, $\sigma = 0.8 \ldots 2.3$). At $224 \times 224$
+        those kernels covered $\sim 1$ to $6 \%$ of the image width and
+        produced essentially invisible blur. They were rescaled on
+        2026-05-14 to pixel-domain values at $224 \times 224$ (K $= 13 \ldots 91$,
+        $\sigma = 2.5 \ldots 18$), with the kernel-to-$\sigma$ rule
+        $K = 2 \lceil 2.5 \sigma \rceil + 1$ so the kernel always captures the
+        $2.5 \sigma$ Gaussian footprint.
+  \item \textbf{Optuna freeze.} The preliminary plan reserved a per-(phase,
+        cell) hyperparameter sweep. The final spec freezes the Optuna L3
+        winner per (model, dataset) and reuses it across every level and
+        every axis. The change saves $\sim 200$ GPU-hours and removes a
+        per-phase confound from the cross-phase comparison.
+  \item \textbf{Multi-seed audit.} The preliminary spec used a single seed
+        (42). The 2026-06-01 revision added a 48-replicate audit at
+        seeds 43 and 44 across the 24 L3 headline cells so that the published L3
+        accuracies carry an explicit $\sigma$ bound rather than a single
+        point estimate.
+\end{enumerate}
+
+\subsection{Phases of the experimental program}
+
+The 402-cell campaign is partitioned into seven phases. Table
+\ref{tab:phase_overview} summarizes each phase.
+
+\begin{table}[htbp]
+\centering
+\caption{Experimental phases of the 402-cell campaign. Multi-seed audit replicates are layered on top of the 24 L3 headline cells.}
+\label{tab:phase_overview}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrl}
+\toprule
+Phase & Purpose & Cells & Tag prefix \\
+\midrule
+A      & Clean baseline (no degradation)                    & 6   & \texttt{final\_clean\_} \\
+B      & Combined degradation, all axes at level L         & 30  & \texttt{final\_B\_L*} \\
+C      & Single-axis isolation, others at identity         & 150 & \texttt{final\_C\_L*\_<axis>\_} \\
+D      & Regularization recovery (T1 / T2 / T3) on Phase B & 90  & \texttt{final\_D\_T*\_L*\_} \\
+B2     & THz protocol simplification (sat $=0$, noise $=0$, T3) & 30 & \texttt{final\_B2\_L*\_} \\
+B2nr   & B2 without regularization, L3 only                & 6   & \texttt{final\_B2nr\_L3\_} \\
+C2     & Single-axis under THz protocol                    & 90  & \texttt{final\_C2\_L*\_<axis>\_} \\
+\midrule
+Audit  & Multi-seed audit (seeds $\{43, 44\}$) on the 24 L3 headline cells & 48 & \texttt{*\_seed\{43,44\}} \\
+\midrule
+\textbf{Total} & & \textbf{450} & \\
+\bottomrule
+\end{tabular}
+\end{table}

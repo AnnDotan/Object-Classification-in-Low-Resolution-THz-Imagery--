@@ -1,0 +1,173 @@
+% Conclusions and Recommendations (BGU \S 10.7.2.9).
+% V6: plain-language reading woven into the four conclusions; Goal 3 and the
+% calibration recommendation corrected against the frozen data (TransNeXt is
+% ~6.5x ResNet50, not 1.5x; ECE does not grow toward L5); the plan-versus-
+% execution ledger rebuilt from the PRD v5 section 4.9 numbers (the V5 table
+% understated the B2/C2 actuals).
+\section{Conclusions and Recommendations}
+\label{sec:conclusions}
+
+\subsection{Scientific conclusions}
+This work delivered a reproducible 402-cell training campaign across three
+architectures (ResNet50, DenseNet121, TransNeXt-tiny), two datasets
+(CIFAR-10, MNIST), five degradation levels, and seven experimental phases,
+anchored to a deterministic per-pipeline PSNR / SSIM probe and a 48-replicate
+multi-seed audit. Four conclusions follow from the measurements.
+
+\begin{enumerate}
+  \item \textbf{The collapse is an information bottleneck, not
+        over-fitting.} The strongest regularization treatment recovers less
+        than one percentage point of the combined-degradation collapse
+        (Phase~D: +0.77~\Mpp{} on average), and moving to the simpler THz
+        protocol recovers about four (Phase~B2: +4.01~\Mpp{}, roughly three
+        quarters of which is the protocol itself rather than the
+        regularization). If the models were merely over-fitting the degraded
+        distribution, training-side intervention would have closed a large
+        part of the gap; it does not. The accuracy is gone because the
+        information is gone.
+  \item \textbf{The foveal transformer is the most robust backbone at the
+        operationally relevant levels.} TransNeXt-tiny leads the CNNs by
+        about ten \Mpp{} at the mild-to-moderate end of the combined curve on
+        CIFAR-10 and is the most robust model on every single-axis
+        comparison at matched image quality. The advantage is real (well
+        above the seed noise) but conditional: it exists exactly where the
+        degraded image still contains texture for its attention to use.
+  \item \textbf{At extreme degradation, architecture stops mattering.} At
+        Phase~B1 L5 all three backbones land in a 19--21\% band on CIFAR-10
+        (27--28\% on MNIST) --- within seed noise of one another. Once the
+        spatial information is destroyed, no backbone in this design space,
+        and plausibly none outside it, can recover what is no longer there.
+  \item \textbf{Resolution is the dominant degradation axis.} On the
+        measured PSNR and SSIM scales, the resolution axis costs roughly
+        four times more accuracy than blur or salt-and-pepper
+        ($-27.45$~\Mpp{} mean L1--L5 against $-6.58$ and $-5.13$) and shows
+        an almost perfect accuracy--quality association
+        ($\rho = +0.98$). For a THz system engineer this is the actionable
+        result: spatial resolution is where the accuracy goes, so spatial
+        resolution is what front-end investment should restore first.
+\end{enumerate}
+
+\subsection{Project evaluation against the preliminary goals}
+The preliminary design report (PDR) set three acceptance criteria.
+
+\begin{itemize}
+  \item \textbf{Goal 1 --- at least 80\% top-1 accuracy at the moderate (L3)
+        operating point.} \emph{Partially met, and informatively so.} On the
+        full combined L3 pipeline the target is missed on CIFAR-10
+        (36--39\%), essentially met on MNIST (79--81\%), and comfortably
+        exceeded on the milder single-axis operating points (for example,
+        every Phase~C2 blur and salt-and-pepper cell at L3). The CIFAR-10
+        shortfall is not an engineering failure but the central scientific
+        finding: the moderate combined degradation destroys enough
+        information that \emph{no} backbone in the design space reaches
+        80\% --- and Phase~D shows that no training trick changes this.
+  \item \textbf{Goal 2 --- an identifiable architectural winner beating the
+        baseline by a meaningful margin.} \emph{Met, in the regime where a
+        winner can exist.} TransNeXt-tiny beats the CNN mean by about ten
+        \Mpp{} at L1--L2 on CIFAR-10, far above the multi-seed noise floor
+        ($\sigma < 1.2$~\Mpp{}). The margin decays to about two points at L3
+        and vanishes by L4, so the ``winner'' claim is explicitly scoped to
+        the mild-to-moderate range where it is decision-relevant.
+  \item \textbf{Goal 3 --- inference latency compatible with sensor-side
+        deployment.} \emph{Met for all three backbones, with very different
+        margins.} At batch size 1 on the RTX 5070: ResNet50 4.2~ms
+        (238 images/s), DenseNet121 10.7~ms (94 images/s), TransNeXt-tiny
+        27.5~ms (36 images/s). All three clear the frame rate of practical
+        THz scanners; but the transformer is roughly $6.5\times$ slower than
+        ResNet50 because its foveal-attention path is not graph-compiled on
+        the current stack, leaving it the thinnest deployment margin ---
+        the subject of a continuation recommendation below.
+\end{itemize}
+
+\textbf{Trade-offs of the final architecture choice.}\quad ResNet50 is the
+fastest and simplest backbone and a solid baseline, but it carries no
+robustness advantage. DenseNet121 adds a small edge at moderate CIFAR-10
+degradation through feature reuse, at the cost of $2.5\times$ ResNet50's
+latency and higher memory. TransNeXt-tiny delivers the best accuracy at mild
+and moderate degradation, at the cost of $6.5\times$ ResNet50's latency and
+no advantage at the extreme end. For a THz deployment operating at
+mild-to-moderate degradation the recommendation is TransNeXt-tiny; at
+extreme degradation the engineering budget is better spent on front-end
+restoration than on any classifier.
+
+\subsection{Plan versus execution}
+Table~\ref{tab:plan_exec} compares the planned compute budget with the
+logged execution from the campaign ledger. The overall envelope closed at
+about +9\% --- comfortably inside the $\sim$310 GPU-hour saving created by
+the \texttt{transnext\_small} $\rightarrow$ \texttt{tiny} substitution ---
+but the per-phase picture is uneven and worth stating honestly: the
+convergence-first policy (60-epoch budget, early-stopping patience 10) let
+the T3-regularized Phase~B2 / C2 cells train materially longer than
+estimated (+45\% and +48\% over their line items), while the 186-cell
+baseline re-run and the post-training diagnostics came in well under. All
+scheduled milestones --- PDR, the determinism gates, the 402-cell campaign,
+the multi-seed audit, the diagnostics, and this report --- were met against
+the 26 July 2026 submission deadline.
+
+\begin{table}[htbp]
+\centering
+\caption{Plan versus execution (GPU-hours). Planned: PDR / PRD estimates; actual: campaign ledger; $\approx$ marks ledger estimates.}
+\label{tab:plan_exec}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lrrl}
+\toprule
+Work item & Planned & Actual & Status \\
+\midrule
+Hyperparameter pre-tuning (Optuna)        & 20.0  & $\approx$20 & Within budget \\
+Phases A / B1 / C (186 cells)             & 62.0  & $\approx$50 & $\sim$19\% under \\
+Phase D regularization sweep (90 cells)   & 52.5  & 56.5        & $+7.6\%$ over \\
+Phase B2 sweep (30 cells)                 & 15.0  & 21.7        & $+45\%$ over \\
+Phase B2-nr arm (6 cells)                 & 3.5   & 3.8         & Within budget \\
+Phase C2 sweep (90 cells)                 & 48.0  & 70.9        & $+48\%$ over \\
+Multi-seed audit (48 replicates)          & 24.0  & $\approx$25 & Within budget \\
+Post-training diagnostics (no re-train)   & 3.5   & 0.7         & $\sim$80\% under \\
+\midrule
+Total                                     & 228.5 & $\approx$249 & $+9\%$ \\
+\midrule
+\multicolumn{4}{l}{\emph{Architecture substitution (\texttt{small}$\rightarrow$\texttt{tiny}): $\approx -310$ GPU-h vs.\ the original plan.}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Limitations}
+The conclusions are bounded by the experimental scope. The five-axis pipeline
+is a synthetic mathematical model: it omits wavelength-dependent diffraction,
+mixing-element nonlinearity, and the dead-pixel patterns of real THz
+detectors. CIFAR-10 and MNIST are small benchmarks, so the per-axis
+attribution is not validated at ImageNet scale or on true THz object
+categories. The Phase~B2 / C2 sweeps were run under the T3 treatment only, so
+protocol and regularization interact in all but the L3 cells (where the
+B2-nr arm separates them). No learned super-resolution baseline was run (a
+scoped-out Phase~E), so the ``restore resolution first'' recommendation has
+not yet been tested against an actual restoration pipeline. Finally, the
+acceptance criteria are model-side only; no human-perception bound was
+collected for the extreme operating points.
+
+\subsection{Recommendations for continuation}
+\begin{enumerate}
+  \item \textbf{Acquire real THz data.}\quad Even a small dataset at the
+        target frequency would calibrate the synthetic model against ground
+        truth and re-weight the per-axis attribution accordingly.
+  \item \textbf{Add a super-resolution pre-stage.}\quad Resolution dominates
+        the attribution by $4\times$, so the highest-value next ablation
+        places a learned upsampler in front of each backbone and re-runs
+        Phases~B2 / C2. If the attribution is right, this single stage
+        should recover more accuracy than any classifier change measured
+        here.
+  \item \textbf{Graph-compile the TransNeXt attention path.}\quad The
+        foveal-attention custom op is the reason for the $6.5\times$ latency
+        gap to ResNet50. Compiling it (or replacing it with a fused
+        implementation) would widen the transformer's deployment margin at
+        no accuracy cost.
+  \item \textbf{Reproduce the attribution at scale.}\quad Repeat the
+        per-axis analysis on a large robustness benchmark such as
+        ImageNet-A [6] to test whether resolution dominance
+        holds beyond small benchmarks.
+  \item \textbf{Calibration monitoring.}\quad Miscalibration stays moderate
+        (mean ECE 5.6\% at L3, 2.9\% at L5) but is not free: the worst cell
+        (12.7\%) sits on the unregularized B2-nr arm. A cheap post-hoc
+        temperature-scaling step, fitted per operating point, would tighten
+        the confidence outputs without touching top-1 accuracy --- worth
+        adding before any operational use of the confidence scores.
+\end{enumerate}
